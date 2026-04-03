@@ -971,13 +971,16 @@ function EngagementsContent() {
                                       summary={cbSummary}
                                       year={filterYear}
                                       month={filterMonth}
+                                      currency={engagement.currency || 'CZK'}
                                       canSeeFinancials={canViewFinancials}
                                       assignedColleagueAssignmentId={cbAssignment?.id}
                                       onUpdateSettings={(updates) => {
-                                        updateEngagementService(engService.id, { 
+                                        updateEngagementService(engService.id, {
                                           creative_boost_max_credits: updates.maxCredits,
                                           creative_boost_price_per_credit: updates.pricePerCredit,
                                           ...(updates.fixedBilling !== undefined && { creative_boost_fixed_billing: updates.fixedBilling }),
+                                          ...(updates.bannerRewardPerCredit !== undefined && { creative_boost_reward_per_credit_banner: updates.bannerRewardPerCredit }),
+                                          ...(updates.videoRewardPerCredit !== undefined && { creative_boost_reward_per_credit_video: updates.videoRewardPerCredit }),
                                         });
                                         // Also update Creative Boost client month if exists
                                         const eng = engagements.find(e => e.id === engService.engagement_id);

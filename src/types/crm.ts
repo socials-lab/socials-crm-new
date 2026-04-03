@@ -284,7 +284,8 @@ export interface EngagementService {
   creative_boost_max_credits: number | null;
   creative_boost_price_per_credit: number | null;
   creative_boost_fixed_billing?: boolean; // true = fixed package, false = usage-based
-  // Note: Reward per credit for graphic designer/video editor is stored in frontend mock data (creativeBoostRewardsMockData.ts)
+  creative_boost_reward_per_credit_banner: number | null;
+  creative_boost_reward_per_credit_video: number | null;
   // One-off invoicing tracking
   invoicing_status: OneOffInvoicingStatus;
   invoiced_at: string | null;

@@ -52,7 +52,26 @@ export async function getExchangeRate(fromRaw: string, toRaw: string): Promise<E
   }
 
   const endpoint = `https://api.frankfurter.app/latest?from=${from}&to=${to}`;
-  const response = await fetch(endpoint);
+  let response: Response;
+  try {
+    response = await fetch(endpoint);
+  } catch {
+    // Network error — try fallback API
+    const fallback = `https://open.er-api.com/v6/latest/${from}`;
+    const fbResponse = await fetch(fallback);
+    if (!fbResponse.ok) {
+      throw new Error(`Failed to load exchange rate ${from}/${to}`);
+    }
+    const fbPayload = await fbResponse.json();
+    const fbRate = fbPayload.rates?.[to];
+    if (typeof fbRate !== 'number' || Number.isNaN(fbRate) || fbRate <= 0) {
+      throw new Error(`Invalid exchange rate from fallback for ${from}/${to}`);
+    }
+    const fbResult: ExchangeRateResult = { from, to, rate: fbRate, providerDate: fbPayload.time_last_update_utc?.slice(0, 10) || new Date().toISOString().slice(0, 10) };
+    rateCache.set(key, fbResult);
+    cacheTimestampByPair.set(key, Date.now());
+    return fbResult;
+  }
   if (!response.ok) {
     throw new Error(`Failed to load exchange rate ${from}/${to} (${response.status})`);
   }

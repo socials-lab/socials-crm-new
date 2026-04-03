@@ -24,34 +24,41 @@ interface CreativeBoostCreditOverviewProps {
   summary: ClientMonthSummary | null | undefined;
   year: number;
   month: number;
+  currency: string;
   canSeeFinancials: boolean;
   assignedColleagueAssignmentId?: string;
-  onUpdateSettings: (updates: { maxCredits?: number; pricePerCredit?: number; fixedBilling?: boolean }) => void;
+  onUpdateSettings: (updates: { maxCredits?: number; pricePerCredit?: number; fixedBilling?: boolean; bannerRewardPerCredit?: number; videoRewardPerCredit?: number }) => void;
   onDelete: () => void;
 }
 
 const MONTH_NAMES = ['Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen', 'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec'];
 
-export function CreativeBoostCreditOverview({ 
-  engagementService, 
-  summary, 
-  year, 
+export function CreativeBoostCreditOverview({
+  engagementService,
+  summary,
+  year,
   month,
+  currency,
   canSeeFinancials,
   assignedColleagueAssignmentId: _assignedColleagueAssignmentId,
   onUpdateSettings,
   onDelete
 }: CreativeBoostCreditOverviewProps) {
+  const currencySymbol = currency === 'EUR' ? '€' : currency === 'USD' ? '$' : 'Kč';
   const navigate = useNavigate();
   
   const [isEditing, setIsEditing] = useState(false);
   const [tempMaxCredits, setTempMaxCredits] = useState('');
   const [tempPricePerCredit, setTempPricePerCredit] = useState('');
   const [tempFixedBilling, setTempFixedBilling] = useState(true);
+  const [tempBannerReward, setTempBannerReward] = useState('');
+  const [tempVideoReward, setTempVideoReward] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  
+
   const maxCredits = engagementService.creative_boost_max_credits ?? 0;
   const pricePerCredit = engagementService.creative_boost_price_per_credit ?? 0;
+  const bannerReward = engagementService.creative_boost_reward_per_credit_banner ?? 0;
+  const videoReward = engagementService.creative_boost_reward_per_credit_video ?? 0;
   
   const usedCredits = summary?.usedCredits ?? 0;
   const progressPercent = maxCredits > 0 ? Math.min((usedCredits / maxCredits) * 100, 100) : 0;
@@ -62,6 +69,8 @@ export function CreativeBoostCreditOverview({
     setTempMaxCredits(String(maxCredits));
     setTempPricePerCredit(String(pricePerCredit));
     setTempFixedBilling(engagementService.creative_boost_fixed_billing !== false);
+    setTempBannerReward(String(bannerReward));
+    setTempVideoReward(String(videoReward));
     setIsEditing(true);
   };
   
@@ -71,6 +80,8 @@ export function CreativeBoostCreditOverview({
       maxCredits: parseInt(tempMaxCredits) || 0,
       pricePerCredit: parseFloat(tempPricePerCredit) || 0,
       fixedBilling: tempFixedBilling,
+      bannerRewardPerCredit: parseFloat(tempBannerReward) || 0,
+      videoRewardPerCredit: parseFloat(tempVideoReward) || 0,
     });
     setIsEditing(false);
   };
@@ -142,47 +153,75 @@ export function CreativeBoostCreditOverview({
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
-            <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground">Max:</span>
-              <Input
-                type="number"
-                value={tempMaxCredits}
-                onChange={(e) => setTempMaxCredits(e.target.value)}
-                className="h-7 w-16 text-xs"
-                placeholder="0"
-                onClick={(e) => e.stopPropagation()}
-              />
-              <span className="text-xs text-muted-foreground">kr</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">Max:</span>
+                <Input
+                  type="number"
+                  value={tempMaxCredits}
+                  onChange={(e) => setTempMaxCredits(e.target.value)}
+                  className="h-7 w-16 text-xs"
+                  placeholder="0"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <span className="text-xs text-muted-foreground">kr</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">Cena:</span>
+                <Input
+                  type="number"
+                  value={tempPricePerCredit}
+                  onChange={(e) => setTempPricePerCredit(e.target.value)}
+                  className="h-7 w-20 text-xs"
+                  placeholder="0"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <span className="text-xs text-muted-foreground">{currencySymbol}/kr</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground">Cena:</span>
-              <Input
-                type="number"
-                value={tempPricePerCredit}
-                onChange={(e) => setTempPricePerCredit(e.target.value)}
-                className="h-7 w-20 text-xs"
-                placeholder="0"
-                onClick={(e) => e.stopPropagation()}
-              />
-              <span className="text-xs text-muted-foreground">Kč/kr</span>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 text-status-active"
-              onClick={handleSave}
-            >
-              <Check className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={handleCancel}
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">🖼️ Banner:</span>
+                <Input
+                  type="number"
+                  value={tempBannerReward}
+                  onChange={(e) => setTempBannerReward(e.target.value)}
+                  className="h-7 w-16 text-xs"
+                  placeholder="80"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <span className="text-xs text-muted-foreground">{currencySymbol}/kr</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">🎬 Video:</span>
+                <Input
+                  type="number"
+                  value={tempVideoReward}
+                  onChange={(e) => setTempVideoReward(e.target.value)}
+                  className="h-7 w-16 text-xs"
+                  placeholder="80"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <span className="text-xs text-muted-foreground">{currencySymbol}/kr</span>
+              </div>
+              <div className="ml-auto flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-status-active"
+                  onClick={handleSave}
+                >
+                  <Check className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={handleCancel}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -216,7 +255,7 @@ export function CreativeBoostCreditOverview({
             </div>
             {canSeeFinancials && (
               <span className="text-muted-foreground">
-                Odhad: <span className="font-medium text-foreground">{estimatedInvoice.toLocaleString()} Kč</span>
+                Odhad: <span className="font-medium text-foreground">{estimatedInvoice.toLocaleString()} {currencySymbol}</span>
               </span>
             )}
           </div>
@@ -227,9 +266,9 @@ export function CreativeBoostCreditOverview({
           <div className="flex items-center justify-between pt-1 border-t">
             <span className="text-xs text-muted-foreground">Fakturovaná částka</span>
             <span className="text-xs font-semibold text-foreground">
-              {(maxCredits * pricePerCredit).toLocaleString()} Kč
+              {(maxCredits * pricePerCredit).toLocaleString()} {currencySymbol}
               <span className="font-normal text-muted-foreground ml-1">
-                ({maxCredits} kr × {pricePerCredit.toLocaleString()} Kč)
+                ({maxCredits} kr × {pricePerCredit.toLocaleString()} {currencySymbol})
               </span>
             </span>
           </div>
@@ -237,9 +276,16 @@ export function CreativeBoostCreditOverview({
         
         {/* Footer */}
         <div className="flex items-center justify-between pt-1">
-          <span className="text-[10px] text-muted-foreground">
-            {maxCredits} kreditů{canSeeFinancials && ` • ${pricePerCredit.toLocaleString()} Kč/kredit`}
-          </span>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-muted-foreground">
+              {maxCredits} kreditů{canSeeFinancials && ` • ${pricePerCredit.toLocaleString()} ${currencySymbol}/kredit`}
+            </span>
+            {canSeeFinancials && (bannerReward > 0 || videoReward > 0) && (
+              <span className="text-[10px] text-muted-foreground">
+                🖼️ Banner: {bannerReward} {currencySymbol}/kr • 🎬 Video: {videoReward} {currencySymbol}/kr
+              </span>
+            )}
+          </div>
           <Button
             variant="ghost"
             size="sm"

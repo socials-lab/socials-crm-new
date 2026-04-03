@@ -147,23 +147,40 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
     const creativeBoostData = new Map<string, { usedCredits: number; pricePerCredit: number; totalAmount: number; clientMonthId: string }>();
 
     clientMonths
-      .filter(cm => cm.year === year && cm.month === month && !cm.invoiceId) // Skip already invoiced
+      .filter(cm => cm.year === year && cm.month === month) // Always include CB — double-billing is prevented by issued invoice check
       .forEach(cm => {
-        const clientOutputs = getClientOutputs(cm.clientId, year, month);
+        // Find the CB engagement service to check fixed vs usage-based billing
+        const cbService = engagementServices.find(
+          es => es.engagement_id === cm.engagementId && es.creative_boost_max_credits
+        );
+        const isFixedBilling = cbService?.creative_boost_fixed_billing !== false;
+        const maxCredits = cm.maxCredits || cbService?.creative_boost_max_credits || 0;
 
-        let totalCredits = 0;
-        clientOutputs.forEach(output => {
-          const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
-          totalCredits += credits.totalCredits;
-        });
-
-        if (totalCredits > 0) {
+        if (isFixedBilling && maxCredits > 0) {
+          // Fixed billing: always invoice the full package (max credits × price)
           creativeBoostData.set(cm.engagementId, {
-            usedCredits: totalCredits,
+            usedCredits: maxCredits,
             pricePerCredit: cm.pricePerCredit,
-            totalAmount: totalCredits * cm.pricePerCredit,
+            totalAmount: maxCredits * cm.pricePerCredit,
             clientMonthId: cm.id,
           });
+        } else {
+          // Usage-based: invoice only consumed credits
+          const clientOutputs = getClientOutputs(cm.clientId, year, month);
+          let totalCredits = 0;
+          clientOutputs.forEach(output => {
+            const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
+            totalCredits += credits.totalCredits;
+          });
+
+          if (totalCredits > 0) {
+            creativeBoostData.set(cm.engagementId, {
+              usedCredits: totalCredits,
+              pricePerCredit: cm.pricePerCredit,
+              totalAmount: totalCredits * cm.pricePerCredit,
+              clientMonthId: cm.id,
+            });
+          }
         }
       });
 
@@ -395,10 +412,22 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   // Merge generated invoices with any saved changes
   const currentInvoices = useMemo(() => {
     if (invoices.length > 0) {
-      // Merge: keep draft edits for existing invoices, add any new generated ones (e.g. newly added EUR engagements)
       const draftIds = new Set(invoices.map(inv => inv.id));
+      // Add completely new invoices (e.g. newly added EUR engagements)
       const newInvoices = generatedInvoices.filter(inv => !draftIds.has(inv.id));
-      return [...invoices, ...newInvoices];
+      // For existing draft invoices, merge in any missing line items from generated (e.g. CB added after draft was saved)
+      const mergedDrafts = invoices.map(draft => {
+        const generated = generatedInvoices.find(g => g.id === draft.id);
+        if (!generated) return draft;
+        const draftLineIds = new Set(draft.line_items.map(li => li.id));
+        const missingItems = generated.line_items.filter(li => !draftLineIds.has(li.id));
+        if (missingItems.length === 0) return draft;
+        const mergedItems = [...draft.line_items, ...missingItems];
+        const subtotal = mergedItems.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+        const totalAdjustments = mergedItems.reduce((sum, item) => sum + item.adjustment_amount, 0);
+        return { ...draft, line_items: mergedItems, subtotal, total_adjustments: totalAdjustments, total_amount: subtotal + totalAdjustments };
+      });
+      return [...mergedDrafts, ...newInvoices];
     }
     return generatedInvoices;
   }, [invoices, generatedInvoices]);
