@@ -41,6 +41,10 @@ interface CreativeBoostForInvoice {
   clientName: string;
   credits: number;
   reward: number;
+  bannerCredits?: number;
+  videoCredits?: number;
+  bannerRewardPerCredit?: number;
+  videoRewardPerCredit?: number;
 }
 
 interface CommissionForInvoice {
