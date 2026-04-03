@@ -41,6 +41,10 @@ interface CreativeBoostForInvoice {
   clientName: string;
   credits: number;
   reward: number;
+  bannerCredits?: number;
+  videoCredits?: number;
+  bannerRewardPerCredit?: number;
+  videoRewardPerCredit?: number;
 }
 
 interface CommissionForInvoice {
@@ -186,10 +190,18 @@ export function InvoicingOverview({
 
       // 2. Creative Boost rewards (format: "Přímá služba – [klient] – Creative Boost")
       creativeBoostItems.forEach((cb, idx) => {
+        const parts: string[] = [];
+        if (cb.bannerCredits && cb.bannerCredits > 0) {
+          parts.push(`🖼️ ${cb.bannerCredits} kr × ${cb.bannerRewardPerCredit ?? 80} Kč`);
+        }
+        if (cb.videoCredits && cb.videoCredits > 0) {
+          parts.push(`🎬 ${cb.videoCredits} kr × ${cb.videoRewardPerCredit ?? 80} Kč`);
+        }
+        const detail = parts.length > 0 ? ` (${parts.join(', ')})` : ` (${cb.credits} kr.)`;
         items.push({
           id: `cb-${idx}`,
           category: 'creative_boost',
-          invoiceName: `Přímá služba – ${cb.clientName} – Creative Boost (${cb.credits} kr.)`,
+          invoiceName: `Přímá služba – ${cb.clientName} – Creative Boost${detail}`,
           amount: cb.reward,
         });
       });
