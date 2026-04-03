@@ -31,6 +31,8 @@ interface LeadFlowStepperProps {
   onCreateOffer: () => void;
   onSendOffer: () => void;
   onSendOnboarding: () => void;
+  onResetOnboarding: () => void;
+  onViewOnboardingData: () => void;
   onSendContract: () => void;
   onMarkContractSent: () => void;
   onMarkContractSigned: () => void;
@@ -104,6 +106,8 @@ export function LeadFlowStepper({
   onCreateOffer,
   onSendOffer,
   onSendOnboarding,
+  onResetOnboarding,
+  onViewOnboardingData,
   onSendContract,
   onMarkContractSent,
   onMarkContractSigned,
@@ -222,15 +226,27 @@ export function LeadFlowStepper({
         : lead.onboarding_form_sent_at 
           ? 'Čeká na vyplnění' 
           : undefined,
-      actions: !lead.onboarding_form_sent_at ? [{
-        label: 'Odeslat formulář',
-        onClick: onSendOnboarding,
-        variant: 'outline',
-      }] : [{
-        label: 'Odeslat znovu',
-        onClick: onSendOnboarding,
-        variant: 'ghost',
-      }],
+      actions: [
+        ...(!lead.onboarding_form_sent_at ? [{
+          label: 'Odeslat formulář',
+          onClick: onSendOnboarding,
+          variant: 'outline' as const,
+        }] : [{
+          label: 'Odeslat znovu',
+          onClick: onSendOnboarding,
+          variant: 'ghost' as const,
+        }]),
+        {
+          label: 'Zobrazit data',
+          onClick: onViewOnboardingData,
+          variant: 'ghost' as const,
+        },
+        ...((lead.onboarding_form_sent_at || lead.onboarding_form_completed_at || lead.ico || lead.billing_street || lead.billing_email) ? [{
+          label: 'Resetovat',
+          onClick: onResetOnboarding,
+          variant: 'ghost' as const,
+        }] : []),
+      ],
     },
     {
       id: 'contract',

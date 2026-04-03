@@ -63,6 +63,7 @@ import { SendOfferDialog } from './SendOfferDialog';
 import { CreateOfferDialog } from './CreateOfferDialog';
 import { ConfirmStageTransitionDialog } from './ConfirmStageTransitionDialog';
 import { LeadFlowStepper } from './LeadFlowStepper';
+import { OnboardingDataDialog } from './OnboardingDataDialog';
 import { LeadCommunicationTimeline } from './LeadCommunicationTimeline';
 import { InlineEditField } from './InlineEditField';
 import { CompanyFinancials } from './CompanyFinancials';
@@ -128,6 +129,8 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
   const [isRequestAccessOpen, setIsRequestAccessOpen] = useState(false);
   const [isMeetingRequestOpen, setIsMeetingRequestOpen] = useState(false);
   const [isOnboardingFormOpen, setIsOnboardingFormOpen] = useState(false);
+  const [isOnboardingDataOpen, setIsOnboardingDataOpen] = useState(false);
+  const [isResetOnboardingOpen, setIsResetOnboardingOpen] = useState(false);
   const [isSendOfferOpen, setIsSendOfferOpen] = useState(false);
   const [isCreateOfferOpen, setIsCreateOfferOpen] = useState(false);
   const [sharedOfferUrl, setSharedOfferUrl] = useState<string | null>(null);
@@ -812,6 +815,8 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                     onCreateOffer={() => setIsCreateOfferOpen(true)}
                     onSendOffer={() => setIsSendOfferOpen(true)}
                     onSendOnboarding={() => setIsOnboardingFormOpen(true)}
+                    onResetOnboarding={() => setIsResetOnboardingOpen(true)}
+                    onViewOnboardingData={() => setIsOnboardingDataOpen(true)}
                     onSendContract={() => setIsContractDialogOpen(true)}
                     onMarkContractSent={() => { updateLead(lead.id, { contract_sent_at: new Date().toISOString() }); toast.success('✉️ Smlouva odeslaná'); }}
                     onMarkContractSigned={handleMarkContractSigned}
@@ -989,6 +994,50 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
           }
         }}
       />
+
+      <OnboardingDataDialog
+        open={isOnboardingDataOpen}
+        onOpenChange={setIsOnboardingDataOpen}
+        lead={lead}
+        onSave={(updates) => updateLead(lead.id, updates)}
+      />
+
+      <AlertDialog open={isResetOnboardingOpen} onOpenChange={setIsResetOnboardingOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Resetovat onboarding?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Všechna vyplněná onboarding data budou smazána — fakturační údaje, kontaktní osoby, datum zahájení. Tuto akci nelze vrátit zpět.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                updateLead(lead.id, {
+                  onboarding_form_sent_at: null,
+                  onboarding_form_url: null,
+                  onboarding_form_completed_at: null,
+                  onboarding_signatories: null,
+                  onboarding_project_contacts: null,
+                  onboarding_start_date: null,
+                  ico: '' as unknown as null,
+                  dic: null,
+                  billing_street: null,
+                  billing_city: null,
+                  billing_zip: null,
+                  billing_country: null,
+                  billing_email: null,
+                });
+                toast.success('Onboarding byl resetován');
+              }}
+            >
+              Resetovat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <SendOfferDialog
         open={isSendOfferOpen}
