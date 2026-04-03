@@ -347,13 +347,38 @@ function MyWorkContent() {
               </div>
             )}
             
-            {totalCreativeBoostReward > 0 && (
-              <div className="flex items-center justify-between py-1.5 border-t">
-                <span className="text-sm text-muted-foreground flex items-center gap-1">
+            {creditsByClient.length > 0 && (
+              <div className="space-y-1.5 border-t pt-1.5">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Sparkles className="h-3 w-3" />
                   Creative Boost ({monthCredits} kr)
-                </span>
-                <span className="font-medium text-primary">{totalCreativeBoostReward.toLocaleString()} Kč</span>
+                </div>
+                {creditsByClient.map((cb) => (
+                  <div key={cb.clientId} className="flex items-center justify-between py-1">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="text-sm truncate">{cb.brandName || cb.clientName}</span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {cb.bannerCredits > 0 && (
+                          <Badge variant="outline" className="text-[10px] h-4">
+                            🖼️ {cb.bannerCredits} kr × {cb.bannerRewardPerCredit} Kč
+                          </Badge>
+                        )}
+                        {cb.videoCredits > 0 && (
+                          <Badge variant="secondary" className="text-[10px] h-4">
+                            🎬 {cb.videoCredits} kr × {cb.videoRewardPerCredit} Kč
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <span className="font-medium text-primary whitespace-nowrap">{cb.totalReward.toLocaleString()} Kč</span>
+                  </div>
+                ))}
+                {creditsByClient.length > 1 && (
+                  <div className="flex items-center justify-between pt-1 text-xs">
+                    <span className="text-muted-foreground">Creative Boost celkem</span>
+                    <span className="font-semibold text-primary">{totalCreativeBoostReward.toLocaleString()} Kč</span>
+                  </div>
+                )}
               </div>
             )}
             
