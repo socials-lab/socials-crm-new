@@ -208,9 +208,13 @@ function MyWorkContent() {
   }));
 
   const creativeBoostForInvoice = creditsByClient.map((cb) => ({
-    clientName: cb.clientName,
+    clientName: cb.brandName || cb.clientName,
     credits: cb.totalCredits,
     reward: cb.totalReward,
+    bannerCredits: cb.bannerCredits,
+    videoCredits: cb.videoCredits,
+    bannerRewardPerCredit: cb.bannerRewardPerCredit,
+    videoRewardPerCredit: cb.videoRewardPerCredit,
   }));
 
   const commissionsForInvoice = approvedCommissions.map((comm) => ({
