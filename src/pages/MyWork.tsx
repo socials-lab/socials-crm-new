@@ -31,7 +31,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useCreativeBoostData, CreativeBoostProvider } from '@/hooks/useCreativeBoostData';
+import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { useUpsellApprovals } from '@/hooks/useUpsellApprovals';
 import { useActivityRewards, type ActivityReward } from '@/hooks/useActivityRewards';
 import { AddActivityRewardDialog } from '@/components/my-work/AddActivityRewardDialog';
