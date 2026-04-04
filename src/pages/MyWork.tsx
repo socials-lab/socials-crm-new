@@ -22,6 +22,8 @@ import {
   AlertCircle,
   Megaphone,
   Wrench,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -88,6 +90,26 @@ function MyWorkContent() {
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
   const currentYear = selectedYear;
   const currentMonth = selectedMonth;
+  const monthLabel = format(new Date(selectedYear, selectedMonth - 1), 'LLLL yyyy', { locale: cs });
+  const capitalizedMonthLabel = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+
+  const goToPreviousMonth = () => {
+    if (selectedMonth === 1) {
+      setSelectedMonth(12);
+      setSelectedYear((y) => y - 1);
+      return;
+    }
+    setSelectedMonth((m) => m - 1);
+  };
+
+  const goToNextMonth = () => {
+    if (selectedMonth === 12) {
+      setSelectedMonth(1);
+      setSelectedYear((y) => y + 1);
+      return;
+    }
+    setSelectedMonth((m) => m + 1);
+  };
 
   // Get current colleague
   const currentColleague = useMemo(() => {
@@ -264,9 +286,22 @@ function MyWorkContent() {
           </h1>
           <p className="text-sm text-muted-foreground">{currentColleague.position}</p>
         </div>
-        <div className="shrink-0 text-left sm:text-right">
-          <p className="text-xs text-muted-foreground">Dnes</p>
-          <p className="text-sm font-medium">{format(currentDate, 'EEEE d. MMMM', { locale: cs })}</p>
+        <div className="shrink-0 flex flex-col items-start sm:items-end gap-2">
+          <div className="text-left sm:text-right">
+            <p className="text-xs text-muted-foreground">Dnes</p>
+            <p className="text-sm font-medium">{format(currentDate, 'EEEE d. MMMM', { locale: cs })}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={goToPreviousMonth}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="min-w-[120px] text-center text-sm font-medium">
+              {capitalizedMonthLabel}
+            </div>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={goToNextMonth}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -330,11 +365,6 @@ function MyWorkContent() {
             <CardTitle className="text-sm font-medium flex items-center gap-2 flex-wrap">
               <Coins className="h-4 w-4 text-primary" />
               Odměny
-              <div className="flex items-center gap-1">
-                <button className="text-xs px-1.5 py-0.5 rounded border hover:bg-muted" onClick={() => { if (selectedMonth === 1) { setSelectedMonth(12); setSelectedYear(y => y - 1); } else setSelectedMonth(m => m - 1); }}>←</button>
-                <span className="text-xs font-normal min-w-[80px] text-center">{selectedMonth}/{selectedYear}</span>
-                <button className="text-xs px-1.5 py-0.5 rounded border hover:bg-muted" onClick={() => { if (selectedMonth === 12) { setSelectedMonth(1); setSelectedYear(y => y + 1); } else setSelectedMonth(m => m + 1); }}>→</button>
-              </div>
               <Badge variant="outline" className="text-xs font-normal">za klientskou práci</Badge>
             </CardTitle>
           </CardHeader>
