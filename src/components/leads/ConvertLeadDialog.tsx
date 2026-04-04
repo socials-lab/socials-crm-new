@@ -31,6 +31,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { useCRMData } from '@/hooks/useCRMData';
 import { toDateOnlyString, toNullableNumber } from '@/lib/dbNormalize';
 import { useAuth } from '@/hooks/useAuth';
@@ -82,6 +84,9 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [successFeeEnabled, setSuccessFeeEnabled] = useState(true);
+  const [successFeePercent, setSuccessFeePercent] = useState(10);
+  const [successFeeMonths, setSuccessFeeMonths] = useState(3);
   const [isConverting, setIsConverting] = useState(false);
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
@@ -383,6 +388,77 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       } catch (fakturoidErr) {
         console.warn('Fakturoid subject creation error (non-blocking):', fakturoidErr);
         toast.warning('Klient vytvořen, ale propojení s Fakturoid selhalo. Propojte manuálně v kartě klienta.');
+      }
+
+      // Save success fee to engagement
+      if (successFeeEnabled && lead.owner_id && conversionResult.engagement_id) {
+        await supabase.from('engagements').update({
+          success_fee_colleague_id: lead.owner_id,
+          success_fee_percent: successFeePercent,
+          success_fee_months: successFeeMonths,
+        }).eq('id', conversionResult.engagement_id);
+      }
+
+      // STEP 7: Create Freelo project (non-blocking)
+      const brandName = form.getValues('brand_name') || lead.company_name;
+      const defaultEmails = ['danny@socials.cz', 'otas@socials.cz', 'david.hala@socials.cz'];
+      const teamEmails = teamMembers
+        .map(m => colleagues.find(c => c.id === m.colleague_id)?.email)
+        .filter(Boolean) as string[];
+      const allEmails = [...new Set([...defaultEmails, ...teamEmails])];
+
+      let freeloFailed = false;
+      try {
+        const { data: freeloResult, error: freeloError } = await invokeWithTimeout<{
+          success?: boolean;
+          project_url?: string;
+          error?: string;
+        }>('create-freelo-project', {
+          body: {
+            project_name: brandName,
+            currency: lead.currency || 'CZK',
+            team_emails: allEmails,
+          },
+        }, 30000);
+
+        if (freeloError || !freeloResult?.success) {
+          freeloFailed = true;
+          console.warn('Freelo project creation failed (non-blocking):', freeloError || freeloResult?.error);
+        } else if (freeloResult.project_url && conversionResult.engagement_id) {
+          await supabase.from('engagements').update({ freelo_url: freeloResult.project_url }).eq('id', conversionResult.engagement_id);
+        }
+      } catch (err) {
+        freeloFailed = true;
+        console.warn('Freelo project creation error (non-blocking):', err);
+      }
+
+      // STEP 7b: Create Slack channel (non-blocking)
+      let slackFailed = false;
+      try {
+        const channelName = `c_${brandName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)}`;
+        const { data: slackResult, error: slackError } = await invokeWithTimeout<{
+          success?: boolean;
+          channel_name?: string;
+          error?: string;
+        }>('create-slack-channel', {
+          body: {
+            channel_name: channelName,
+            team_emails: allEmails,
+          },
+        }, 30000);
+
+        if (slackError || !slackResult?.success) {
+          slackFailed = true;
+          console.warn('Slack channel creation failed (non-blocking):', slackError || slackResult?.error);
+        }
+      } catch (err) {
+        slackFailed = true;
+        console.warn('Slack channel creation error (non-blocking):', err);
+      }
+
+      if (freeloFailed || slackFailed) {
+        const failedParts = [freeloFailed && 'Freelo', slackFailed && 'Slack'].filter(Boolean).join(' a ');
+        toast.warning(`Zakázka vytvořena, ale ${failedParts} se nepodařilo nastavit. Nastavte manuálně.`);
       }
 
       // Invalidate all affected caches
@@ -905,6 +981,64 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                   </li>
                 )}
               </ul>
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-3 flex items-center gap-1.5">
+                ℹ️ Při převodu se automaticky vytvoří <strong>Freelo projekt</strong> a <strong>Slack kanál</strong>. Přiřazení kolegové budou pozváni do obou platforem.
+              </p>
+            </div>
+
+            {/* Success Fee Section */}
+            <div className="space-y-3 p-4 rounded-lg border bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  🏆 Success fee za uzavření klienta
+                </h4>
+                <Checkbox
+                  checked={successFeeEnabled}
+                  onCheckedChange={(checked) => setSuccessFeeEnabled(checked === true)}
+                />
+              </div>
+              {successFeeEnabled && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>Kolega:</span>
+                    <span className="font-medium text-foreground">
+                      {colleagues.find(c => c.id === lead.owner_id)?.full_name || 'Nepřiřazeno'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Procento z MRR</Label>
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          type="number"
+                          value={successFeePercent}
+                          onChange={(e) => setSuccessFeePercent(Number(e.target.value))}
+                          min={0}
+                          max={100}
+                          className="h-8 text-sm"
+                        />
+                        <span className="text-sm text-muted-foreground">%</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Počet měsíců</Label>
+                      <Input
+                        type="number"
+                        value={successFeeMonths}
+                        onChange={(e) => setSuccessFeeMonths(Number(e.target.value))}
+                        min={1}
+                        max={24}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+                  {monthlyTotal > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      = {Math.round(monthlyTotal * successFeePercent / 100).toLocaleString('cs-CZ')} {currency}/měsíc po dobu {successFeeMonths} měsíců
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Team Section */}

@@ -74,6 +74,13 @@ const transformApplicant = (row: Record<string, unknown>): Applicant => ({
   onboarding_sent_at: row.onboarding_sent_at,
   onboarding_completed_at: row.onboarding_completed_at,
   converted_to_colleague_id: row.converted_to_colleague_id,
+  buddy_id: row.buddy_id ?? null,
+  buddy_meeting_done: !!row.buddy_meeting_done,
+  academy_completed: !!row.academy_completed,
+  first_clients_assigned: !!row.first_clients_assigned,
+  fully_onboarded: !!row.fully_onboarded,
+  onboarding_terminated: !!row.onboarding_terminated,
+  terminated_at: row.terminated_at ?? null,
   created_at: row.created_at,
   updated_at: row.updated_at,
 });
@@ -156,6 +163,13 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
           if (updates.onboarding_sent_at !== undefined) updateData.onboarding_sent_at = updates.onboarding_sent_at;
           if (updates.onboarding_completed_at !== undefined) updateData.onboarding_completed_at = updates.onboarding_completed_at;
           if (updates.converted_to_colleague_id !== undefined) updateData.converted_to_colleague_id = updates.converted_to_colleague_id;
+          if (updates.buddy_id !== undefined) updateData.buddy_id = updates.buddy_id;
+          if (updates.buddy_meeting_done !== undefined) updateData.buddy_meeting_done = updates.buddy_meeting_done;
+          if (updates.academy_completed !== undefined) updateData.academy_completed = updates.academy_completed;
+          if (updates.first_clients_assigned !== undefined) updateData.first_clients_assigned = updates.first_clients_assigned;
+          if (updates.fully_onboarded !== undefined) updateData.fully_onboarded = updates.fully_onboarded;
+          if (updates.onboarding_terminated !== undefined) updateData.onboarding_terminated = updates.onboarding_terminated;
+          if (updates.terminated_at !== undefined) updateData.terminated_at = updates.terminated_at;
 
           const { error } = await supabase.from('applicants').update(updateData).eq('id', id);
           if (error) throw error;

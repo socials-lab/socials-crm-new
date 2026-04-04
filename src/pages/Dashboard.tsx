@@ -23,6 +23,12 @@ import {
   Wrench,
   PlusCircle,
   BarChart3,
+  Send,
+  FileSignature,
+  UserMinus,
+  CheckCircle2,
+  CalendarCheck,
+  UserCheck,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format, subDays, isAfter, parseISO, addDays, differenceInDays, differenceInCalendarDays, formatDistanceToNow } from 'date-fns';
@@ -133,6 +139,32 @@ function ActivityFeedRow({ icon: Icon, title, subtitle, at, colorClass, value, i
           <span className="text-xs text-muted-foreground shrink-0">{formatRelativeDate(at)}</span>
         </div>
         <p className="text-xs text-muted-foreground break-words hyphens-auto">{subtitle}</p>
+      </div>
+      {value !== undefined && value > 0 && (
+        <span className={`text-sm font-medium whitespace-nowrap ${isNegative ? 'text-destructive' : 'text-emerald-600'}`}>
+          {isNegative ? '-' : '+'}{(value / 1000).toFixed(0)}k
+        </span>
+      )}
+    </div>
+  );
+}
+
+function ActivityRow({ icon: Icon, label, count, items, colorClass, value, isNegative }: {
+  icon: LucideIcon; label: string; count: number; items?: string[]; colorClass: string; value?: number; isNegative?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 border border-border/50">
+      <div className={`p-1.5 rounded-full ${colorClass}`}>
+        <Icon className="h-3.5 w-3.5" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">{label}</span>
+          <Badge variant="secondary" className="text-[10px] h-4">{count}</Badge>
+        </div>
+        {items && items.length > 0 && (
+          <p className="text-xs text-muted-foreground truncate">{items.join(', ')}</p>
+        )}
       </div>
       {value !== undefined && value > 0 && (
         <span className={`text-sm font-medium whitespace-nowrap ${isNegative ? 'text-destructive' : 'text-emerald-600'}`}>
@@ -380,6 +412,89 @@ export default function Dashboard() {
       .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
       .slice(0, 50);
   }, [activityHistoryRows, leads, engagements, clients, extraWorks, meetings, applicants]);
+
+  // === GROUPED RECENT ACTIVITY (last 7 days) ===
+  const recentActivity = useMemo(() => {
+    const sevenDaysAgo = subDays(new Date(), 7);
+
+    const newLeads = leads
+      .filter(l => l.created_at && isAfter(parseISO(l.created_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
+
+    const newClients = leads
+      .filter(l => l.stage === 'won' && l.converted_at && isAfter(parseISO(l.converted_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.converted_at!).getTime() - new Date(a.converted_at!).getTime());
+
+    const offersSent = leads
+      .filter(l => l.offer_sent_at && isAfter(parseISO(l.offer_sent_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.offer_sent_at!).getTime() - new Date(a.offer_sent_at!).getTime());
+
+    const contractsSigned = leads
+      .filter(l => l.contract_signed_at && isAfter(parseISO(l.contract_signed_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.contract_signed_at!).getTime() - new Date(a.contract_signed_at!).getTime());
+
+    const lostLeads = leads
+      .filter(l => l.stage === 'lost' && l.updated_at && isAfter(parseISO(l.updated_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+
+    const newEngagements = engagements
+      .filter(e => e.start_date && isAfter(parseISO(e.start_date), sevenDaysAgo))
+      .sort((a, b) => new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime());
+
+    const endedEngagements = engagements
+      .filter(e => e.end_date && isAfter(parseISO(e.end_date), sevenDaysAgo) && ['completed', 'cancelled'].includes(e.status || ''))
+      .sort((a, b) => new Date(b.end_date!).getTime() - new Date(a.end_date!).getTime());
+
+    const newExtraWorks = (extraWorks || [])
+      .filter(w => w.created_at && isAfter(parseISO(w.created_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
+
+    const approvedExtraWorks = (extraWorks || [])
+      .filter(w => w.approval_date && isAfter(parseISO(w.approval_date), sevenDaysAgo))
+      .sort((a, b) => new Date(b.approval_date!).getTime() - new Date(a.approval_date!).getTime());
+
+    const newModifications = (pendingRequests || [])
+      .filter(r => r.created_at && isAfter(parseISO(r.created_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    const approvedModifications = (pendingRequests || [])
+      .filter(r => r.reviewed_at && ['approved', 'client_approved'].includes(r.status) && isAfter(parseISO(r.reviewed_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.reviewed_at!).getTime() - new Date(a.reviewed_at!).getTime());
+
+    const newMeetingsScheduled = meetings
+      .filter(m => m.created_at && isAfter(parseISO(m.created_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    const completedMeetings = meetings
+      .filter(m => m.status === 'completed' && m.scheduled_at && isAfter(parseISO(m.scheduled_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
+
+    const newApplicants = applicants
+      .filter(a => a.created_at && isAfter(parseISO(a.created_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    const hiredApplicants = applicants
+      .filter(a => a.stage === 'hired' && a.updated_at && isAfter(parseISO(a.updated_at), sevenDaysAgo))
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+
+    const hasAnyActivity =
+      newLeads.length > 0 || newClients.length > 0 || offersSent.length > 0 || contractsSigned.length > 0 || lostLeads.length > 0 ||
+      newEngagements.length > 0 || endedEngagements.length > 0 ||
+      newExtraWorks.length > 0 || approvedExtraWorks.length > 0 ||
+      newModifications.length > 0 || approvedModifications.length > 0 ||
+      newMeetingsScheduled.length > 0 || completedMeetings.length > 0 ||
+      newApplicants.length > 0 || hiredApplicants.length > 0;
+
+    return {
+      newLeads, newClients, offersSent, contractsSigned, lostLeads,
+      newEngagements, endedEngagements,
+      newExtraWorks, approvedExtraWorks,
+      newModifications, approvedModifications,
+      newMeetingsScheduled, completedMeetings,
+      newApplicants, hiredApplicants,
+      hasAnyActivity,
+    };
+  }, [leads, engagements, extraWorks, pendingRequests, meetings, applicants]);
 
   // === CLIENT HEALTH ===
   const clientHealth = useMemo(() => {
@@ -704,7 +819,7 @@ export default function Dashboard() {
       {/* === MAIN CONTENT GRID === */}
       <div className="grid gap-6 lg:grid-cols-2">
 
-        {/* Recent Activity - Comprehensive CRM Overview */}
+        {/* Recent Activity - Grouped by category */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-medium">
@@ -712,26 +827,141 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {recentEvents.length > 0 ? (
-              <>
-                <div className="space-y-2 lg:hidden">
-                  {recentEvents.map((event) => (
-                    <ActivityFeedRow key={event.id} {...event} />
-                  ))}
-                </div>
-                <ScrollArea className="hidden h-[400px] pr-4 lg:block">
+            <ScrollArea className="h-[400px] pr-4">
+              <div className="space-y-4">
+                {/* 🎯 Sales & Leady */}
+                {(recentActivity.newClients.length > 0 || recentActivity.newLeads.length > 0 ||
+                  recentActivity.offersSent.length > 0 || recentActivity.contractsSigned.length > 0 ||
+                  recentActivity.lostLeads.length > 0) && (
                   <div className="space-y-2">
-                    {recentEvents.map((event) => (
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wide">🎯 Sales & Leady</p>
+                    {recentActivity.newClients.length > 0 && (
+                      <ActivityRow icon={UserPlus} label="Noví klienti" count={recentActivity.newClients.length}
+                        items={recentActivity.newClients.slice(0, 3).map(l => l.company_name)}
+                        colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900"
+                        value={canSeeFinancials ? recentActivity.newClients.reduce((s, l) => s + (l.estimated_price || 0), 0) : undefined} />
+                    )}
+                    {recentActivity.newLeads.length > 0 && (
+                      <ActivityRow icon={PlusCircle} label="Nové leady" count={recentActivity.newLeads.length}
+                        items={recentActivity.newLeads.slice(0, 3).map(l => l.company_name)}
+                        colorClass="text-slate-600 bg-slate-100 dark:bg-slate-800" />
+                    )}
+                    {recentActivity.offersSent.length > 0 && (
+                      <ActivityRow icon={Send} label="Odeslané nabídky" count={recentActivity.offersSent.length}
+                        items={recentActivity.offersSent.slice(0, 3).map(l => l.company_name)}
+                        colorClass="text-pink-600 bg-pink-100 dark:bg-pink-900" />
+                    )}
+                    {recentActivity.contractsSigned.length > 0 && (
+                      <ActivityRow icon={FileSignature} label="Podepsané smlouvy" count={recentActivity.contractsSigned.length}
+                        items={recentActivity.contractsSigned.slice(0, 3).map(l => l.company_name)}
+                        colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" />
+                    )}
+                    {recentActivity.lostLeads.length > 0 && (
+                      <ActivityRow icon={TrendingDown} label="Ztracené leady" count={recentActivity.lostLeads.length}
+                        items={recentActivity.lostLeads.slice(0, 3).map(l => l.company_name)}
+                        colorClass="text-red-600 bg-red-100 dark:bg-red-900"
+                        value={canSeeFinancials ? recentActivity.lostLeads.reduce((s, l) => s + (l.estimated_price || 0), 0) : undefined}
+                        isNegative />
+                    )}
+                  </div>
+                )}
+
+                {/* 📁 Zakázky & Vícepráce */}
+                {(recentActivity.newEngagements.length > 0 || recentActivity.endedEngagements.length > 0 ||
+                  recentActivity.newExtraWorks.length > 0 || recentActivity.approvedExtraWorks.length > 0) && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wide">📁 Zakázky & Vícepráce</p>
+                    {recentActivity.newEngagements.length > 0 && (
+                      <ActivityRow icon={Briefcase} label="Nové zakázky" count={recentActivity.newEngagements.length}
+                        items={recentActivity.newEngagements.slice(0, 3).map(e => e.name)}
+                        colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
+                    )}
+                    {recentActivity.endedEngagements.length > 0 && (
+                      <ActivityRow icon={UserMinus} label="Ukončené zakázky" count={recentActivity.endedEngagements.length}
+                        items={recentActivity.endedEngagements.slice(0, 3).map(e => e.name)}
+                        colorClass="text-muted-foreground bg-muted" />
+                    )}
+                    {recentActivity.newExtraWorks.length > 0 && (
+                      <ActivityRow icon={Wrench} label="Nové vícepráce" count={recentActivity.newExtraWorks.length}
+                        colorClass="text-violet-600 bg-violet-100 dark:bg-violet-900"
+                        value={canSeeFinancials ? recentActivity.newExtraWorks.reduce((s, w) => s + w.amount, 0) : undefined} />
+                    )}
+                    {recentActivity.approvedExtraWorks.length > 0 && (
+                      <ActivityRow icon={CheckCircle} label="Schválené vícepráce" count={recentActivity.approvedExtraWorks.length}
+                        colorClass="text-green-600 bg-green-100 dark:bg-green-900"
+                        value={canSeeFinancials ? recentActivity.approvedExtraWorks.reduce((s, w) => s + w.amount, 0) : undefined} />
+                    )}
+                  </div>
+                )}
+
+                {/* ✏️ Návrhy změn */}
+                {(recentActivity.newModifications.length > 0 || recentActivity.approvedModifications.length > 0) && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wide">✏️ Návrhy změn</p>
+                    {recentActivity.newModifications.length > 0 && (
+                      <ActivityRow icon={FileText} label="Nové návrhy" count={recentActivity.newModifications.length}
+                        items={recentActivity.newModifications.slice(0, 3).map(m => m.engagement_name)}
+                        colorClass="text-amber-600 bg-amber-100 dark:bg-amber-900" />
+                    )}
+                    {recentActivity.approvedModifications.length > 0 && (
+                      <ActivityRow icon={CheckCircle2} label="Schválené návrhy" count={recentActivity.approvedModifications.length}
+                        items={recentActivity.approvedModifications.slice(0, 3).map(m => m.engagement_name)}
+                        colorClass="text-green-600 bg-green-100 dark:bg-green-900" />
+                    )}
+                  </div>
+                )}
+
+                {/* 📅 Schůzky */}
+                {(recentActivity.newMeetingsScheduled.length > 0 || recentActivity.completedMeetings.length > 0) && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wide">📅 Schůzky</p>
+                    {recentActivity.newMeetingsScheduled.length > 0 && (
+                      <ActivityRow icon={Calendar} label="Naplánované" count={recentActivity.newMeetingsScheduled.length}
+                        items={recentActivity.newMeetingsScheduled.slice(0, 3).map(m => m.title)}
+                        colorClass="text-blue-600 bg-blue-100 dark:bg-blue-900" />
+                    )}
+                    {recentActivity.completedMeetings.length > 0 && (
+                      <ActivityRow icon={CalendarCheck} label="Proběhlé" count={recentActivity.completedMeetings.length}
+                        items={recentActivity.completedMeetings.slice(0, 3).map(m => m.title)}
+                        colorClass="text-teal-600 bg-teal-100 dark:bg-teal-900" />
+                    )}
+                  </div>
+                )}
+
+                {/* 👥 Recruitment */}
+                {(recentActivity.newApplicants.length > 0 || recentActivity.hiredApplicants.length > 0) && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wide">👥 Recruitment</p>
+                    {recentActivity.newApplicants.length > 0 && (
+                      <ActivityRow icon={Users} label="Noví uchazeči" count={recentActivity.newApplicants.length}
+                        items={recentActivity.newApplicants.slice(0, 3).map(a => a.full_name)}
+                        colorClass="text-slate-600 bg-slate-100 dark:bg-slate-800" />
+                    )}
+                    {recentActivity.hiredApplicants.length > 0 && (
+                      <ActivityRow icon={UserCheck} label="Přijatí" count={recentActivity.hiredApplicants.length}
+                        items={recentActivity.hiredApplicants.slice(0, 3).map(a => a.full_name)}
+                        colorClass="text-emerald-600 bg-emerald-100 dark:bg-emerald-900" />
+                    )}
+                  </div>
+                )}
+
+                {/* Detailed feed below */}
+                {recentEvents.length > 0 && (
+                  <div className="space-y-2 border-t pt-4">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">📋 Podrobný log</p>
+                    {recentEvents.slice(0, 20).map((event) => (
                       <ActivityFeedRow key={event.id} {...event} />
                     ))}
                   </div>
-                </ScrollArea>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                Žádné změny za posledních 7 dní
-              </p>
-            )}
+                )}
+
+                {!recentActivity.hasAnyActivity && recentEvents.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    Žádné změny za posledních 7 dní
+                  </p>
+                )}
+              </div>
+            </ScrollArea>
           </CardContent>
         </Card>
 

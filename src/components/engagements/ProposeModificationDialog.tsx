@@ -19,7 +19,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useCRMData } from '@/hooks/useCRMData';
 import { useModificationRequests } from '@/hooks/useModificationRequests';
 import { useAuth } from '@/hooks/useAuth';
-import type { ModificationRequestType, ServiceTier, ModificationRequestItem, ModificationProposedChanges } from '@/types/crm';
+import type { ModificationRequestType, ServiceTier, ModificationRequestItem, ModificationProposedChanges, BulkEditProposedChanges } from '@/types/crm';
+import { BulkEditStep } from '@/components/engagements/BulkEditStep';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { SERVICE_DETAILS } from '@/constants/serviceDetails';
@@ -51,6 +52,7 @@ const REQUEST_TYPE_LABELS: Record<ModificationRequestType, string> = {
   add_assignment: 'Přiřazení kolegy',
   update_assignment: 'Změna odměny kolegy',
   new_engagement: 'Nová zakázka',
+  bulk_edit: 'Hromadná úprava zakázky',
 };
 
 const REQUEST_TYPE_DESCRIPTIONS: Record<ModificationRequestType, string> = {
@@ -61,10 +63,12 @@ const REQUEST_TYPE_DESCRIPTIONS: Record<ModificationRequestType, string> = {
   add_assignment: 'Přiřazení nového kolegy k vybrané službě s definicí jeho odměny',
   update_assignment: 'Změna odměny přiřazeného kolegy',
   new_engagement: 'Nová zakázka pro stávajícího klienta — pod stejným nebo jiným SRO',
+  bulk_edit: 'Úprava všech služeb, cen a odměn celé zakázky najednou — jeden souhrnný návrh pro klienta',
 };
 
 // Types visible in the dropdown (update_assignment is merged into update_service_price)
 const VISIBLE_REQUEST_TYPES: ModificationRequestType[] = [
+  'bulk_edit',
   'expand_country',
   'add_service',
   'update_service_price',
@@ -113,6 +117,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
   const [engagementComboOpen, setEngagementComboOpen] = useState(false);
   const [requestType, setRequestType] = useState<ModificationRequestType | ''>('');
   const [requestTypeConfirmed, setRequestTypeConfirmed] = useState(false);
+  const [bulkEditChanges, setBulkEditChanges] = useState<BulkEditProposedChanges | null>(null);
   const [effectiveFrom, setEffectiveFrom] = useState<Date | undefined>(new Date());
   const [upsoldById, setUpsoldById] = useState<string>('none');
   const [note, setNote] = useState('');
@@ -385,6 +390,8 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
       setNewEngName('');
       setNewEngOnboardingEmail('');
       setNewEngServices([]);
+      // Bulk edit reset
+      setBulkEditChanges(null);
       // Bundled items reset
       setBundledItems([]);
       setBundleDiscountPercent(0);
@@ -719,6 +726,11 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           onboarding_email: newEngIsDifferentSro ? newEngOnboardingEmail : undefined,
           send_onboarding_form: newEngIsDifferentSro,
         };
+        break;
+      }
+      case 'bulk_edit': {
+        if (!bulkEditChanges) return null;
+        proposed_changes = { ...bulkEditChanges };
         break;
       }
     }
@@ -2068,6 +2080,14 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
               )}
 
               {/* NEW ENGAGEMENT FIELDS */}
+              {requestType === 'bulk_edit' && selectedEngagementId && (
+                <BulkEditStep
+                  engagementId={selectedEngagementId}
+                  onChange={setBulkEditChanges}
+                  initialData={bulkEditChanges}
+                />
+              )}
+
               {requestType === 'new_engagement' && (
                 <div className="space-y-4">
                   <h4 className="font-medium flex items-center gap-2">
@@ -2638,7 +2658,7 @@ export function ProposeModificationDialog({ open, onOpenChange, editingRequest }
           )}
 
           {/* ===== ADD ANOTHER ITEM BUTTON (after step 3 form) ===== */}
-          {selectedEngagementId && requestType && bundledItems.length > 0 && (
+          {selectedEngagementId && requestType && requestType !== 'bulk_edit' && bundledItems.length > 0 && (
             <Button
               type="button"
               variant="outline"

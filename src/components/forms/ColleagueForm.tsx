@@ -58,6 +58,7 @@ const colleagueSchema = z.object({
   is_freelancer: z.boolean(),
   internal_hourly_cost: z.coerce.number().min(0, 'Hodinová sazba musí být kladná'),
   monthly_fixed_cost: z.coerce.number().min(0).nullable(),
+  min_monthly_reward: z.coerce.number().min(0).nullable(),
   max_engagements: z.coerce.number().min(0).nullable(),
   capacity_slots: capacitySlotsSchema,
   status: z.enum(['active', 'on_hold', 'left'] as const),
@@ -106,6 +107,7 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
       is_freelancer: colleague?.is_freelancer || false,
       internal_hourly_cost: colleague?.internal_hourly_cost || 0,
       monthly_fixed_cost: colleague?.monthly_fixed_cost ?? null,
+      min_monthly_reward: colleague?.min_monthly_reward ?? null,
       max_engagements: colleague?.max_engagements ?? 5,
       capacity_slots: existingSlots,
       status: colleague?.status || 'active',
@@ -425,10 +427,10 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
                 <FormItem>
                   <FormLabel>Fixní měsíční náklad</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="number" 
+                    <Input
+                      type="number"
                       min={0}
-                      value={field.value ?? ''} 
+                      value={field.value ?? ''}
                       onChange={e => field.onChange(e.target.value ? Number(e.target.value) : null)}
                     />
                   </FormControl>
@@ -437,6 +439,25 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
               )}
             />
           </div>
+          <FormField
+            control={form.control}
+            name="min_monthly_reward"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Minimální měsíční odměna (CZK)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    placeholder="Nenastaveno"
+                    value={field.value ?? ''}
+                    onChange={e => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
         <div className="border-t pt-4">

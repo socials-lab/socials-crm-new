@@ -20,9 +20,13 @@ export type NotificationType =
   | 'extra_work_ready_to_invoice'
   | 'creative_boost_activated'
   | 'creative_boost_deadline'
-  | 'sop_update_suggested';
+  | 'sop_update_suggested'
+  | 'applicant_onboarding_completed'
+  | 'extra_work_created'
+  | 'invoice_issued'
+  | 'lead_lost';
 
-export type EntityType = 'lead' | 'engagement' | 'extra_work' | 'creative_boost' | 'modification' | 'colleague' | 'feedback' | 'sop';
+export type EntityType = 'lead' | 'engagement' | 'extra_work' | 'creative_boost' | 'modification' | 'colleague' | 'feedback' | 'sop' | 'applicant';
 
 export interface Notification {
   id: string;

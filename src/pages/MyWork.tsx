@@ -539,6 +539,17 @@ function MyWorkContent() {
               <span className="font-medium">Celkem za klientskou práci</span>
               <span className="text-xl font-bold text-primary">{totalClientEarnings.toLocaleString()} Kč</span>
             </div>
+            {currentColleague?.min_monthly_reward != null && currentColleague.min_monthly_reward > 0 && (
+              <div className="flex items-center justify-between pt-2 mt-2 border-t border-dashed">
+                <span className="text-xs text-muted-foreground">Garantovaná min. odměna</span>
+                <span className={`text-sm font-medium ${totalClientEarnings >= currentColleague.min_monthly_reward ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  {currentColleague.min_monthly_reward.toLocaleString()} Kč
+                  {totalClientEarnings < currentColleague.min_monthly_reward && (
+                    <span className="text-xs ml-1">(doplatek {(currentColleague.min_monthly_reward - totalClientEarnings).toLocaleString()} Kč)</span>
+                  )}
+                </span>
+              </div>
+            )}
           </CardContent>
         </Card>
 

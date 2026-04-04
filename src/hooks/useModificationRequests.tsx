@@ -6,6 +6,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useCRMData } from '@/hooks/useCRMData';
 import { getSessionEnsuringFresh } from '@/lib/authSession';
 import { toast } from 'sonner';
+import { notifyModificationCreated } from '@/services/notificationTriggers';
 import { withAbortTimeout, withTimeout } from '@/utils/asyncUtils';
 import type {
   ModificationRequestType,
@@ -577,10 +578,15 @@ export function useModificationRequests() {
   };
 
   const submitDraft = async (requestId: string) => {
-    return updateMutation.mutateAsync({
+    const request = pendingRequests?.find(r => r.id === requestId);
+    const result = await updateMutation.mutateAsync({
       requestId,
       updates: { status: 'pending' },
     });
+    if (request) {
+      notifyModificationCreated(request.engagement_name, request.request_type, request.engagement_name).catch(() => {});
+    }
+    return result;
   };
 
   const deleteRequest = async (requestId: string) => {

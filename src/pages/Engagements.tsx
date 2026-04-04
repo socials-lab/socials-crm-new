@@ -8,6 +8,7 @@ import { getErrorMessage } from '@/lib/errorUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { InlineEditField } from '@/components/leads/InlineEditField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -895,20 +896,60 @@ function EngagementsContent() {
                                 </button>
                               )}
                             </div>
-                            <p><span className="text-muted-foreground">Billing:</span> {
-                              engagement.billing_model === 'fixed_fee' ? 'Fixní' : 
-                              engagement.billing_model === 'spend_based' ? '% ze spendu' : 'Hybrid'
-                            }</p>
-                            <p><span className="text-muted-foreground">Začátek:</span> {new Date(engagement.start_date).toLocaleDateString('cs-CZ')}</p>
-                            {engagement.end_date && (
-                              <p><span className="text-muted-foreground">Konec:</span> {new Date(engagement.end_date).toLocaleDateString('cs-CZ')}</p>
-                            )}
-                            {engagement.notice_period_months && (
-                              <p><span className="text-muted-foreground">Výpovědní lhůta:</span> {engagement.notice_period_months} měsíce</p>
-                            )}
-                            {engagement.notes && (
-                              <p className="pt-2 border-t"><span className="text-muted-foreground">Poznámky:</span> {engagement.notes}</p>
-                            )}
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">Billing:</span>
+                              <InlineEditField
+                                value={engagement.billing_model}
+                                type="select"
+                                options={[
+                                  { value: 'fixed_fee', label: 'Fixní' },
+                                  { value: 'spend_based', label: '% ze spendu' },
+                                  { value: 'hybrid', label: 'Hybrid' },
+                                ]}
+                                onSave={(v) => safeUpdateEngagement(engagement.id, { billing_model: v as 'fixed_fee' | 'spend_based' | 'hybrid' }, 'Billing model změněn')}
+                                displayClassName="text-sm"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">Začátek:</span>
+                              <InlineEditField
+                                value={engagement.start_date?.slice(0, 10)}
+                                type="text"
+                                onSave={(v) => safeUpdateEngagement(engagement.id, { start_date: v }, 'Datum začátku změněno')}
+                                displayClassName="text-sm"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">Konec:</span>
+                              <InlineEditField
+                                value={engagement.end_date?.slice(0, 10) || ''}
+                                type="text"
+                                emptyText="Bez konce"
+                                onSave={(v) => safeUpdateEngagement(engagement.id, { end_date: v || null }, v ? 'Datum konce změněno' : 'Datum konce odebráno')}
+                                displayClassName="text-sm"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">Výpovědní lhůta:</span>
+                              <InlineEditField
+                                value={engagement.notice_period_months ?? ''}
+                                type="number"
+                                suffix=" měsíce"
+                                emptyText="Nenastaveno"
+                                onSave={(v) => safeUpdateEngagement(engagement.id, { notice_period_months: v ? Number(v) : null }, 'Výpovědní lhůta změněna')}
+                                displayClassName="text-sm"
+                              />
+                            </div>
+                            <div className="pt-2 border-t">
+                              <span className="text-muted-foreground text-sm">Poznámky:</span>
+                              <InlineEditField
+                                value={engagement.notes || ''}
+                                type="textarea"
+                                emptyText="Klikni pro přidání poznámky..."
+                                onSave={(v) => safeUpdateEngagement(engagement.id, { notes: v }, 'Poznámky aktualizovány')}
+                                displayClassName="text-sm"
+                              />
+                            </div>
                           </div>
                         );
                       })()}
@@ -1354,268 +1395,67 @@ function EngagementsContent() {
                       )}
                     </div>
 
-                    {/* Documents section - offer and contract links - always visible with inline editing */}
+                    {/* Smlouva section - PDF upload */}
                     <div className="space-y-3">
                       <h4 className="font-medium text-sm flex items-center gap-2">
                         <FileText className="h-4 w-4 text-muted-foreground" />
-                        📄 Dokumenty
+                        📎 Smlouva
                       </h4>
-                      <div className="space-y-2">
-                        {/* Nabídka */}
-                        {editingOfferUrlId === engagement.id ? (
-                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                            <Input
-                              type="text"
-                              inputMode="url"
-                              value={tempOfferUrl}
-                              onChange={(e) => setTempOfferUrl(e.target.value)}
-                              className="h-8 text-sm flex-1"
-                              placeholder="https://notion.so/..."
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  safeUpdateEngagement(engagement.id, { offer_url: normalizeOptionalUrl(tempOfferUrl) }, 'Odkaz na nabídku uložen');
-                                  setEditingOfferUrlId(null);
-                                } else if (e.key === 'Escape') {
-                                  setEditingOfferUrlId(null);
-                                }
-                              }}
-                            />
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-status-active"
-                              onClick={() => {
-                                safeUpdateEngagement(engagement.id, { offer_url: normalizeOptionalUrl(tempOfferUrl) }, 'Odkaz na nabídku uložen');
-                                setEditingOfferUrlId(null);
-                              }}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => setEditingOfferUrlId(null)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : engagement.offer_url ? (
-                          <div className="flex items-center gap-2">
-                            <a
-                              href={engagement.offer_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background border text-sm text-primary hover:bg-muted transition-colors flex-1"
-                            >
-                              <FileText className="h-4 w-4" />
-                              Nabídka v Notion
-                              <ExternalLink className="h-3.5 w-3.5 ml-auto" />
-                            </a>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingOfferUrlId(engagement.id);
-                                setTempOfferUrl(engagement.offer_url || '');
-                              }}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-sm w-full justify-start text-muted-foreground"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingOfferUrlId(engagement.id);
-                              setTempOfferUrl('');
-                            }}
-                          >
-                            <Plus className="h-3.5 w-3.5 mr-1" />
-                            Přidat odkaz na nabídku
-                          </Button>
-                        )}
-
-                        {/* Smlouva */}
-                        {editingContractUrlId === engagement.id ? (
-                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                            <Input
-                              type="text"
-                              inputMode="url"
-                              value={tempContractUrl}
-                              onChange={(e) => setTempContractUrl(e.target.value)}
-                              className="h-8 text-sm flex-1"
-                              placeholder="https://digisign.cz/..."
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  safeUpdateEngagement(engagement.id, { contract_url: normalizeOptionalUrl(tempContractUrl) }, 'Odkaz na smlouvu uložen');
-                                  setEditingContractUrlId(null);
-                                } else if (e.key === 'Escape') {
-                                  setEditingContractUrlId(null);
-                                }
-                              }}
-                            />
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-status-active"
-                              onClick={() => {
-                                safeUpdateEngagement(engagement.id, { contract_url: normalizeOptionalUrl(tempContractUrl) }, 'Odkaz na smlouvu uložen');
-                                setEditingContractUrlId(null);
-                              }}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => setEditingContractUrlId(null)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : engagement.contract_url ? (
-                          <div className="flex items-center gap-2">
-                            <a
-                              href={engagement.contract_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background border text-sm text-primary hover:bg-muted transition-colors flex-1"
-                            >
-                              <FileText className="h-4 w-4" />
-                              Smlouva v DigiSign
-                              <ExternalLink className="h-3.5 w-3.5 ml-auto" />
-                            </a>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingContractUrlId(engagement.id);
-                                setTempContractUrl(engagement.contract_url || '');
-                              }}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-sm w-full justify-start text-muted-foreground"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingContractUrlId(engagement.id);
-                              setTempContractUrl('');
-                            }}
-                          >
-                            <Plus className="h-3.5 w-3.5 mr-1" />
-                            Přidat odkaz na smlouvu
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Freelo link - always visible */}
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-sm flex items-center gap-2">
-                        <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                        Projektový nástroj
-                      </h4>
-                      {editingFreeloId === engagement.id ? (
-                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                          <Input
-                            type="text"
-                            inputMode="url"
-                            value={tempFreeloUrl}
-                            onChange={(e) => setTempFreeloUrl(e.target.value)}
-                            className="h-8 text-sm flex-1"
-                            placeholder="https://app.freelo.io/..."
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                safeUpdateEngagement(engagement.id, { freelo_url: normalizeOptionalUrl(tempFreeloUrl) }, 'Freelo odkaz uložen');
-                                setEditingFreeloId(null);
-                              } else if (e.key === 'Escape') {
-                                setEditingFreeloId(null);
-                              }
-                            }}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-status-active"
-                            onClick={() => {
-                              safeUpdateEngagement(engagement.id, { freelo_url: normalizeOptionalUrl(tempFreeloUrl) }, 'Freelo odkaz uložen');
-                              setEditingFreeloId(null);
-                            }}
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setEditingFreeloId(null)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : engagement.freelo_url ? (
+                      {engagement.contract_url ? (
                         <div className="flex items-center gap-2">
                           <a
-                            href={engagement.freelo_url}
+                            href={engagement.contract_url}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-background border text-sm text-primary hover:bg-muted transition-colors"
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background border text-sm text-primary hover:bg-muted transition-colors flex-1"
                           >
-                            <img 
-                              src="https://www.freelo.io/favicon.ico" 
-                              alt="Freelo" 
-                              className="h-4 w-4"
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                            Otevřít ve Freelu
-                            <ExternalLink className="h-3.5 w-3.5" />
+                            <FileText className="h-4 w-4" />
+                            Smlouva
+                            <ExternalLink className="h-3.5 w-3.5 ml-auto" />
                           </a>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-8 w-8 text-destructive"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setEditingFreeloId(engagement.id);
-                              setTempFreeloUrl(engagement.freelo_url || '');
+                              safeUpdateEngagement(engagement.id, { contract_url: null }, 'Smlouva odebrána');
                             }}
                           >
-                            <Pencil className="h-3.5 w-3.5" />
+                            <X className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       ) : (
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 text-sm"
+                          className="h-9 text-sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setEditingFreeloId(engagement.id);
-                            setTempFreeloUrl('');
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = '.pdf';
+                            input.onchange = async (evt) => {
+                              const file = (evt.target as HTMLInputElement).files?.[0];
+                              if (!file) return;
+                              try {
+                                const { data, error } = await supabase.storage
+                                  .from('contracts')
+                                  .upload(`${engagement.id}/${file.name}`, file, { upsert: true });
+                                if (error) throw error;
+                                const { data: urlData } = supabase.storage.from('contracts').getPublicUrl(data.path);
+                                safeUpdateEngagement(engagement.id, { contract_url: urlData.publicUrl }, 'Smlouva nahrána');
+                              } catch (err) {
+                                toast.error('Nepodařilo se nahrát smlouvu');
+                                console.error(err);
+                              }
+                            };
+                            input.click();
                           }}
                         >
                           <Plus className="h-3.5 w-3.5 mr-1" />
-                          Přidat Freelo odkaz
+                          Nahrát smlouvu
                         </Button>
                       )}
                     </div>

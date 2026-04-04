@@ -168,6 +168,7 @@ function ColleaguesContent() {
             is_freelancer: colleagueData.is_freelancer,
             internal_hourly_cost: colleagueData.internal_hourly_cost,
             monthly_fixed_cost: colleagueData.monthly_fixed_cost,
+            min_monthly_reward: colleagueData.min_monthly_reward,
             max_engagements: colleagueData.max_engagements,
           },
         });

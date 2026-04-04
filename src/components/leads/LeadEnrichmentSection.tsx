@@ -19,6 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import { InlineEditField } from './InlineEditField';
 import type { Lead } from '@/types/crm';
 
 interface LeadEnrichmentSectionProps {
@@ -91,17 +92,21 @@ function InfoRow({ label, value }: { label: string; value: string | null | undef
 }
 
 /** Summary bar shown at the top of lead detail */
-export function LeadSummaryBar({ lead }: LeadEnrichmentSectionProps) {
+export function LeadSummaryBar({ lead, onUpdate }: LeadEnrichmentSectionProps & { onUpdate?: (updates: Partial<typeof lead>) => void }) {
+  const handleSave = (field: string, value: string) => {
+    if (onUpdate) onUpdate({ [field]: value || null });
+  };
+
   const fields = [
-    { label: 'Jméno', value: lead.contact_name },
-    { label: 'E-mail', value: lead.contact_email },
-    { label: 'Telefon', value: lead.contact_phone },
-    { label: 'Web', value: lead.website, isLink: true },
-    { label: 'Rozpočet', value: lead.enrichment_ad_spend_range || (lead.ad_spend_monthly ? `${lead.ad_spend_monthly.toLocaleString('cs-CZ')} Kč` : null) },
-    { label: 'Skóre', value: lead.lead_score !== null && lead.lead_score !== undefined ? String(lead.lead_score) : null },
-    { label: 'Kvalifikace', value: lead.enrichment_qualification_tier },
-    { label: 'Schůzka', value: lead.booking_datetime ? new Date(lead.booking_datetime).toLocaleDateString('cs-CZ') : '–' },
-    { label: 'Datum', value: lead.created_at ? new Date(lead.created_at).toLocaleDateString('cs-CZ') : null },
+    { label: 'Jméno', value: lead.contact_name, field: 'contact_name' },
+    { label: 'E-mail', value: lead.contact_email, field: 'contact_email' },
+    { label: 'Telefon', value: lead.contact_phone, field: 'contact_phone' },
+    { label: 'Web', value: lead.website, field: 'website', isLink: true },
+    { label: 'Rozpočet', value: lead.enrichment_ad_spend_range || (lead.ad_spend_monthly ? `${lead.ad_spend_monthly.toLocaleString('cs-CZ')} Kč` : null), field: null },
+    { label: 'Skóre', value: lead.lead_score !== null && lead.lead_score !== undefined ? String(lead.lead_score) : null, field: null },
+    { label: 'Kvalifikace', value: lead.enrichment_qualification_tier, field: null },
+    { label: 'Schůzka', value: lead.booking_datetime ? new Date(lead.booking_datetime).toLocaleDateString('cs-CZ') : '–', field: null },
+    { label: 'Datum', value: lead.created_at ? new Date(lead.created_at).toLocaleDateString('cs-CZ') : null, field: null },
   ];
 
   return (
@@ -120,7 +125,14 @@ export function LeadSummaryBar({ lead }: LeadEnrichmentSectionProps) {
           <tr>
             {fields.map(f => (
               <td key={`v-${f.label}`} className="px-3 py-2.5 whitespace-nowrap">
-                {f.isLink && f.value ? (
+                {f.field && onUpdate ? (
+                  <InlineEditField
+                    value={f.value || ''}
+                    onSave={(v) => handleSave(f.field!, v)}
+                    emptyText="–"
+                    displayClassName={cn("text-sm", f.isLink && f.value && "text-primary")}
+                  />
+                ) : f.isLink && f.value ? (
                   <a href={f.value.startsWith('http') ? f.value : `https://${f.value}`} target="_blank" rel="noopener noreferrer"
                     className="text-primary hover:underline">
                     {f.value}

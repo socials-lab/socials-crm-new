@@ -1,138 +1,348 @@
 import { useState, useMemo } from 'react';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
 import { ApplicantCard } from './ApplicantCard';
 import type { Applicant, ApplicantStage } from '@/types/applicant';
-import { APPLICANT_STAGE_CONFIG, APPLICANT_STAGE_ORDER } from '@/types/applicant';
+import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applicant';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { ChevronDown, ChevronUp, Users, GraduationCap, Briefcase, CheckCircle2, XCircle } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 
 interface ApplicantsKanbanProps {
   applicants: Applicant[];
   onApplicantClick: (applicant: Applicant) => void;
   onStageChange: (applicantId: string, newStage: ApplicantStage) => void;
+  onUpdateApplicant?: (applicantId: string, data: Partial<Applicant>) => void;
 }
 
-export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange }: ApplicantsKanbanProps) {
+// Hiring pipeline stages (before acceptance)
+const HIRING_STAGES: ApplicantStage[] = [
+  'new_applicant',
+  'invited_interview',
+  'interview_done',
+  'offer_sent',
+  'hired',
+];
+
+// Closed/end stages
+const CLOSED_STAGES: ApplicantStage[] = ['bad_fit', 'withdrawn', 'postponed'];
+
+// Onboarding pipeline steps (after hired)
+type OnboardingStep = 'buddy_meeting' | 'academy' | 'first_clients' | 'fully_ready' | 'terminated';
+
+const ONBOARDING_STEP_CONFIG: Record<OnboardingStep, { label: string; icon: typeof Users; color: string }> = {
+  buddy_meeting: { label: 'Schůzka s buddym', icon: Users, color: 'bg-blue-500/10 border-blue-200' },
+  academy: { label: 'Akademie', icon: GraduationCap, color: 'bg-violet-500/10 border-violet-200' },
+  first_clients: { label: 'Přidělení klientů', icon: Briefcase, color: 'bg-amber-500/10 border-amber-200' },
+  fully_ready: { label: '100 % Ready', icon: CheckCircle2, color: 'bg-emerald-500/10 border-emerald-200' },
+  terminated: { label: 'Ukončeno', icon: XCircle, color: 'bg-destructive/10 border-destructive/20' },
+};
+
+const ONBOARDING_STEP_ORDER: OnboardingStep[] = ['buddy_meeting', 'academy', 'first_clients', 'fully_ready', 'terminated'];
+
+function getOnboardingStep(a: Applicant): OnboardingStep {
+  if (a.onboarding_terminated) return 'terminated';
+  if (a.fully_onboarded) return 'fully_ready';
+  if (a.first_clients_assigned) return 'first_clients';
+  if (a.academy_completed) return 'academy';
+  return 'buddy_meeting';
+}
+
+export function ApplicantsKanban({ applicants, onApplicantClick, onStageChange, onUpdateApplicant }: ApplicantsKanbanProps) {
   const [draggedApplicantId, setDraggedApplicantId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<ApplicantStage | null>(null);
+  const [dragOverOnboardingStep, setDragOverOnboardingStep] = useState<OnboardingStep | null>(null);
+  const [closedOpen, setClosedOpen] = useState(false);
 
   const applicantsByStage = useMemo(() => {
     const grouped: Record<ApplicantStage, Applicant[]> = {
-      new_applicant: [],
-      invited_interview: [],
-      interview_done: [],
-      offer_sent: [],
-      hired: [],
-      rejected: [],
-      withdrawn: [],
+      new_applicant: [], invited_interview: [], interview_done: [],
+      offer_sent: [], hired: [], bad_fit: [], withdrawn: [], postponed: [],
     };
-
-    applicants.forEach(applicant => {
-      if (grouped[applicant.stage]) {
-        grouped[applicant.stage].push(applicant);
-      }
-    });
-
+    applicants.forEach(a => { if (grouped[a.stage]) grouped[a.stage].push(a); });
     return grouped;
   }, [applicants]);
 
-  const getStageStats = (stage: ApplicantStage) => {
-    const stageApplicants = applicantsByStage[stage];
-    return {
-      count: stageApplicants.length,
+  // Hired applicants split into onboarding steps
+  const hiredApplicants = applicantsByStage.hired;
+  const onboardingByStep = useMemo(() => {
+    const grouped: Record<OnboardingStep, Applicant[]> = {
+      buddy_meeting: [], academy: [], first_clients: [], fully_ready: [], terminated: [],
     };
-  };
+    hiredApplicants.forEach(a => {
+      grouped[getOnboardingStep(a)].push(a);
+    });
+    return grouped;
+  }, [hiredApplicants]);
 
-  const handleDragStart = (e: React.DragEvent, applicantId: string) => {
-    setDraggedApplicantId(applicantId);
+  const closedCount = applicantsByStage.bad_fit.length + applicantsByStage.withdrawn.length + applicantsByStage.postponed.length;
+
+  // Drag & drop handlers for hiring pipeline
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedApplicantId(id);
     e.dataTransfer.effectAllowed = 'move';
   };
-
-  const handleDragEnd = () => {
-    setDraggedApplicantId(null);
-    setDragOverStage(null);
-  };
-
+  const handleDragEnd = () => { setDraggedApplicantId(null); setDragOverStage(null); setDragOverOnboardingStep(null); };
   const handleDragOver = (e: React.DragEvent, stage: ApplicantStage) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOverStage(stage);
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverStage(stage); setDragOverOnboardingStep(null);
   };
-
-  const handleDragLeave = () => {
-    setDragOverStage(null);
-  };
-
+  const handleDragLeave = () => { setDragOverStage(null); setDragOverOnboardingStep(null); };
   const handleDrop = (e: React.DragEvent, newStage: ApplicantStage) => {
     e.preventDefault();
-    if (draggedApplicantId) {
-      onStageChange(draggedApplicantId, newStage);
-    }
-    setDraggedApplicantId(null);
-    setDragOverStage(null);
+    if (draggedApplicantId) onStageChange(draggedApplicantId, newStage);
+    setDraggedApplicantId(null); setDragOverStage(null); setDragOverOnboardingStep(null);
   };
 
-  // Show main stages in kanban (hide rejected/withdrawn by default or show at end)
-  const mainStages: ApplicantStage[] = ['new_applicant', 'invited_interview', 'interview_done', 'offer_sent', 'hired'];
-  const endStages: ApplicantStage[] = ['rejected', 'withdrawn'];
+  // Drag & drop handlers for onboarding pipeline
+  const handleOnboardingDragOver = (e: React.DragEvent, step: OnboardingStep) => {
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverOnboardingStep(step); setDragOverStage(null);
+  };
+  const handleOnboardingDrop = (e: React.DragEvent, step: OnboardingStep) => {
+    e.preventDefault();
+    if (draggedApplicantId && onUpdateApplicant) {
+      // First ensure applicant is in 'hired' stage
+      const applicant = applicants.find(a => a.id === draggedApplicantId);
+      if (applicant && applicant.stage !== 'hired') {
+        onStageChange(draggedApplicantId, 'hired');
+      }
+      
+      // Handle terminated step
+      if (step === 'terminated') {
+        onUpdateApplicant(draggedApplicantId, {
+          onboarding_terminated: true,
+          terminated_at: new Date().toISOString(),
+        });
+      } else {
+        // Set onboarding flags based on target step
+        const stepIndex = ONBOARDING_STEP_ORDER.indexOf(step);
+        onUpdateApplicant(draggedApplicantId, {
+          onboarding_terminated: false,
+          terminated_at: null,
+          buddy_meeting_done: stepIndex >= 1, // completed if past buddy_meeting
+          academy_completed: stepIndex >= 2,
+          first_clients_assigned: stepIndex >= 3,
+          fully_onboarded: step === 'fully_ready',
+        });
+      }
+    }
+    setDraggedApplicantId(null); setDragOverStage(null); setDragOverOnboardingStep(null);
+  };
 
-  return (
-    <div className="flex gap-4 overflow-x-auto pb-4">
-      {[...mainStages, ...endStages].map((stage) => {
-        const config = APPLICANT_STAGE_CONFIG[stage];
-        const stats = getStageStats(stage);
-        const isDropTarget = dragOverStage === stage;
-        const isEndStage = endStages.includes(stage);
-
-        return (
-          <div
-            key={stage}
-            className={cn(
-              "flex-shrink-0 w-72 flex flex-col bg-muted/30 rounded-lg",
-              isEndStage && "w-56 opacity-80"
-            )}
-            onDragOver={(e) => handleDragOver(e, stage)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, stage)}
-          >
-            {/* Column Header */}
-            <div className={cn(
-              "px-3 py-2 rounded-t-lg border-b",
-              config.color
-            )}>
-              <div className="flex items-center justify-between">
-                <span className="font-medium text-sm">{config.title}</span>
-                <span className="text-xs font-semibold bg-background/50 px-2 py-0.5 rounded-full">
-                  {stats.count}
-                </span>
-              </div>
-            </div>
-
-            {/* Column Content */}
-            <div
-              className={cn(
-                "flex-1 p-2 space-y-2 min-h-[200px] transition-colors",
-                isDropTarget && "bg-primary/10 ring-2 ring-primary/30 ring-inset rounded-b-lg"
-              )}
-            >
-              {applicantsByStage[stage].map((applicant) => (
-                <ApplicantCard
-                  key={applicant.id}
-                  applicant={applicant}
-                  onClick={() => onApplicantClick(applicant)}
-                  onDragStart={(e) => handleDragStart(e, applicant.id)}
-                  onDragEnd={handleDragEnd}
-                  isDragging={draggedApplicantId === applicant.id}
-                />
-              ))}
-              
-              {applicantsByStage[stage].length === 0 && (
-                <div className="flex items-center justify-center h-24 text-muted-foreground text-sm">
-                  Žádní uchazeči
-                </div>
-              )}
+  const renderStageColumn = (stage: ApplicantStage, compact = false) => {
+    const config = APPLICANT_STAGE_CONFIG[stage];
+    const stageApplicants = applicantsByStage[stage];
+    const isDropTarget = dragOverStage === stage;
+    // Don't show "hired" in hiring pipeline - they appear in onboarding
+    if (stage === 'hired') {
+      return (
+        <div
+          key={stage}
+          className={cn(
+            "rounded-lg border transition-all flex flex-col bg-muted/20 min-h-[140px]",
+            isDropTarget && "ring-2 ring-primary shadow-lg"
+          )}
+          onDragOver={(e) => handleDragOver(e, stage)}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, stage)}
+        >
+          <div className={cn("p-2.5 border-b flex-shrink-0", config.color)}>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-xs whitespace-nowrap">{config.title}</span>
+              <Badge variant="secondary" className="ml-auto text-xs px-1.5 py-0">
+                {stageApplicants.length}
+              </Badge>
             </div>
           </div>
-        );
-      })}
+          <div className="p-3 flex-1 flex items-center justify-center">
+            <p className="text-xs text-muted-foreground text-center">
+              {stageApplicants.length > 0 
+                ? `${stageApplicants.length} kandidát${stageApplicants.length > 1 ? 'ů' : ''} v onboarding pipeline ↓`
+                : 'Přetáhněte sem kandidáta'}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        key={stage}
+        className={cn(
+          "rounded-lg border transition-all flex flex-col bg-muted/20",
+          isDropTarget && "ring-2 ring-primary shadow-lg",
+          compact ? "min-h-[100px]" : "min-h-[140px]"
+        )}
+        onDragOver={(e) => handleDragOver(e, stage)}
+        onDragLeave={handleDragLeave}
+        onDrop={(e) => handleDrop(e, stage)}
+      >
+        <div className={cn("p-2.5 border-b flex-shrink-0", config.color)}>
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-xs whitespace-nowrap">{config.title}</span>
+            <Badge variant="secondary" className="ml-auto text-xs px-1.5 py-0">
+              {stageApplicants.length}
+            </Badge>
+          </div>
+        </div>
+        <div className={cn(
+          "p-1.5 space-y-1.5 flex-1",
+          compact && "max-h-[150px] overflow-y-auto"
+        )}>
+          {stageApplicants.map(applicant => (
+            <ApplicantCard
+              key={applicant.id}
+              applicant={applicant}
+              onClick={() => onApplicantClick(applicant)}
+              onDragStart={(e) => handleDragStart(e, applicant.id)}
+              onDragEnd={handleDragEnd}
+              isDragging={draggedApplicantId === applicant.id}
+            />
+          ))}
+          {stageApplicants.length === 0 && (
+            <div className="text-center py-4 text-xs text-muted-foreground">—</div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* 1. Hiring Pipeline */}
+      <div>
+        <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+          📋 Nábor
+        </h3>
+        <div className="overflow-x-auto scrollbar-thin pb-2">
+          <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
+            {HIRING_STAGES.map(stage => (
+              <div key={stage} className="w-[260px] flex-shrink-0">
+                {renderStageColumn(stage)}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Onboarding Pipeline */}
+      {hiredApplicants.length > 0 && (
+        <div>
+          <Separator className="mb-4" />
+          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+            🚀 Zapracování
+            <Badge variant="outline" className="text-xs">{hiredApplicants.length}</Badge>
+          </h3>
+          <div className="overflow-x-auto scrollbar-thin pb-2">
+            <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
+              {ONBOARDING_STEP_ORDER.map(step => {
+                const config = ONBOARDING_STEP_CONFIG[step];
+                const Icon = config.icon;
+                const stepApplicants = onboardingByStep[step];
+                const isDropTarget = dragOverOnboardingStep === step;
+
+                return (
+                  <div
+                    key={step}
+                    className={cn(
+                      "w-[260px] flex-shrink-0 rounded-lg border flex flex-col min-h-[140px] transition-all",
+                      config.color,
+                      isDropTarget && "ring-2 ring-primary shadow-lg"
+                    )}
+                    onDragOver={(e) => handleOnboardingDragOver(e, step)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleOnboardingDrop(e, step)}
+                  >
+                    <div className="p-2.5 border-b flex items-center gap-2">
+                      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="font-medium text-xs whitespace-nowrap">{config.label}</span>
+                      <Badge variant="secondary" className="ml-auto text-xs px-1.5 py-0">
+                        {stepApplicants.length}
+                      </Badge>
+                    </div>
+                    <div className="p-1.5 space-y-1.5 flex-1">
+                      {stepApplicants.map(applicant => (
+                        <Card
+                          key={applicant.id}
+                          className="cursor-grab hover:shadow-md hover:border-primary/30 transition-all active:cursor-grabbing"
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, applicant.id)}
+                          onDragEnd={handleDragEnd}
+                          onClick={() => onApplicantClick(applicant)}
+                        >
+                          <CardContent className="p-2.5">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium text-sm">{applicant.full_name}</p>
+                                <p className="text-xs text-muted-foreground">{applicant.position}</p>
+                              </div>
+                              {applicant.buddy_id && (
+                                <Badge variant="outline" className="text-[10px]">Buddy</Badge>
+                              )}
+                            </div>
+                            {/* Contact info instead of checklist - stage is already visible from column */}
+                            <div className="mt-1.5 space-y-0.5">
+                              {applicant.email && (
+                                <p className="text-[11px] text-muted-foreground truncate">{applicant.email}</p>
+                              )}
+                              {applicant.phone && (
+                                <p className="text-[11px] text-muted-foreground">{applicant.phone}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t">
+                              <Badge variant="secondary" className="text-[10px]">
+                                {APPLICANT_SOURCE_LABELS[applicant.source]}
+                              </Badge>
+                              <span className="text-[10px] text-muted-foreground">
+                                {format(new Date(applicant.created_at), 'd. M.', { locale: cs })}
+                              </span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                      {stepApplicants.length === 0 && (
+                        <div className="text-center py-4 text-xs text-muted-foreground">—</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Closed - collapsible */}
+      <Collapsible open={closedOpen} onOpenChange={setClosedOpen}>
+        <CollapsibleTrigger asChild>
+          <button className="flex items-center gap-2 w-full p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors text-left">
+            <span className="text-sm font-medium">Uzavřené</span>
+            <Badge variant="outline" className="text-xs">{closedCount}</Badge>
+            <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-destructive" />
+                {applicantsByStage.bad_fit.length} bad fit
+              </span>
+              <span className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-muted-foreground" />
+                {applicantsByStage.withdrawn.length} staženo
+              </span>
+              <span className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-amber-500" />
+                {applicantsByStage.postponed.length} odloženo
+              </span>
+              {closedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </div>
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+            {CLOSED_STAGES.map(stage => renderStageColumn(stage, true))}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }

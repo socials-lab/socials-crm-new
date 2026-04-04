@@ -255,6 +255,10 @@ export interface Engagement {
   // Document links from lead conversion
   offer_url: string | null;
   contract_url: string | null;
+  // Success fee for closing the deal
+  success_fee_colleague_id: string | null;
+  success_fee_percent: number | null;
+  success_fee_months: number | null;
   // Termination tracking (optional - only set when terminating)
   termination_reason?: TerminationReason | null;
   termination_initiated_by?: TerminationInitiatedBy | null;
@@ -315,6 +319,7 @@ export interface Colleague {
   is_freelancer: boolean;
   internal_hourly_cost: number;
   monthly_fixed_cost: number | null;
+  min_monthly_reward: number | null; // Minimální měsíční odměna garantovaná kolegovi
   capacity_hours_per_month: number | null; // Legacy - kept for extra work calculations
   max_engagements: number | null; // Max number of engagements colleague can handle
   capacity_slots: Record<string, number> | null; // Capacity slots per service type (meta, google, graphics)

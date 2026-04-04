@@ -2,6 +2,7 @@ import { useCallback, createContext, useContext, ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { withTimeout } from '@/utils/asyncUtils';
+import { notifyNewLead, notifyOfferSent, notifyContractSigned, notifyLeadLost } from '@/services/notificationTriggers';
 import type { Lead, LeadStage, LeadNote, LeadNoteType, LeadChangeType, LeadHistoryEntry } from '@/types/crm';
 
 // Field labels for history display
@@ -287,7 +288,9 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
   });
 
   const addLead = useCallback(async (data: Omit<Lead, 'id' | 'created_at' | 'updated_at' | 'notes' | 'converted_to_client_id' | 'converted_to_engagement_id' | 'converted_at'>): Promise<Lead> => {
-    return withTimeout(addLeadMutation.mutateAsync(data), 30000);
+    const result = await withTimeout(addLeadMutation.mutateAsync(data), 30000);
+    notifyNewLead(result.id, data.company_name).catch(() => {});
+    return result;
   }, [addLeadMutation]);
 
   const updateLead = useCallback(async (id: string, data: Partial<Lead>) => {
@@ -331,6 +334,10 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
     await addHistoryEntry(id, 'stage_change', 'stage', LEAD_FIELD_LABELS.stage || 'Stav', oldStageLabel, newStageLabel);
 
     await withTimeout(updateLeadMutation.mutateAsync({ id, data: { stage } }), 30000);
+
+    // Non-blocking notifications
+    if (stage === 'lost') notifyLeadLost(id, lead.company_name).catch(() => {});
+    if (lead.offer_sent_at && !lead.contract_signed_at && stage === 'offer_sent') notifyOfferSent(id, lead.company_name).catch(() => {});
   }, [leads, updateLeadMutation, addHistoryEntry]);
 
   const addNote = useCallback(async (

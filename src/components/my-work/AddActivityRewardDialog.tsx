@@ -18,7 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Calculator, Megaphone, Building2, Briefcase } from 'lucide-react';
+import { Calculator, Megaphone, Building2, Briefcase, RefreshCw } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import type { ActivityReward, ActivityCategory } from '@/hooks/useActivityRewards';
 import { CATEGORY_LABELS, generateInvoiceItemName } from '@/hooks/useActivityRewards';
@@ -49,6 +50,7 @@ export function AddActivityRewardDialog({
   const [hourlyRate, setHourlyRate] = useState('');
   const [activityDate, setActivityDate] = useState(defaultDate ?? format(new Date(), 'yyyy-MM-dd'));
   const [isAmountManual, setIsAmountManual] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Auto-calculate amount when hours and hourly rate change
@@ -106,6 +108,7 @@ export function AddActivityRewardDialog({
         hours: billingType === 'hourly' && hours ? Number(hours) : null,
         hourly_rate: billingType === 'hourly' && hourlyRate ? Number(hourlyRate) : null,
         activity_date: activityDate,
+        is_recurring: isRecurring,
         client_name: category === 'client_work' ? clientName : null,
       });
       handleClose();
@@ -126,6 +129,7 @@ export function AddActivityRewardDialog({
     setHourlyRate('');
     setActivityDate(format(new Date(), 'yyyy-MM-dd'));
     setIsAmountManual(false);
+    setIsRecurring(false);
     onOpenChange(false);
   };
 
@@ -310,6 +314,24 @@ export function AddActivityRewardDialog({
               placeholder="0"
               min={0}
             />
+          </div>
+          {/* Recurring checkbox */}
+          <div className="flex items-start gap-3 pt-2">
+            <Checkbox
+              id="recurring"
+              checked={isRecurring}
+              onCheckedChange={(checked) => setIsRecurring(checked === true)}
+              className="mt-0.5"
+            />
+            <div className="space-y-1">
+              <label htmlFor="recurring" className="text-sm font-medium flex items-center gap-1.5 cursor-pointer">
+                <RefreshCw className="h-3.5 w-3.5 text-primary" />
+                Opakovat každý měsíc
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Položka se bude automaticky zobrazovat ve fakturaci každý měsíc od zvoleného data.
+              </p>
+            </div>
           </div>
         </div>
 

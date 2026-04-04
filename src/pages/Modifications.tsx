@@ -15,7 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Clock, CheckCircle, XCircle, FileEdit, Plus, Copy, Check, Send, PackageCheck, Calendar, Mail, Building2, FileText, ArrowRight, ChevronDown, ChevronRight, History } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, FileEdit, Plus, Copy, Check, Send, PackageCheck, Calendar, Mail, Building2, FileText, ArrowRight, ChevronDown, ChevronRight, History, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import type { ModificationProposedChanges } from '@/types/crm';
 
@@ -136,6 +137,7 @@ function CollapsibleModificationCard({ request, cardContent }: { request: Stored
 
 export default function Modifications() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [approvedRequest, setApprovedRequest] = useState<StoredModificationRequest | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
@@ -505,6 +507,32 @@ export default function Modifications() {
         description="Připravte nabídku na rozšíření spolupráce se stávajícím klientem"
       />
 
+      {/* Delete All Confirmation */}
+      <AlertDialog open={deleteAllOpen} onOpenChange={setDeleteAllOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat všechny návrhy změn?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Budou smazány všechny návrhy ({pendingRequests.length}). Tuto akci nelze vrátit zpět.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                for (const req of pendingRequests) {
+                  await deleteRequest(req.id);
+                }
+                toast.success(`Smazáno ${pendingRequests.length} návrhů`);
+              }}
+            >
+              Smazat vše
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <ProposeModificationDialog
         open={dialogOpen}
         onOpenChange={(open) => {
@@ -537,10 +565,18 @@ export default function Modifications() {
                 Přidejte novou službu, rozšiřte stávající službu o další zemi nebo e-shop, upravte cenu — systém automaticky spočítá dopad na marži a připraví nabídku pro klienta.
               </p>
             </div>
-            <Button onClick={() => setDialogOpen(true)} size="lg" className="shrink-0">
-              <Plus className="h-4 w-4 mr-2" />
-              Navrhnout úpravu
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              {pendingRequests.length > 0 && (
+                <Button variant="outline" size="lg" onClick={() => setDeleteAllOpen(true)} className="text-destructive hover:text-destructive">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Smazat vše
+                </Button>
+              )}
+              <Button onClick={() => setDialogOpen(true)} size="lg">
+                <Plus className="h-4 w-4 mr-2" />
+                Navrhnout úpravu
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

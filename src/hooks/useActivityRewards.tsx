@@ -18,6 +18,7 @@ export interface ActivityReward {
   hours: number | null;
   hourly_rate: number | null;
   activity_date: string;
+  is_recurring: boolean;
   created_at: string;
   client_name?: string | null;
 }
@@ -124,10 +125,22 @@ export function useActivityRewards(colleagueId: string | null) {
     const start = startOfMonth(new Date(year, month - 1));
     const end = endOfMonth(new Date(year, month - 1));
 
-    return rewards.filter(r => {
+    const directMatches = rewards.filter(r => {
       const date = parseISO(r.activity_date);
       return isWithinInterval(date, { start, end });
     });
+
+    // Include recurring items from previous months that started before or in this month
+    const recurringFromPast = rewards.filter(r => {
+      if (!r.is_recurring) return false;
+      const date = parseISO(r.activity_date);
+      // Already included as direct match
+      if (isWithinInterval(date, { start, end })) return false;
+      // Only include if the recurring item started before this month's end
+      return date <= end;
+    });
+
+    return [...directMatches, ...recurringFromPast];
   }, [rewards, colleagueId]);
 
   const getRewardsByCategory = useCallback((year: number, month: number) => {

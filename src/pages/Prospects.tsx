@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, UserPlus, ArrowRightLeft, Search, ExternalLink, Code, Download } from 'lucide-react';
+import { Users, UserPlus, ArrowRightLeft, Search, ExternalLink, Code, Download, Upload } from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { ProspectIntegrationDialog } from '@/components/prospects/ProspectIntegrationDialog';
 import { useProspectsData } from '@/hooks/useProspectsData';
 import { ProspectDetailSheet } from '@/components/prospects/ProspectDetailSheet';
@@ -76,6 +78,53 @@ export default function Prospects() {
     URL.revokeObjectURL(url);
   };
 
+  const handleImportCSV = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    input.onchange = async (evt) => {
+      const file = (evt.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const text = await file.text();
+      const lines = text.split('\n').filter(l => l.trim());
+      if (lines.length < 2) { toast.error('CSV je prázdné'); return; }
+
+      const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
+      const nameIdx = headers.findIndex(h => ['name', 'jméno', 'jmeno', 'název', 'nazev'].includes(h));
+      const emailIdx = headers.findIndex(h => ['email', 'e-mail', 'mail'].includes(h));
+      const phoneIdx = headers.findIndex(h => ['phone', 'telefon', 'tel'].includes(h));
+      const companyIdx = headers.findIndex(h => ['company', 'firma', 'společnost', 'spolecnost'].includes(h));
+
+      if (nameIdx === -1 && emailIdx === -1) {
+        toast.error('CSV musí obsahovat sloupec "name" nebo "email"');
+        return;
+      }
+
+      const rows = lines.slice(1).map(line => {
+        const cols = line.split(',').map(c => c.replace(/^"|"$/g, '').trim());
+        return {
+          name: cols[nameIdx] || cols[emailIdx] || '',
+          email: cols[emailIdx] || '',
+          phone: phoneIdx >= 0 ? cols[phoneIdx] || null : null,
+          company: companyIdx >= 0 ? cols[companyIdx] || null : null,
+          status: 'new' as const,
+          notes: [],
+        };
+      }).filter(r => r.name || r.email);
+
+      if (rows.length === 0) { toast.error('Žádné platné záznamy v CSV'); return; }
+
+      const { error } = await supabase.from('prospects').insert(rows);
+      if (error) {
+        toast.error('Import selhal: ' + error.message);
+        return;
+      }
+      toast.success(`Importováno ${rows.length} zájemců`);
+      window.location.reload();
+    };
+    input.click();
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6 animate-fade-in">
       <PageHeader
@@ -83,6 +132,10 @@ export default function Prospects() {
         description="Kontakty z lead magnetů a webinářů"
         actions={
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleImportCSV} className="gap-1.5">
+              <Upload className="h-4 w-4" />
+              Import CSV
+            </Button>
             <Button variant="outline" size="sm" onClick={handleExportCSV} className="gap-1.5" disabled={filtered.length === 0}>
               <Download className="h-4 w-4" />
               Export CSV
