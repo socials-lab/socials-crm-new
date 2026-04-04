@@ -5,10 +5,10 @@ import { Card } from '@/components/ui/card';
 import { ShieldAlert } from 'lucide-react';
 
 export default function Upsells() {
-  const { canSeeFinancials, isSuperAdmin } = useUserRole();
+  const { canAccessPage, isSuperAdmin } = useUserRole();
   
-  // Only users with financial access can view this page
-  if (!canSeeFinancials && !isSuperAdmin) {
+  // Provize page visibility is controlled by explicit page permission.
+  if (!isSuperAdmin && !canAccessPage('upsells')) {
     return (
       <div className="space-y-6 animate-fade-in p-4 md:p-6">
         <PageHeader 
