@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getErrorMessage, isPrimaryContactConstraintError, isEngagementReferenceError } from '@/lib/errorUtils';
 import { toDateOnlyString } from '@/lib/dbNormalize';
+import { invokeWithTimeout } from '@/lib/supabaseUtils';
 import { withTimeout } from '@/utils/asyncUtils';
 import type { 
   Client, 
@@ -477,9 +478,41 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       return transformClient(result);
     },
-    onSuccess: () => {
+    onSuccess: async (createdClient) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast.success('Klient byl vytvořen');
+
+      // Auto-link newly created clients to Fakturoid (non-blocking).
+      if (createdClient.fakturoid_subject_id) return;
+
+      try {
+        const { data: fakturoidResult, error: fakturoidError } = await invokeWithTimeout<{
+          success?: boolean;
+          error?: string;
+        }>(
+          'fakturoid-create-subject',
+          { body: { client_id: createdClient.id } },
+          30000,
+        );
+
+        if (fakturoidError || !fakturoidResult?.success) {
+          console.warn('Auto Fakturoid sync failed for new client:', {
+            clientId: createdClient.id,
+            detail: fakturoidError?.message || fakturoidResult?.error,
+          });
+          toast.warning('Klient byl vytvořen, ale propojení s Fakturoid selhalo. Propojte jej manuálně v kartě klienta.');
+          return;
+        }
+
+        // Edge function writes fakturoid_subject_id with service role; refresh immediately.
+        queryClient.invalidateQueries({ queryKey: ['clients'] });
+      } catch (fakturoidErr) {
+        console.warn('Auto Fakturoid sync error for new client:', {
+          clientId: createdClient.id,
+          error: fakturoidErr,
+        });
+        toast.warning('Klient byl vytvořen, ale propojení s Fakturoid selhalo. Propojte jej manuálně v kartě klienta.');
+      }
     },
     onError: (error: { code?: string; message?: string }) => {
       console.error('Failed to create client:', error);
