@@ -300,6 +300,7 @@ export const COUNTRY_CODE_MAP: Record<string, string> = {
   "Rakousko": "AT",
   "Poland": "PL",
   "Polsko": "PL",
+  "Gibraltar": "GI",
 };
 
 export function getCountryCode(country: string): string {
