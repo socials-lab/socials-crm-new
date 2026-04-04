@@ -1,6 +1,6 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { format } from "date-fns";
-import { Bug, Lightbulb, Clock, Wrench, CheckCircle, ImageIcon, MoreHorizontal, Loader2 } from "lucide-react";
+import { Bug, Lightbulb, Clock, Wrench, CheckCircle, ImageIcon, MoreHorizontal, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,7 @@ export default function BugReports() {
   const [statusFilter, setStatusFilter] = useState<"all" | BugReportStatus>("all");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
+  const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
 
   const filteredReports = useMemo(() => {
     return reports.filter((report) => {
@@ -140,78 +141,136 @@ export default function BugReports() {
             )}
 
             {!isLoading &&
-              filteredReports.map((report) => (
-                <TableRow key={report.id}>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={report.type === "bug" ? "border-0 bg-destructive/10 text-destructive" : "border-0 bg-primary/10 text-primary"}
+              filteredReports.map((report) => {
+                const isExpanded = expandedReportId === report.id;
+                return (
+                  <Fragment key={report.id}>
+                    <TableRow
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setExpandedReportId((prev) => (prev === report.id ? null : report.id));
+                      }}
                     >
-                      {report.type === "bug" ? <Bug className="mr-1 h-3 w-3" /> : <Lightbulb className="mr-1 h-3 w-3" />}
-                      {report.type === "bug" ? "Chyba" : "Návrh"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={`gap-1 border-0 ${STATUS_VARIANT[report.status]}`}>
-                      {STATUS_ICON[report.status]}
-                      {STATUS_LABELS[report.status]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">{report.subject}</div>
-                    {report.description && (
-                      <div className="line-clamp-1 text-xs text-muted-foreground">
-                        {report.description}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="hidden text-sm md:table-cell">{report.reported_by}</TableCell>
-                  <TableCell className="hidden max-w-[220px] truncate text-xs text-muted-foreground lg:table-cell">
-                    {getPathname(report.page_url)}
-                  </TableCell>
-                  <TableCell className="hidden text-sm md:table-cell">
-                    {format(new Date(report.created_at), "d. M. yyyy HH:mm")}
-                  </TableCell>
-                  <TableCell>
-                    {report.screenshot_url ? (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => setPreviewImage(report.screenshot_url)}
-                      >
-                        <ImageIcon className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-
-                  {isAdmin && (
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" disabled={updatingStatusId === report.id}>
-                            {updatingStatusId === report.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <MoreHorizontal className="h-4 w-4" />
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={report.type === "bug" ? "border-0 bg-destructive/10 text-destructive" : "border-0 bg-primary/10 text-primary"}
+                        >
+                          {report.type === "bug" ? <Bug className="mr-1 h-3 w-3" /> : <Lightbulb className="mr-1 h-3 w-3" />}
+                          {report.type === "bug" ? "Chyba" : "Návrh"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={`gap-1 border-0 ${STATUS_VARIANT[report.status]}`}>
+                          {STATUS_ICON[report.status]}
+                          {STATUS_LABELS[report.status]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="font-medium">{report.subject}</div>
+                            {report.description && (
+                              <div className="line-clamp-1 text-xs text-muted-foreground">
+                                {report.description}
+                              </div>
                             )}
+                          </div>
+                          {isExpanded ? (
+                            <ChevronUp className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden text-sm md:table-cell">{report.reported_by}</TableCell>
+                      <TableCell className="hidden max-w-[220px] truncate text-xs text-muted-foreground lg:table-cell">
+                        {getPathname(report.page_url)}
+                      </TableCell>
+                      <TableCell className="hidden text-sm md:table-cell">
+                        {format(new Date(report.created_at), "d. M. yyyy HH:mm")}
+                      </TableCell>
+                      <TableCell>
+                        {report.screenshot_url ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setPreviewImage(report.screenshot_url);
+                            }}
+                          >
+                            <ImageIcon className="h-4 w-4" />
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {ALL_STATUSES.filter((status) => status !== report.status).map((status) => (
-                            <DropdownMenuItem key={status} onClick={() => void handleStatusChange(report.id, status)}>
-                              {STATUS_ICON[status]}
-                              <span className="ml-1.5">{STATUS_LABELS[status]}</span>
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+
+                      {isAdmin && (
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                disabled={updatingStatusId === report.id}
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                {updatingStatusId === report.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <MoreHorizontal className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {ALL_STATUSES.filter((status) => status !== report.status).map((status) => (
+                                <DropdownMenuItem key={status} onClick={() => void handleStatusChange(report.id, status)}>
+                                  {STATUS_ICON[status]}
+                                  <span className="ml-1.5">{STATUS_LABELS[status]}</span>
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                    {isExpanded && (
+                      <TableRow>
+                        <TableCell colSpan={isAdmin ? 8 : 7} className="bg-muted/30">
+                          <div className="space-y-3 py-1">
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Předmět</p>
+                              <p className="mt-1 text-sm">{report.subject}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Popis</p>
+                              <p className="mt-1 whitespace-pre-wrap text-sm">
+                                {report.description?.trim() ? report.description : "Bez popisu"}
+                              </p>
+                            </div>
+                            <div className="grid gap-2 text-xs text-muted-foreground md:grid-cols-3">
+                              <div>
+                                <span className="font-medium text-foreground">Nahlásil:</span> {report.reported_by}
+                              </div>
+                              <div>
+                                <span className="font-medium text-foreground">Vytvořeno:</span>{" "}
+                                {format(new Date(report.created_at), "d. M. yyyy HH:mm")}
+                              </div>
+                              <div className="truncate">
+                                <span className="font-medium text-foreground">Stránka:</span> {getPathname(report.page_url)}
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Fragment>
+                );
+              })}
           </TableBody>
         </Table>
       </div>

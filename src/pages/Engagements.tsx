@@ -619,7 +619,7 @@ function EngagementsContent() {
           const engagementAssignments = getAssignmentsByEngagementId(engagement.id).filter(a => !a.end_date);
           const isExpanded = expandedEngagementId === engagement.id;
           const metrics = getMetricsByEngagementId(engagement.id);
-          const invoiceHistory = getInvoicesByEngagementId(engagement.id);
+          const invoiceHistory = canViewFinancials ? getInvoicesByEngagementId(engagement.id) : [];
           const latestMetrics = metrics.sort((a, b) => {
             if (a.year !== b.year) return b.year - a.year;
             return b.month - a.month;
@@ -691,7 +691,7 @@ function EngagementsContent() {
 
                 <div className="flex min-w-0 flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end sm:gap-3">
                   {/* Unbilled one-off warning badge */}
-                  {hasUnbilledItems && (
+                  {canViewFinancials && hasUnbilledItems && (
                     <Badge variant="outline" className="text-xs whitespace-nowrap bg-amber-50 text-amber-700 border-amber-200 gap-1">
                       <AlertTriangle className="h-3 w-3" />
                       K fakturaci
@@ -744,13 +744,15 @@ function EngagementsContent() {
                           <UserPlus className="h-4 w-4 mr-2" />
                           Přiřadit kolegu
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => {
-                          setInvoiceDialogEngagement(engagement);
-                          setIsInvoiceDialogOpen(true);
-                        }}>
-                          <FileText className="h-4 w-4 mr-2" />
-                          Vytvořit fakturu
-                        </DropdownMenuItem>
+                        {canViewFinancials && (
+                          <DropdownMenuItem onClick={() => {
+                            setInvoiceDialogEngagement(engagement);
+                            setIsInvoiceDialogOpen(true);
+                          }}>
+                            <FileText className="h-4 w-4 mr-2" />
+                            Vytvořit fakturu
+                          </DropdownMenuItem>
+                        )}
                         {engagement.type === 'retainer' && !engagement.end_date && (
                           <DropdownMenuItem onClick={() => {
                             setEngagementToEnd(engagement);
@@ -1263,11 +1265,13 @@ function EngagementsContent() {
                     </div>
 
                     {/* Invoicing history section */}
-                    <EngagementInvoicingSection
-                      engagement={engagement}
-                      invoices={invoiceHistory}
-                      currency={engagement.currency}
-                    />
+                    {canViewFinancials && (
+                      <EngagementInvoicingSection
+                        engagement={engagement}
+                        invoices={invoiceHistory}
+                        currency={engagement.currency}
+                      />
+                    )}
 
                     {/* Platforms section */}
                     <div className="space-y-3">
@@ -1616,7 +1620,7 @@ function EngagementsContent() {
         })()
       )}
 
-      {invoiceDialogEngagement && (
+      {canViewFinancials && invoiceDialogEngagement && (
         <CreateInvoiceFromEngagementDialog
           open={isInvoiceDialogOpen}
           onOpenChange={(open) => {
