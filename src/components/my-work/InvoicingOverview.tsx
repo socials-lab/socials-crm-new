@@ -51,11 +51,18 @@ interface ExtraWorkForInvoice {
 interface InvoicingOverviewProps {
   selectedYear: number;
   selectedMonth: number;
-  // Client work data
+  // Client work data (for current month — used as default)
   clientRewards: ClientRewardForInvoice[];
   creativeBoostItems: CreativeBoostForInvoice[];
   commissionItems: CommissionForInvoice[];
   extraWorkItems: ExtraWorkForInvoice[];
+  // Callback to get client data for any month
+  getClientDataForMonth?: (year: number, month: number) => {
+    clientRewards: ClientRewardForInvoice[];
+    creativeBoostItems: CreativeBoostForInvoice[];
+    commissionItems: CommissionForInvoice[];
+    extraWorkItems: ExtraWorkForInvoice[];
+  };
   // Internal work data
   internalRewards: ActivityReward[];
   getRewardsByCategory: (year: number, month: number) => { marketing: ActivityReward[]; overhead: ActivityReward[]; client_work: ActivityReward[] };
@@ -139,6 +146,7 @@ export function InvoicingOverview({
   creativeBoostItems,
   commissionItems,
   extraWorkItems,
+  getClientDataForMonth,
   internalRewards,
   getRewardsByCategory,
   onAddInternalWork,
@@ -148,8 +156,18 @@ export function InvoicingOverview({
   const invoiceLineItems = useMemo(() => {
     const items: InvoiceLineItem[] = [];
 
+    const now = new Date();
+    const isCurrentMonth =
+      selectedYear === now.getFullYear() &&
+      selectedMonth === now.getMonth() + 1;
+
+    // Get client data for selected month
+    const monthData = isCurrentMonth
+      ? { clientRewards, creativeBoostItems, commissionItems, extraWorkItems }
+      : getClientDataForMonth?.(selectedYear, selectedMonth) ?? { clientRewards: [], creativeBoostItems: [], commissionItems: [], extraWorkItems: [] };
+
     // 1. Client rewards - fixed monthly fees (format: "Přímá služba – [klient] – správa účtu")
-    clientRewards.forEach((cr) => {
+    monthData.clientRewards.forEach((cr) => {
       const invoiceName = cr.isProrated
         ? `Přímá služba – ${cr.clientName} – správa účtu (poměrná část od ${cr.startDay}.)`
         : `Přímá služba – ${cr.clientName} – správa účtu`;
@@ -164,7 +182,7 @@ export function InvoicingOverview({
     });
 
     // 2. Creative Boost rewards (format: "Přímá služba – [klient] – Creative Boost")
-    creativeBoostItems.forEach((cb, idx) => {
+    monthData.creativeBoostItems.forEach((cb, idx) => {
       items.push({
         id: `cb-${idx}`,
         category: 'creative_boost',
@@ -174,7 +192,7 @@ export function InvoicingOverview({
     });
 
     // 3. Approved commissions (format: "Přímá služba – [klient] – provize za upsell")
-    commissionItems.forEach((comm, idx) => {
+    monthData.commissionItems.forEach((comm, idx) => {
       items.push({
         id: `comm-${idx}`,
         category: 'commission',
@@ -184,7 +202,7 @@ export function InvoicingOverview({
     });
 
     // 4. Extra work (format: "Přímá služba – [klient] – [název práce]")
-    extraWorkItems.forEach((ew, idx) => {
+    monthData.extraWorkItems.forEach((ew, idx) => {
       const hoursNote = ew.hours && ew.hourlyRate
         ? ` (${ew.hours}h × ${ew.hourlyRate} Kč)`
         : '';
@@ -196,7 +214,7 @@ export function InvoicingOverview({
       });
     });
 
-    // 4. Internal work (marketing + overhead) - from activity rewards
+    // 5. Internal work (marketing + overhead) - from activity rewards
     const categorized = getRewardsByCategory(selectedYear, selectedMonth);
     
     categorized.marketing.forEach((r) => {
@@ -231,7 +249,7 @@ export function InvoicingOverview({
     });
 
     return items;
-  }, [clientRewards, creativeBoostItems, commissionItems, extraWorkItems, getRewardsByCategory, selectedYear, selectedMonth]);
+  }, [clientRewards, creativeBoostItems, commissionItems, extraWorkItems, getClientDataForMonth, getRewardsByCategory, selectedYear, selectedMonth]);
 
   // Group items by category for display
   const groupedItems = useMemo(() => {

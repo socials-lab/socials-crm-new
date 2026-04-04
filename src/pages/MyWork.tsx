@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -127,10 +127,21 @@ function MyWorkContent() {
   // Get assignments for current colleague
   const myAssignments = useMemo(() => {
     if (!currentColleague) return [];
-    return assignments.filter(
-      a => a.colleague_id === currentColleague.id && !a.end_date
-    );
-  }, [assignments, currentColleague]);
+    const now = new Date();
+    return assignments.filter(a => {
+      if (a.colleague_id !== currentColleague.id || a.end_date) return false;
+      const eng = engagements.find(e => e.id === a.engagement_id);
+      if (!eng) return false;
+      // Exclude cancelled/completed engagements
+      if (eng.status === 'cancelled' || eng.status === 'completed') return false;
+      // Exclude engagements that have ended (end_date in the past)
+      if (eng.end_date && new Date(eng.end_date) < now) return false;
+      // Include active + planned that have already started
+      if (eng.status === 'active') return true;
+      if (eng.start_date && new Date(eng.start_date) <= now) return true;
+      return false;
+    });
+  }, [assignments, currentColleague, engagements]);
 
   // Calculate earnings and client data with prorated rewards
   const myWorkData = useMemo(() => {
@@ -147,7 +158,7 @@ function MyWorkContent() {
     
     myAssignments.forEach(assignment => {
       const engagement = engagements.find(e => e.id === assignment.engagement_id);
-      if (engagement && engagement.status === 'active') {
+      if (engagement) {
         const client = clients.find(c => c.id === engagement.client_id);
         if (client) {
           const monthlyAmount = assignment.monthly_cost || 0;
@@ -260,6 +271,65 @@ function MyWorkContent() {
       hourlyRate: currentColleague?.internal_hourly_cost,
     };
   });
+
+  // Get client data for any month (used by InvoicingOverview for past months)
+  const getClientDataForMonth = useCallback((year: number, month: number) => {
+    if (!currentColleague) return { clientRewards: [], creativeBoostItems: [], commissionItems: [], extraWorkItems: [] };
+    const now = new Date();
+
+    // Get assignments active in that month
+    const monthAssignments = assignments.filter(a => {
+      if (a.colleague_id !== currentColleague.id) return false;
+      const eng = engagements.find(e => e.id === a.engagement_id);
+      if (!eng) return false;
+      if (eng.status === 'cancelled' || eng.status === 'completed') return false;
+      // Check engagement was active during the requested month
+      const monthStart = new Date(year, month - 1, 1);
+      const monthEnd = new Date(year, month, 0);
+      const engStart = new Date(eng.start_date);
+      const engEnd = eng.end_date ? new Date(eng.end_date) : null;
+      if (engStart > monthEnd) return false;
+      if (engEnd && engEnd < monthStart) return false;
+      if (a.end_date && new Date(a.end_date) < monthStart) return false;
+      return true;
+    });
+
+    const cr = monthAssignments.map(assignment => {
+      const eng = engagements.find(e => e.id === assignment.engagement_id);
+      const client = eng ? clients.find(c => c.id === eng.client_id) : null;
+      const monthlyAmount = assignment.monthly_cost || 0;
+      const prorated = calculateProratedReward(monthlyAmount, assignment.start_date, year, month);
+      return {
+        clientName: client?.brand_name || client?.name || '',
+        engagementId: assignment.engagement_id,
+        amount: prorated.proratedAmount,
+        isProrated: prorated.isProrated,
+        startDay: prorated.startDay,
+      };
+    }).filter(r => r.clientName);
+
+    const cbByClient = getColleagueCreditsByClient(currentColleague.id, year, month);
+    const cb = cbByClient.map(c => ({ clientName: c.clientName, credits: c.totalCredits, reward: c.totalReward }));
+
+    const comms = getApprovedCommissionsForColleague(currentColleague.id, year, month)
+      .map(c => ({ clientName: c.clientName, amount: c.commissionAmount }));
+
+    const monthExtraWorks = extraWorks.filter(ew => {
+      if (!ew.colleague_id || ew.colleague_id !== currentColleague.id) return false;
+      if (!ew.work_date) return false;
+      const d = new Date(ew.work_date);
+      return d.getFullYear() === year && d.getMonth() + 1 === month;
+    });
+    const ew = monthExtraWorks.map(e => {
+      const client = clients.find(c => c.id === e.client_id);
+      const amount = currentColleague.internal_hourly_cost && e.hours_worked
+        ? currentColleague.internal_hourly_cost * e.hours_worked
+        : e.amount;
+      return { clientName: client?.name || '', name: e.name, amount, hours: e.hours_worked, hourlyRate: currentColleague.internal_hourly_cost };
+    });
+
+    return { clientRewards: cr, creativeBoostItems: cb, commissionItems: comms, extraWorkItems: ew };
+  }, [currentColleague, assignments, engagements, clients, extraWorks, getColleagueCreditsByClient, getApprovedCommissionsForColleague, calculateProratedReward]);
 
   // No colleague linked
   if (!currentColleague) {
@@ -671,6 +741,7 @@ function MyWorkContent() {
         creativeBoostItems={creativeBoostForInvoice}
         commissionItems={commissionsForInvoice}
         extraWorkItems={extraWorksForInvoice}
+        getClientDataForMonth={getClientDataForMonth}
         internalRewards={activityRewards}
         getRewardsByCategory={getRewardsByCategory}
         onAddInternalWork={(year, month) => {

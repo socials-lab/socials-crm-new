@@ -1137,7 +1137,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           <>
             <ScrollReveal>
               <section>
-                {offer.loom_url && (
+                {loomEmbedUrl && (
                   <div className="rounded-xl overflow-hidden border border-foreground/[0.08] mb-6">
                     <AspectRatio ratio={16 / 9}>
                       {loomEmbedUrl ? (
