@@ -5,7 +5,8 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
 
 // Default reward per credit when not configured in assignment
-const DEFAULT_REWARD_PER_CREDIT = 80;
+const DEFAULT_REWARD_PER_CREDIT = 150;
+const DEFAULT_VIDEO_REWARD_PER_CREDIT = 100;
 import type {
   OutputType,
   CreativeBoostClientMonth,
@@ -683,9 +684,9 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
 
       let engagementId: string | null = null;
       let engagementName = '';
-      let rewardPerCredit = 80;
+      let rewardPerCredit = DEFAULT_REWARD_PER_CREDIT;
       let bannerRewardPerCredit = DEFAULT_REWARD_PER_CREDIT;
-      let videoRewardPerCredit = DEFAULT_REWARD_PER_CREDIT;
+      let videoRewardPerCredit = DEFAULT_VIDEO_REWARD_PER_CREDIT;
 
       if (clientMonth?.engagementServiceId) {
         const engService = engagementServices.find(es => es.id === clientMonth.engagementServiceId);

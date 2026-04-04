@@ -26,9 +26,9 @@ import {
 } from '@/lib/assignmentRoles';
 
 // Default reward per credit when not configured
-const DEFAULT_REWARD_PER_CREDIT = 80;
-const DEFAULT_BANNER_REWARD_PER_CREDIT = 80;
-const DEFAULT_VIDEO_REWARD_PER_CREDIT = 80;
+const DEFAULT_REWARD_PER_CREDIT = 150;
+const DEFAULT_BANNER_REWARD_PER_CREDIT = 150;
+const DEFAULT_VIDEO_REWARD_PER_CREDIT = 100;
 
 // Extended cost model including per_credit for Creative Boost
 type ExtendedCostModel = CostModel | 'per_credit';

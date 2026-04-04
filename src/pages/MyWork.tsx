@@ -270,7 +270,7 @@ function MyWorkContent() {
   }));
 
   const commissionsForInvoice = approvedCommissions.map((comm) => ({
-    clientName: comm.clientName,
+    clientName: comm.brandName || comm.clientName || 'Neznámý klient',
     amount: comm.commissionAmount,
   }));
 
@@ -326,7 +326,7 @@ function MyWorkContent() {
     const cb = cbByClient.map(c => ({ clientName: c.clientName, credits: c.totalCredits, reward: c.totalReward }));
 
     const comms = getApprovedCommissionsForColleague(currentColleague.id, year, month)
-      .map(c => ({ clientName: c.clientName, amount: c.commissionAmount }));
+      .map(c => ({ clientName: c.brandName || c.clientName || 'Neznámý klient', amount: c.commissionAmount }));
 
     const monthExtraWorks = extraWorks.filter(ew => {
       if (!ew.colleague_id || ew.colleague_id !== currentColleague.id) return false;
@@ -522,13 +522,28 @@ function MyWorkContent() {
               </div>
             )}
             
-            {totalApprovedCommission > 0 && (
-              <div className="flex items-center justify-between py-1.5 border-t">
-                <span className="text-sm text-muted-foreground flex items-center gap-1">
+            {approvedCommissions.length > 0 && (
+              <div className="space-y-1.5 border-t pt-1.5">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <CheckCircle className="h-3 w-3" />
                   Schválené provize
-                </span>
-                <span className="font-medium text-primary">{formatAmountWithOptionalEur(totalApprovedCommission)}</span>
+                </div>
+                {approvedCommissions.map((comm) => (
+                  <div key={comm.id} className="flex items-center justify-between py-1">
+                    <span className="text-sm truncate">
+                      {(comm.brandName || comm.clientName || 'Neznámý klient')} - provize
+                    </span>
+                    <span className="font-medium text-primary whitespace-nowrap">
+                      {formatAmountWithOptionalEur(comm.commissionAmount)}
+                    </span>
+                  </div>
+                ))}
+                {approvedCommissions.length > 1 && (
+                  <div className="flex items-center justify-between pt-1 text-xs">
+                    <span className="text-muted-foreground">Provize celkem</span>
+                    <span className="font-semibold text-primary">{formatAmountWithOptionalEur(totalApprovedCommission)}</span>
+                  </div>
+                )}
               </div>
             )}
             

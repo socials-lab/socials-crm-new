@@ -282,8 +282,8 @@ export function AddEngagementServiceDialog({
         form.setValue('creative_boost_max_credits', 50);
         form.setValue('creative_boost_price_per_credit', 400);
         form.setValue('creative_boost_fixed_billing', true);
-        form.setValue('creative_boost_reward_per_credit_banner', 80);
-        form.setValue('creative_boost_reward_per_credit_video', 80);
+        form.setValue('creative_boost_reward_per_credit_banner', 150);
+        form.setValue('creative_boost_reward_per_credit_video', 100);
         form.setValue('price', 0);
         form.setValue('selected_tier', null);
       } else if (service.service_type === 'core') {

@@ -193,10 +193,11 @@ export function InvoicingOverview({
 
     // 3. Approved commissions (format: "Přímá služba – [klient] – provize za upsell")
     monthData.commissionItems.forEach((comm, idx) => {
+      const displayClient = comm.clientName?.trim() || 'Neznámý klient';
       items.push({
         id: `comm-${idx}`,
         category: 'commission',
-        invoiceName: `Přímá služba – ${comm.clientName} – provize za upsell`,
+        invoiceName: `Přímá služba – ${displayClient} – provize`,
         amount: comm.amount,
       });
     });

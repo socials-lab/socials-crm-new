@@ -31,9 +31,9 @@ import {
 } from '@/lib/assignmentRoles';
 import { Palette } from 'lucide-react';
 
-const DEFAULT_REWARD_PER_CREDIT = 80;
-const DEFAULT_BANNER_REWARD_PER_CREDIT = 80;
-const DEFAULT_VIDEO_REWARD_PER_CREDIT = 80;
+const DEFAULT_REWARD_PER_CREDIT = 150;
+const DEFAULT_BANNER_REWARD_PER_CREDIT = 150;
+const DEFAULT_VIDEO_REWARD_PER_CREDIT = 100;
 
 const assignmentSchemaBase = z.object({
   colleague_id: z.string().min(1, 'Vyberte kolegu'),

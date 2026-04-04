@@ -1,6 +1,7 @@
 export const ASSIGNMENT_ROLE_OPTIONS = [
   'Meta Ads Specialist',
   'PPC Specialist',
+  'SEO Specialist',
   'Graphic Designer',
   'Video Editor',
   'Sales Specialist',
@@ -46,6 +47,13 @@ export function canonicalizeAssignmentRole(role: string): AssignmentRoleOption |
     normalizedRole.includes('videoeditor')
   ) {
     return 'Video Editor';
+  }
+
+  if (
+    normalizedRole.includes('seo specialist') ||
+    normalizedRole === 'seo'
+  ) {
+    return 'SEO Specialist';
   }
 
   return mapKnownRoleByNormalizedKey(normalizedRole);
