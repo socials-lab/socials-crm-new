@@ -8,7 +8,7 @@ import { InvoiceHistory } from '@/components/invoicing/InvoiceHistory';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { useUserRole } from '@/hooks/useUserRole';
-import { format, startOfMonth, endOfMonth, parseISO, isAfter, isBefore, getDaysInMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parseISO, isAfter, isBefore, getDaysInMonth, differenceInCalendarDays } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { FileText, CheckCircle, Package, Briefcase, ChevronLeft, ChevronRight, Palette, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -137,7 +137,7 @@ const Invoicing = () => {
         if (startsBeforeEnd && endsAfterStart) {
           const effectiveStart = isAfter(engStartDate, periodStart) ? engStartDate : periodStart;
           const effectiveEnd = engEndDate && isBefore(engEndDate, periodEnd) ? engEndDate : periodEnd;
-          const activeDays = Math.floor((effectiveEnd.getTime() - effectiveStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+          const activeDays = differenceInCalendarDays(effectiveEnd, effectiveStart) + 1;
           const isProrated = activeDays < totalDays;
 
           const services = engagementServices.filter(

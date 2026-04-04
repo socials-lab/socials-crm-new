@@ -1055,7 +1055,7 @@ function EngagementsContent() {
                                       </div>
                                       <div className="min-w-0">
                                         <div className="flex items-center gap-2">
-                                          <p className="truncate text-sm font-medium">{engService.name}</p>
+                                          <p className="text-sm font-medium break-words">{engService.name}</p>
                                           {service?.service_type === 'core' && (
                                             <DropdownMenu>
                                               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>

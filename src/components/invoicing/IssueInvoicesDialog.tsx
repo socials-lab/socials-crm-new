@@ -53,6 +53,30 @@ function requireCurrency(value: string | null | undefined, context: string): str
   return value;
 }
 
+function normalizeText(value: string | null | undefined): string {
+  return (value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+function isEcoBambooClient(clientName: string | null | undefined, clientBrandName: string | null | undefined): boolean {
+  const name = normalizeText(clientName);
+  const brand = normalizeText(clientBrandName);
+  return (
+    name.includes('ecobamboo') ||
+    name.includes('eco bamboo') ||
+    brand.includes('ecobamboo') ||
+    brand.includes('eco bamboo')
+  );
+}
+
+function getIsoEndOfInvoiceMonth(year: number, month: number): string {
+  const endOfMonthUtcNoon = new Date(Date.UTC(year, month, 0, 12, 0, 0));
+  return endOfMonthUtcNoon.toISOString();
+}
+
 function formatAmountsByCurrency(items: Array<{ amount: number; currency: string }>) {
   if (items.length === 0) return '-';
   const byCurrency = new Map<string, number>();
@@ -103,6 +127,13 @@ export function IssueInvoicesDialog({
         return client?.brand_name || client?.name || inv.engagement_name;
       }),
   ));
+
+  const ecoBambooInvoiceIds = invoices
+    .filter((inv) => {
+      const client = getClientById(inv.client_id);
+      return isEcoBambooClient(client?.name, client?.brand_name);
+    })
+    .map((inv) => inv.id);
 
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('cs-CZ', {
@@ -206,6 +237,24 @@ export function IssueInvoicesDialog({
         30000,
         'createInvoiceWithLineItems',
       );
+
+      // Eco Bamboo exception:
+      // default issued date in CRM = DUZP = last day of invoiced month.
+      if (isEcoBambooClient(client?.name, client?.brand_name)) {
+        const ecoIssuedAt = getIsoEndOfInvoiceMonth(invoice.year, invoice.month);
+        const { error: ecoIssuedAtUpdateError } = await withPromiseTimeout(
+          (async () =>
+            await supabase
+              .from('issued_invoices')
+              .update({ issued_at: ecoIssuedAt })
+              .eq('id', createdInvoice.id))(),
+          30000,
+          'ecoBambooIssuedAtUpdate',
+        );
+        if (ecoIssuedAtUpdateError) {
+          throw new Error(`Nepodařilo se nastavit datum vystavení pro Eco Bamboo: ${ecoIssuedAtUpdateError.message}`);
+        }
+      }
 
       // Push to Fakturoid (blocking).
       const { data: fakturoidResult, error: fakturoidError } = await invokeWithTimeout<{
@@ -416,6 +465,14 @@ export function IssueInvoicesDialog({
                 <AlertDescription className="text-destructive">
                   Nelze pokračovat: klient nemá propojení na Fakturoid (`fakturoid_subject_id`): {missingFakturoidClients.join(', ')}.
                   Nejprve propojte klienta ve Fakturoid.
+                </AlertDescription>
+              </Alert>
+            )}
+            {ecoBambooInvoiceIds.length > 0 && (
+              <Alert>
+                <AlertDescription>
+                  <strong>Eco Bamboo výjimka:</strong> datum vystavení a DUZP se nastaví automaticky stejně,
+                  vždy na poslední den fakturovaného měsíce (např. za březen = 31. 3.).
                 </AlertDescription>
               </Alert>
             )}

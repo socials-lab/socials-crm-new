@@ -34,6 +34,25 @@ interface EngagementInvoiceCardProps {
   onApproveAllItems?: (invoiceId: string) => void;
 }
 
+function normalizeText(value: string | null | undefined): string {
+  return (value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+function isEcoBambooClient(clientName: string | null | undefined, clientBrandName: string | null | undefined): boolean {
+  const name = normalizeText(clientName);
+  const brand = normalizeText(clientBrandName);
+  return (
+    name.includes('ecobamboo') ||
+    name.includes('eco bamboo') ||
+    brand.includes('ecobamboo') ||
+    brand.includes('eco bamboo')
+  );
+}
+
 export function EngagementInvoiceCard({ 
   invoice, 
   onUpdateLineItem, 
@@ -55,6 +74,7 @@ export function EngagementInvoiceCard({
   
   const client = getClientById(invoice.client_id);
   if (!client) return null;
+  const isEcoBamboo = isEcoBambooClient(client.name, client.brand_name);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('cs-CZ', {
@@ -193,6 +213,11 @@ export function EngagementInvoiceCard({
                     </>
                   )}
                 </p>
+                {isEcoBamboo && (
+                  <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
+                    Eco Bamboo vyjimka: datum vystaveni = DUZP = posledni den fakturovaneho mesice.
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-1.5">
@@ -295,7 +320,7 @@ export function EngagementInvoiceCard({
                 return (
                   <div 
                     key={item.id} 
-                    className="flex items-center justify-between text-xs py-1 border-b border-dashed last:border-0"
+                    className="flex items-start justify-between gap-2 text-xs py-1 border-b border-dashed last:border-0"
                   >
                     <div className="flex items-center gap-1.5">
                       <div onClick={(e) => e.stopPropagation()}>
@@ -317,7 +342,9 @@ export function EngagementInvoiceCard({
                       {itemHasNote && (
                         <MessageSquare className="h-3 w-3 text-amber-500" />
                       )}
-                      <span className="text-muted-foreground truncate max-w-[200px]">{item.source_description || item.line_description}</span>
+                      <span className="text-muted-foreground whitespace-normal break-words">
+                        {item.source_description || item.line_description}
+                      </span>
                     </div>
                     <span className="font-medium shrink-0">{formatCurrency(item.final_amount)}</span>
                   </div>

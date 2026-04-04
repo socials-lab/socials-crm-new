@@ -34,6 +34,8 @@ interface InviteRequest {
   internal_hourly_cost?: number;
   monthly_fixed_cost?: number;
   capacity_hours_per_month?: number;
+  invoice_display_name?: string | null;
+  invoice_currency?: string;
   colleague_id?: string;
 }
 
@@ -96,6 +98,8 @@ serve(async (req) => {
       internal_hourly_cost,
       monthly_fixed_cost,
       capacity_hours_per_month,
+      invoice_display_name,
+      invoice_currency,
     }: InviteRequest = await req.json();
 
     // Validate required fields with specific error messages
@@ -240,6 +244,8 @@ serve(async (req) => {
       internal_hourly_cost: internalCost ?? 0,
       monthly_fixed_cost: monthlyCost,
       capacity_hours_per_month: capacityHours,
+      invoice_display_name: (invoice_display_name && String(invoice_display_name).trim()) || null,
+      invoice_currency: (invoice_currency && String(invoice_currency).toUpperCase() === 'EUR') ? 'EUR' : 'CZK',
       profile_id: inviteData.user.id,
     };
 

@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, ExternalLink, Eye, Loader2 } from 'lucide-react';
+import { FileText, ExternalLink, Eye, Loader2, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useCRMData } from '@/hooks/useCRMData';
@@ -23,6 +23,7 @@ export function InvoiceHistory() {
   const { issuedInvoices, getIssuedInvoicesByYear } = useCRMData();
   const { createInvoiceInFakturoid, isLoading: isCreatingFakturoid } = useFakturoid();
   const [selectedYear, setSelectedYear] = useState('2024');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('cs-CZ', {
@@ -37,10 +38,37 @@ export function InvoiceHistory() {
     return format(new Date(2024, month - 1), 'LLLL', { locale: cs });
   };
 
-  const filteredHistory = useMemo(() => {
+  const yearHistory = useMemo(() => {
     return getIssuedInvoicesByYear(parseInt(selectedYear))
       .sort((a, b) => new Date(b.issued_at).getTime() - new Date(a.issued_at).getTime());
   }, [selectedYear, getIssuedInvoicesByYear]);
+
+  const filteredHistory = useMemo(() => {
+    const normalizedQuery = searchQuery
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+
+    if (!normalizedQuery) return yearHistory;
+
+    return yearHistory.filter((invoice) => {
+      const searchableFields = [
+        invoice.invoice_number,
+        invoice.engagement_name,
+        invoice.client_name,
+        `${invoice.month}.${invoice.year}`,
+      ];
+
+      const haystack = searchableFields
+        .join(' ')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+      return haystack.includes(normalizedQuery);
+    });
+  }, [yearHistory, searchQuery]);
 
   // Group by month for summary, with amounts per currency
   const monthlyStats = useMemo(() => {
@@ -92,32 +120,47 @@ export function InvoiceHistory() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="text-lg font-medium">Historie fakturace</h3>
-        <Select value={selectedYear} onValueChange={setSelectedYear}>
-          <SelectTrigger className="w-[120px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {availableYears.length > 0 ? (
-              availableYears.map(year => (
-                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-              ))
-            ) : (
-              <>
-                <SelectItem value="2024">2024</SelectItem>
-                <SelectItem value="2023">2023</SelectItem>
-              </>
-            )}
-          </SelectContent>
-        </Select>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <div className="relative w-full sm:w-[300px]">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Hledat fakturu, zakázku nebo klienta..."
+              className="pl-8"
+            />
+          </div>
+          <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <SelectTrigger className="w-full sm:w-[120px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {availableYears.length > 0 ? (
+                availableYears.map(year => (
+                  <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                ))
+              ) : (
+                <>
+                  <SelectItem value="2024">2024</SelectItem>
+                  <SelectItem value="2023">2023</SelectItem>
+                </>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {filteredHistory.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Žádná historie pro vybraný rok</p>
+            <p className="text-muted-foreground">
+              {searchQuery
+                ? 'Pro zadané hledání nebyly nalezeny žádné faktury'
+                : 'Žádná historie pro vybraný rok'}
+            </p>
           </CardContent>
         </Card>
       ) : (

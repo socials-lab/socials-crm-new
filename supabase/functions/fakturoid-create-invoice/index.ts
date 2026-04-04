@@ -62,6 +62,23 @@ function parseNumber(value: unknown, context: string, opts: { min?: number; allo
   return parsed;
 }
 
+function normalizeText(value: string | null | undefined): string {
+  return (value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function isEcoBambooClient(clientName: string | null | undefined): boolean {
+  const normalized = normalizeText(clientName);
+  return normalized.includes("ecobamboo") || normalized.includes("eco bamboo");
+}
+
+function formatDateYYYYMMDD(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -177,10 +194,14 @@ serve(async (req) => {
       vat_rate: useReverseCharge ? 0 : (isVatPayer ? (item.is_reverse_charge ? 0 : parseNumber(item.vat_rate ?? 21, `line item ${index + 1} vat_rate`, { min: 0 })) : 0),
     }));
 
-    // DUZP (taxable fulfillment date) = last day of previous month relative to invoice period
-    // e.g. invoice period = April (month=4) → DUZP = March 31st
-    const duzpDate = new Date(invoice.year, invoice.month - 1, 0); // day 0 of month = last day of previous month
-    const duzpFormatted = `${duzpDate.getFullYear()}-${String(duzpDate.getMonth() + 1).padStart(2, '0')}-${String(duzpDate.getDate()).padStart(2, '0')}`;
+    const ecoBambooMode = isEcoBambooClient(client.name);
+
+    // Default DUZP behavior: last day of previous month relative to invoiced period.
+    // Eco Bamboo exception: DUZP = issued_on = last day of invoiced month.
+    const duzpDate = ecoBambooMode
+      ? new Date(invoice.year, invoice.month, 0)
+      : new Date(invoice.year, invoice.month - 1, 0);
+    const duzpFormatted = formatDateYYYYMMDD(duzpDate);
 
     const payload = {
       subject_id: client.fakturoid_subject_id,
@@ -190,6 +211,7 @@ serve(async (req) => {
       // due_in: 14 means "due 14 days from issued_on" - Fakturoid will calculate actual date
       due_in: 14,
       taxable_fulfillment_due: duzpFormatted,
+      ...(ecoBambooMode ? { issued_on: duzpFormatted } : {}),
       note: `Faktura ${invoice.invoice_number}`,
     };
 

@@ -21,6 +21,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useTeamEarnings, type ColleagueEarningsSummary } from '@/hooks/useTeamEarnings';
+import { useCzkEurRate } from '@/hooks/useCzkEurRate';
 import { ColleagueEarningsSheet } from './ColleagueEarningsSheet';
 import type { Colleague } from '@/types/crm';
 
@@ -37,6 +38,7 @@ export function TeamEarningsOverview() {
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const { getTeamEarningsSummary, getTeamTotalForMonth } = useTeamEarnings();
+  const { eurRate, rateDate, convertCzkToEur, isLoadingRate } = useCzkEurRate();
 
   const teamSummary = useMemo(() => {
     return getTeamEarningsSummary(selectedYear, selectedMonth);
@@ -152,6 +154,22 @@ export function TeamEarningsOverview() {
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-muted">
+                <TrendingUp className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Kurz CZK na EUR</p>
+                <p className="text-sm font-semibold">
+                  {isLoadingRate ? 'Načítám...' : eurRate ? `1 CZK = ${eurRate.toFixed(4)} EUR` : 'Nedostupné'}
+                </p>
+                {rateDate && <p className="text-[10px] text-muted-foreground">{rateDate}</p>}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Team List */}
@@ -178,6 +196,11 @@ export function TeamEarningsOverview() {
                     <div className="min-w-0">
                       <p className="font-medium truncate">{summary.colleague.full_name}</p>
                       <p className="text-xs text-muted-foreground truncate">{summary.colleague.position}</p>
+                      {summary.colleague.invoice_display_name && (
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          Fakturovat pod: {summary.colleague.invoice_display_name}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -224,6 +247,11 @@ export function TeamEarningsOverview() {
                       {(summary.totalEarnings / 1000).toFixed(0)}k
                     </p>
                     <p className="text-xs text-muted-foreground">Kč</p>
+                    {summary.colleague.invoice_currency === 'EUR' && convertCzkToEur(summary.totalEarnings) != null && (
+                      <p className="text-[11px] text-muted-foreground">
+                        ~{convertCzkToEur(summary.totalEarnings)?.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR
+                      </p>
+                    )}
                   </div>
 
                   {/* Action */}
@@ -255,6 +283,9 @@ export function TeamEarningsOverview() {
                       <ListTodo className="h-3 w-3" />
                       {summary.activitiesCount}× činností
                     </Badge>
+                  )}
+                  {summary.colleague.invoice_currency === 'EUR' && (
+                    <Badge variant="outline" className="text-xs">Fakturace v EUR</Badge>
                   )}
                 </div>
               </div>

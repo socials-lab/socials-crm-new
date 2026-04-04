@@ -46,6 +46,11 @@ const INDUSTRY_OPTIONS = [
   { value: 'LeadGen', label: 'LeadGen' },
 ] as const;
 
+function isCzechCountry(country: string): boolean {
+  const normalized = country.trim().toLowerCase();
+  return normalized === 'czech republic' || normalized === 'czechia' || normalized === 'česká republika';
+}
+
 function isValidIndustryValue(value: string | undefined): value is typeof INDUSTRY_OPTIONS[number]['value'] {
   if (!value) return false;
   return INDUSTRY_OPTIONS.some((option) => option.value === value);
@@ -66,7 +71,10 @@ const clientSchema = z.object({
     .min(1, 'Brand je povinný')
     .max(255, 'Brand je příliš dlouhý')
     .transform(s => s.trim()),
-  ico: czechIco,
+  ico: z.string()
+    .min(1, 'IČO je povinné')
+    .max(32, 'IČO je příliš dlouhé')
+    .transform(s => s.trim()),
   dic: czechDic,
   website: z.string()
     .max(500, 'URL je příliš dlouhá')
@@ -104,7 +112,19 @@ const clientSchema = z.object({
   // Cross-validate DIČ against IČO for Czech legal entities (s.r.o., a.s., etc.)
   // Note: OSVČ (sole proprietors) may have DIČ based on birth number, not IČO
   // Only show warning for 10-digit DIČ (which should match IČO for legal entities)
-  if (data.dic && data.ico && data.country === 'Czech Republic') {
+  if (isCzechCountry(data.country)) {
+    const icoValidation = czechIco.safeParse(data.ico);
+    if (!icoValidation.success) {
+      const firstIssue = icoValidation.error.issues[0];
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: firstIssue?.message || 'Neplatné IČO pro Českou republiku',
+        path: ['ico'],
+      });
+    }
+  }
+
+  if (data.dic && data.ico && isCzechCountry(data.country)) {
     const expectedDic = `CZ${data.ico}`;
     // Only validate if DIČ has exactly 10 digits (CZ + 8 = legal entity format)
     // OSVČ can have 9-10 digit birth numbers which won't match IČO
@@ -215,6 +235,11 @@ export function ClientForm({ client, hasActiveEngagements = false, hasEngagement
   }
 
   async function handleAresLookup() {
+    if (!isCzechCountry(form.getValues('country'))) {
+      toast.error('ARES vyhledávání je dostupné pouze pro české IČO');
+      return;
+    }
+
     const ico = form.getValues('ico').trim();
     if (!/^\d{7,8}$/.test(ico)) {
       toast.error('Zadejte platné IČO (7 nebo 8 číslic)');

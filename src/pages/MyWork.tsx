@@ -36,6 +36,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useCreativeBoostData, CreativeBoostProvider } from '@/hooks/useCreativeBoostData';
 import { useUpsellApprovals } from '@/hooks/useUpsellApprovals';
 import { useActivityRewards, type ActivityReward } from '@/hooks/useActivityRewards';
+import { useCzkEurRate } from '@/hooks/useCzkEurRate';
 import { AddActivityRewardDialog } from '@/components/my-work/AddActivityRewardDialog';
 import { EditActivityRewardDialog } from '@/components/my-work/EditActivityRewardDialog';
 import { InvoicingOverview } from '@/components/my-work/InvoicingOverview';
@@ -69,6 +70,7 @@ function MyWorkContent() {
   
   const { getColleagueCredits, getColleagueCreditsByClient } = useCreativeBoostData();
   const { getApprovedCommissionsForColleague } = useUpsellApprovals();
+  const { convertCzkToEur, eurRate, rateDate } = useCzkEurRate();
   
   // Activity rewards hook
   const {
@@ -239,6 +241,18 @@ function MyWorkContent() {
 
   // Total client earnings this month (WITHOUT internal work)
   const totalClientEarnings = myWorkData.totalMonthlyProrated + totalCreativeBoostReward + totalApprovedCommission + totalExtraWork;
+  const showEurConversion = currentColleague?.invoice_currency === 'EUR';
+
+  const formatAmountWithOptionalEur = useCallback(
+    (amountCzk: number) => {
+      const czk = `${amountCzk.toLocaleString('cs-CZ')} Kč`;
+      if (!showEurConversion) return czk;
+      const eur = convertCzkToEur(amountCzk);
+      if (eur == null) return `${czk} (EUR přepočet nedostupný)`;
+      return `${czk} (~${eur.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR)`;
+    },
+    [showEurConversion, convertCzkToEur],
+  );
 
   // Prepare data for invoicing overview
   const clientRewardsForInvoice = myWorkData.clientRewards.map((cr) => ({
@@ -436,9 +450,19 @@ function MyWorkContent() {
               <Coins className="h-4 w-4 text-primary" />
               Odměny
               <Badge variant="outline" className="text-xs font-normal">za klientskou práci</Badge>
+              {showEurConversion && (
+                <Badge variant="secondary" className="text-xs font-normal">
+                  fakturace v EUR
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
+            {showEurConversion && eurRate && (
+              <p className="text-xs text-muted-foreground">
+                Aktuální kurz: 1 CZK = {eurRate.toFixed(4)} EUR{rateDate ? ` (${rateDate})` : ''}
+              </p>
+            )}
             {/* Client rewards breakdown */}
             {myWorkData.clientRewards.length > 0 && (
               <div className="space-y-1.5">
@@ -454,7 +478,7 @@ function MyWorkContent() {
                       )}
                     </div>
                     <span className={`font-medium whitespace-nowrap ${item.prorated.isProrated ? 'text-amber-600' : ''}`}>
-                      {item.prorated.proratedAmount.toLocaleString()} Kč
+                      {formatAmountWithOptionalEur(item.prorated.proratedAmount)}
                     </span>
                   </div>
                 ))}
@@ -485,12 +509,14 @@ function MyWorkContent() {
                       </div>
                     </div>
                     <span className="font-medium text-primary whitespace-nowrap">{cb.totalReward.toLocaleString()} Kč</span>
+                    
                   </div>
                 ))}
                 {creditsByClient.length > 1 && (
                   <div className="flex items-center justify-between pt-1 text-xs">
                     <span className="text-muted-foreground">Creative Boost celkem</span>
                     <span className="font-semibold text-primary">{totalCreativeBoostReward.toLocaleString()} Kč</span>
+                    
                   </div>
                 )}
               </div>
@@ -502,7 +528,7 @@ function MyWorkContent() {
                   <CheckCircle className="h-3 w-3" />
                   Schválené provize
                 </span>
-                <span className="font-medium text-primary">{totalApprovedCommission.toLocaleString()} Kč</span>
+                <span className="font-medium text-primary">{formatAmountWithOptionalEur(totalApprovedCommission)}</span>
               </div>
             )}
             
@@ -527,6 +553,7 @@ function MyWorkContent() {
                         )}
                       </div>
                       <span className="font-medium">{colleagueAmount.toLocaleString()} Kč</span>
+                      
                     </div>
                   );
                 })}
@@ -537,7 +564,7 @@ function MyWorkContent() {
             
             <div className="flex items-center justify-between pt-1">
               <span className="font-medium">Celkem za klientskou práci</span>
-              <span className="text-xl font-bold text-primary">{totalClientEarnings.toLocaleString()} Kč</span>
+              <span className="text-xl font-bold text-primary">{formatAmountWithOptionalEur(totalClientEarnings)}</span>
             </div>
             {currentColleague?.min_monthly_reward != null && currentColleague.min_monthly_reward > 0 && (
               <div className="flex items-center justify-between pt-2 mt-2 border-t border-dashed">

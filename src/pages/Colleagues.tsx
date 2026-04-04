@@ -170,6 +170,8 @@ function ColleaguesContent() {
             monthly_fixed_cost: colleagueData.monthly_fixed_cost,
             min_monthly_reward: colleagueData.min_monthly_reward,
             max_engagements: colleagueData.max_engagements,
+            invoice_display_name: colleagueData.invoice_display_name,
+            invoice_currency: colleagueData.invoice_currency,
           },
         });
 

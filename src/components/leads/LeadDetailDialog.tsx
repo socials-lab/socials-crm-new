@@ -899,9 +899,9 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
               <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
                 <div className="flex items-center gap-2">
                   <Clock className="h-3.5 w-3.5" />
-                  <span>Vytvořeno: {new Date(lead.created_at).toLocaleDateString('cs-CZ')}</span>
+                  <span>Vytvořeno: {new Date(lead.created_at).toLocaleString('cs-CZ')}</span>
                   <span>•</span>
-                  <span>Aktualizace: {new Date(lead.updated_at).toLocaleDateString('cs-CZ')}</span>
+                  <span>Aktualizace: {new Date(lead.updated_at).toLocaleString('cs-CZ')}</span>
                 </div>
               </div>
 

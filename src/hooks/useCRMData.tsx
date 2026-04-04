@@ -190,6 +190,8 @@ const transformColleague = (row: Record<string, unknown>): Colleague => ({
   ...row,
   seniority: row.seniority || 'mid',
   status: row.status || 'active',
+  invoice_display_name: (row.invoice_display_name as string | null) ?? null,
+  invoice_currency: (row.invoice_currency as 'CZK' | 'EUR') || 'CZK',
   created_at: row.created_at || new Date().toISOString(),
   updated_at: row.updated_at || new Date().toISOString(),
 });

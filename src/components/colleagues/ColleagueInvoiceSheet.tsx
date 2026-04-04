@@ -25,6 +25,7 @@ import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { useUpsellApprovals } from '@/hooks/useUpsellApprovals';
 import { useTeamEarnings } from '@/hooks/useTeamEarnings';
 import { usePayoutMonthSnapshots } from '@/hooks/usePayoutMonthSnapshots';
+import { useCzkEurRate } from '@/hooks/useCzkEurRate';
 import { buildColleagueInvoiceData, type ColleagueInvoiceData } from './TeamInvoicingOverview';
 
 const MONTHS = [
@@ -59,12 +60,32 @@ function Section({ icon: Icon, title, children }: { icon: ElementType; title: st
   );
 }
 
-function LineItem({ name, amount, note }: { name: string; amount: number; note?: string }) {
+function LineItem({
+  name,
+  amount,
+  note,
+  showEur,
+  convertCzkToEur,
+}: {
+  name: string;
+  amount: number;
+  note?: string;
+  showEur: boolean;
+  convertCzkToEur: (amount: number) => number | null;
+}) {
+  const eurAmount = showEur ? convertCzkToEur(amount) : null;
   return (
     <div className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-muted/50">
       <span className="text-sm flex-1 min-w-0 truncate">{name}</span>
       {note && <Badge variant="secondary" className="text-xs shrink-0">{note}</Badge>}
-      <span className="font-medium text-sm whitespace-nowrap">{amount.toLocaleString('cs-CZ')} Kč</span>
+      <span className="font-medium text-sm whitespace-nowrap text-right">
+        <span className="block">{amount.toLocaleString('cs-CZ')} Kč</span>
+        {eurAmount != null && (
+          <span className="block text-[10px] font-normal text-muted-foreground">
+            ~{eurAmount.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR
+          </span>
+        )}
+      </span>
     </div>
   );
 }
@@ -91,6 +112,7 @@ export function ColleagueInvoiceSheet({
   const { getApprovedCommissionsForColleague } = useUpsellApprovals();
   const { getColleagueMonthlyHistory, getColleagueActivities } = useTeamEarnings();
   const { isMonthClosed, getSnapshotForMonth, getSnapshotsForColleague } = usePayoutMonthSnapshots();
+  const { convertCzkToEur, eurRate, rateDate } = useCzkEurRate();
 
   const data = useMemo<ColleagueInvoiceData | null>(() => {
     if (!colleague) return null;
@@ -202,6 +224,8 @@ export function ColleagueInvoiceSheet({
     clientWorkItems.length > 0;
 
   const hasInternal = marketingItems.length > 0 || overheadItems.length > 0;
+  const showEur = colleague.invoice_currency === 'EUR';
+  const grandTotalEur = showEur ? convertCzkToEur(data.grandTotal) : null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -214,6 +238,12 @@ export function ColleagueInvoiceSheet({
             <div>
               <span className="block">{colleague.full_name}</span>
               <span className="block text-sm font-normal text-muted-foreground">{colleague.position}</span>
+              {(colleague.invoice_display_name || showEur) && (
+                <span className="block text-xs font-normal text-muted-foreground">
+                  {colleague.invoice_display_name ? `Fakturovat pod: ${colleague.invoice_display_name}` : 'Fakturace v EUR'}
+                  {showEur && eurRate ? ` • kurz ${eurRate.toFixed(4)} (${rateDate || 'dnes'})` : ''}
+                </span>
+              )}
             </div>
           </SheetTitle>
         </SheetHeader>
@@ -250,14 +280,33 @@ export function ColleagueInvoiceSheet({
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm text-muted-foreground">{MONTHS[selectedMonth - 1]} {selectedYear}</span>
-                <span className="text-2xl font-bold text-primary">{data.grandTotal.toLocaleString('cs-CZ')} Kč</span>
+                <span className="text-right">
+                  <span className="block text-2xl font-bold text-primary">{data.grandTotal.toLocaleString('cs-CZ')} Kč</span>
+                  {grandTotalEur != null && (
+                    <span className="block text-xs text-muted-foreground">
+                      ~{grandTotalEur.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR
+                    </span>
+                  )}
+                </span>
               </div>
               <div className="flex items-center gap-4 text-xs text-muted-foreground">
                 {data.clientTotal > 0 && (
-                  <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" /> Klientská: {data.clientTotal.toLocaleString('cs-CZ')} Kč</span>
+                  <span className="flex items-center gap-1">
+                    <Briefcase className="h-3 w-3" />
+                    Klientská: {data.clientTotal.toLocaleString('cs-CZ')} Kč
+                    {showEur && convertCzkToEur(data.clientTotal) != null && (
+                      <span className="text-[10px]">(~{convertCzkToEur(data.clientTotal)?.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR)</span>
+                    )}
+                  </span>
                 )}
                 {data.internalTotal > 0 && (
-                  <span className="flex items-center gap-1"><Building2 className="h-3 w-3" /> Režie: {data.internalTotal.toLocaleString('cs-CZ')} Kč</span>
+                  <span className="flex items-center gap-1">
+                    <Building2 className="h-3 w-3" />
+                    Režie: {data.internalTotal.toLocaleString('cs-CZ')} Kč
+                    {showEur && convertCzkToEur(data.internalTotal) != null && (
+                      <span className="text-[10px]">(~{convertCzkToEur(data.internalTotal)?.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR)</span>
+                    )}
+                  </span>
                 )}
               </div>
             </CardContent>
@@ -268,13 +317,32 @@ export function ColleagueInvoiceSheet({
               {hasClient && (
                 <Section icon={Briefcase} title="Klientská práce">
                   {visibleClientItems.map((item, index) => (
-                    <LineItem key={`client-${index}`} name={item.name} amount={item.amount} note={item.note} />
+                    <LineItem
+                      key={`client-${index}`}
+                      name={item.name}
+                      amount={item.amount}
+                      note={item.note}
+                      showEur={showEur}
+                      convertCzkToEur={convertCzkToEur}
+                    />
                   ))}
                   {visibleCreativeBoostItems.map((item, index) => (
-                    <LineItem key={`cb-${index}`} name={`${item.name} - Creative Boost (${item.credits} kr.)`} amount={item.amount} />
+                    <LineItem
+                      key={`cb-${index}`}
+                      name={`${item.name} - Creative Boost (${item.credits} kr.)`}
+                      amount={item.amount}
+                      showEur={showEur}
+                      convertCzkToEur={convertCzkToEur}
+                    />
                   ))}
                   {visibleCommissionItems.map((item, index) => (
-                    <LineItem key={`commission-${index}`} name={item.name} amount={item.amount} />
+                    <LineItem
+                      key={`commission-${index}`}
+                      name={item.name}
+                      amount={item.amount}
+                      showEur={showEur}
+                      convertCzkToEur={convertCzkToEur}
+                    />
                   ))}
                   {visibleExtraWorkItems.map((item, index) => (
                     <LineItem
@@ -282,10 +350,18 @@ export function ColleagueInvoiceSheet({
                       name={item.name}
                       amount={item.amount}
                       note={item.hours && item.rate ? `${item.hours}h x ${item.rate} Kč` : undefined}
+                      showEur={showEur}
+                      convertCzkToEur={convertCzkToEur}
                     />
                   ))}
                   {clientWorkItems.map((item, index) => (
-                    <LineItem key={`client-work-${index}`} name={item.name} amount={item.amount} />
+                    <LineItem
+                      key={`client-work-${index}`}
+                      name={item.name}
+                      amount={item.amount}
+                      showEur={showEur}
+                      convertCzkToEur={convertCzkToEur}
+                    />
                   ))}
                 </Section>
               )}
@@ -298,7 +374,13 @@ export function ColleagueInvoiceSheet({
                         <Megaphone className="h-3 w-3" /> Marketing
                       </div>
                       {marketingItems.map((item, index) => (
-                        <LineItem key={`marketing-${index}`} name={item.name} amount={item.amount} />
+                        <LineItem
+                          key={`marketing-${index}`}
+                          name={item.name}
+                          amount={item.amount}
+                          showEur={showEur}
+                          convertCzkToEur={convertCzkToEur}
+                        />
                       ))}
                     </div>
                   )}
@@ -308,7 +390,13 @@ export function ColleagueInvoiceSheet({
                         <Building2 className="h-3 w-3" /> Interní práce
                       </div>
                       {overheadItems.map((item, index) => (
-                        <LineItem key={`overhead-${index}`} name={item.name} amount={item.amount} />
+                        <LineItem
+                          key={`overhead-${index}`}
+                          name={item.name}
+                          amount={item.amount}
+                          showEur={showEur}
+                          convertCzkToEur={convertCzkToEur}
+                        />
                       ))}
                     </div>
                   )}
@@ -356,7 +444,12 @@ export function ColleagueInvoiceSheet({
                           </div>
                         </div>
                         <span className="font-semibold text-sm whitespace-nowrap">
-                          {activity.amount.toLocaleString('cs-CZ')} Kč
+                          <span className="block text-right">{activity.amount.toLocaleString('cs-CZ')} Kč</span>
+                          {showEur && convertCzkToEur(activity.amount) != null && (
+                            <span className="block text-[10px] text-muted-foreground text-right">
+                              ~{convertCzkToEur(activity.amount)?.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR
+                            </span>
+                          )}
                         </span>
                       </div>
                     </div>

@@ -164,6 +164,11 @@ export function ColleagueCard({
               {details.totalMonthlyEarnings.toLocaleString()} Kč/měs
             </Badge>
           )}
+          {isSuperAdmin && colleague.invoice_currency === 'EUR' && (
+            <Badge variant="outline" className="text-[10px] sm:text-xs">
+              Fakturace v EUR
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -289,6 +294,16 @@ export function ColleagueCard({
                       <span className="text-xs">neznámý bankovní účet</span>
                     </div>
                   )}
+                  {colleague.invoice_display_name ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <User className="h-4 w-4 shrink-0" />
+                      <span className="text-xs">Fakturovat pod: {colleague.invoice_display_name}</span>
+                    </div>
+                  ) : null}
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <CreditCard className="h-4 w-4 shrink-0" />
+                    <span className="text-xs">Měna fakturace: {colleague.invoice_currency}</span>
+                  </div>
                 </div>
               </div>
             )}

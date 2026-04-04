@@ -19,7 +19,7 @@ import {
 import { Save, Send, FileText, AlertTriangle, Plus, CheckCircle2, RotateCcw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { InvoiceLineItem, MonthlyEngagementInvoice } from '@/types/crm';
-import { getDaysInMonth, parseISO, startOfMonth, endOfMonth, format, isAfter, isBefore } from 'date-fns';
+import { getDaysInMonth, parseISO, startOfMonth, endOfMonth, format, isAfter, isBefore, differenceInCalendarDays } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { isEngagementServiceActiveInPeriod } from '@/lib/engagementServiceLifecycle';
@@ -67,7 +67,6 @@ function requireSingleCurrency(items: InvoiceLineItem[], context: string): strin
   }
   return firstCurrency;
 }
-
 
 export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvoicingProps) {
   const { clients, engagements, engagementServices, getClientById, getExtraWorksReadyToInvoice, markExtraWorkAsInvoiced, getUnbilledOneOffServices, issuedInvoices } = useCRMData();
@@ -227,13 +226,15 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
         // Calculate active days in this period
         const effectiveStart = isAfter(engStartDate, periodStart) ? engStartDate : periodStart;
         const effectiveEnd = engEndDate && isBefore(engEndDate, periodEnd) ? engEndDate : periodEnd;
-        
-        const activeDays = Math.floor((effectiveEnd.getTime() - effectiveStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+        const activeDays = differenceInCalendarDays(effectiveEnd, effectiveStart) + 1;
         
         // Spolupráce začínající 1.-5. den měsíce = fakturovat plnou částku
         const startDayOfMonth = effectiveStart.getDate();
         const startsEarlyInMonth = startDayOfMonth <= 5;
-        const endsAtPeriodEnd = effectiveEnd.getTime() === periodEnd.getTime();
+        const endsAtPeriodEnd = effectiveEnd.getDate() === periodEnd.getDate() &&
+          effectiveEnd.getMonth() === periodEnd.getMonth() &&
+          effectiveEnd.getFullYear() === periodEnd.getFullYear();
         
         // Není poměrné pokud: aktivní všechny dny NEBO začíná 1.-5. den a nekončí předčasně
         const isProrated = activeDays < totalDays && !(startsEarlyInMonth && endsAtPeriodEnd);

@@ -74,6 +74,8 @@ const colleagueSchema = z.object({
   billing_city: z.string().nullable(),
   billing_zip: z.string().nullable(),
   bank_account: z.string().nullable(),
+  invoice_display_name: z.string().nullable(),
+  invoice_currency: z.enum(['CZK', 'EUR'] as const),
 });
 
 type ColleagueFormData = z.infer<typeof colleagueSchema>;
@@ -123,6 +125,8 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
       billing_city: colleague?.billing_city || null,
       billing_zip: colleague?.billing_zip || null,
       bank_account: colleague?.bank_account || null,
+      invoice_display_name: colleague?.invoice_display_name || null,
+      invoice_currency: colleague?.invoice_currency || 'CZK',
     },
   });
 
@@ -645,6 +649,53 @@ export function ColleagueForm({ colleague, onSubmit, onCancel, showInviteOption 
               </FormItem>
             )}
           />
+
+          <div className="grid gap-4 sm:grid-cols-2 mt-4">
+            <FormField
+              control={form.control}
+              name="invoice_display_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fakturovat pod jménem</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Např. Jaroslav Bobák"
+                      value={field.value || ''}
+                      onChange={(e) => field.onChange(e.target.value || null)}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Identita kolegy pro odměny a výkazy.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="invoice_currency"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Měna fakturace</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="CZK">CZK</SelectItem>
+                      <SelectItem value="EUR">EUR</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    U EUR se částky zobrazí v Kč i s přepočtem.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
 
         <FormField

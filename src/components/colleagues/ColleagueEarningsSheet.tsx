@@ -29,6 +29,7 @@ import { format, parseISO } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import type { Colleague } from '@/types/crm';
 import { useTeamEarnings, type ColleagueMonthlyHistory } from '@/hooks/useTeamEarnings';
+import { useCzkEurRate } from '@/hooks/useCzkEurRate';
 
 interface ColleagueEarningsSheetProps {
   colleague: Colleague | null;
@@ -47,6 +48,7 @@ export function ColleagueEarningsSheet({ colleague, open, onOpenChange }: Collea
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
 
   const { getColleagueMonthlyHistory, getColleagueEarningsForMonth, getColleagueActivities } = useTeamEarnings();
+  const { convertCzkToEur, eurRate, rateDate } = useCzkEurRate();
 
   const monthlyHistory = useMemo(() => {
     if (!colleague) return [];
@@ -72,6 +74,7 @@ export function ColleagueEarningsSheet({ colleague, open, onOpenChange }: Collea
   }, [monthlyHistory]);
 
   if (!colleague) return null;
+  const showEur = colleague.invoice_currency === 'EUR';
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -84,6 +87,12 @@ export function ColleagueEarningsSheet({ colleague, open, onOpenChange }: Collea
             <div>
               <span>{colleague.full_name}</span>
               <p className="text-sm font-normal text-muted-foreground">{colleague.position}</p>
+              {(colleague.invoice_display_name || showEur) && (
+                <p className="text-xs font-normal text-muted-foreground">
+                  {colleague.invoice_display_name ? `Fakturovat pod: ${colleague.invoice_display_name}` : 'Fakturace v EUR'}
+                  {showEur && eurRate ? ` • kurz ${eurRate.toFixed(4)} (${rateDate || 'dnes'})` : ''}
+                </p>
+              )}
             </div>
           </SheetTitle>
         </SheetHeader>
@@ -135,6 +144,11 @@ export function ColleagueEarningsSheet({ colleague, open, onOpenChange }: Collea
                     {selectedMonthData.totalEarnings.toLocaleString('cs-CZ')} Kč
                   </span>
                 </div>
+                {showEur && convertCzkToEur(selectedMonthData.totalEarnings) != null && (
+                  <p className="text-xs text-muted-foreground text-right mb-2">
+                    ~{convertCzkToEur(selectedMonthData.totalEarnings)?.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR
+                  </p>
+                )}
                 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
@@ -143,6 +157,7 @@ export function ColleagueEarningsSheet({ colleague, open, onOpenChange }: Collea
                       Fixní ze zakázek
                     </span>
                     <span className="font-medium">{selectedMonthData.fixedEarnings.toLocaleString('cs-CZ')} Kč</span>
+                    
                   </div>
                   
                   {selectedMonthData.creativeBoostReward > 0 && (
@@ -152,6 +167,7 @@ export function ColleagueEarningsSheet({ colleague, open, onOpenChange }: Collea
                         Creative Boost ({selectedMonthData.creativeBoostCredits} kr)
                       </span>
                       <span className="font-medium text-primary">{selectedMonthData.creativeBoostReward.toLocaleString('cs-CZ')} Kč</span>
+                      
                     </div>
                   )}
                   
@@ -162,6 +178,7 @@ export function ColleagueEarningsSheet({ colleague, open, onOpenChange }: Collea
                         Provize
                       </span>
                       <span className="font-medium text-primary">{selectedMonthData.commissionsReward.toLocaleString('cs-CZ')} Kč</span>
+                      
                     </div>
                   )}
                   
@@ -172,6 +189,7 @@ export function ColleagueEarningsSheet({ colleague, open, onOpenChange }: Collea
                         Ostatní činnosti ({selectedMonthData.activitiesCount}×)
                       </span>
                       <span className="font-medium text-primary">{selectedMonthData.activitiesReward.toLocaleString('cs-CZ')} Kč</span>
+                      
                     </div>
                   )}
                 </div>
@@ -216,7 +234,12 @@ export function ColleagueEarningsSheet({ colleague, open, onOpenChange }: Collea
                         </div>
                       </div>
                       <span className="font-semibold text-sm whitespace-nowrap">
-                        {activity.amount.toLocaleString('cs-CZ')} Kč
+                        <span className="block text-right">{activity.amount.toLocaleString('cs-CZ')} Kč</span>
+                        {showEur && convertCzkToEur(activity.amount) != null && (
+                          <span className="block text-[10px] font-normal text-muted-foreground text-right">
+                            ~{convertCzkToEur(activity.amount)?.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR
+                          </span>
+                        )}
                       </span>
                     </div>
                   </div>
@@ -253,6 +276,11 @@ export function ColleagueEarningsSheet({ colleague, open, onOpenChange }: Collea
                     </span>
                     <span className="font-semibold text-primary">
                       {month.totalEarnings.toLocaleString('cs-CZ')} Kč
+                      {showEur && convertCzkToEur(month.totalEarnings) != null && (
+                        <span className="block text-[10px] font-normal text-muted-foreground text-right">
+                          ~{convertCzkToEur(month.totalEarnings)?.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR
+                        </span>
+                      )}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
