@@ -665,12 +665,13 @@ function MyWorkContent() {
 
       {/* Invoicing Overview - Complete invoice items */}
       <InvoicingOverview
+        selectedYear={selectedYear}
+        selectedMonth={selectedMonth}
         clientRewards={clientRewardsForInvoice}
         creativeBoostItems={creativeBoostForInvoice}
         commissionItems={commissionsForInvoice}
         extraWorkItems={extraWorksForInvoice}
         internalRewards={activityRewards}
-        getRewardsByMonth={getRewardsByMonth}
         getRewardsByCategory={getRewardsByCategory}
         onAddInternalWork={(year, month) => {
           const defaultDate = `${year}-${String(month).padStart(2, '0')}-15`;

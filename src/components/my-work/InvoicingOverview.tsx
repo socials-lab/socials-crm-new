@@ -1,20 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { 
   FileText, Copy, Briefcase, Building2, Sparkles, 
-  CheckCircle, Megaphone, AlertCircle, Pencil, Plus
+  CheckCircle, Megaphone, Pencil, Plus
 } from 'lucide-react';
-import { parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import type { ActivityReward, ActivityCategory } from '@/hooks/useActivityRewards';
 import { CATEGORY_LABELS } from '@/hooks/useActivityRewards';
@@ -57,6 +49,8 @@ interface ExtraWorkForInvoice {
 }
 
 interface InvoicingOverviewProps {
+  selectedYear: number;
+  selectedMonth: number;
   // Client work data
   clientRewards: ClientRewardForInvoice[];
   creativeBoostItems: CreativeBoostForInvoice[];
@@ -64,7 +58,6 @@ interface InvoicingOverviewProps {
   extraWorkItems: ExtraWorkForInvoice[];
   // Internal work data
   internalRewards: ActivityReward[];
-  getRewardsByMonth: (year: number, month: number) => ActivityReward[];
   getRewardsByCategory: (year: number, month: number) => { marketing: ActivityReward[]; overhead: ActivityReward[]; client_work: ActivityReward[] };
   // Actions
   onAddInternalWork: (year: number, month: number) => void;
@@ -140,83 +133,68 @@ function InvoiceLineItemRow({
 }
 
 export function InvoicingOverview({
+  selectedYear,
+  selectedMonth,
   clientRewards,
   creativeBoostItems,
   commissionItems,
   extraWorkItems,
   internalRewards,
-  getRewardsByMonth,
   getRewardsByCategory,
   onAddInternalWork,
   onEditReward,
 }: InvoicingOverviewProps) {
-  const now = new Date();
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
-
-  // Get available years
-  const availableYears = useMemo(() => {
-    const years = new Set(internalRewards.map(r => parseISO(r.activity_date).getFullYear()));
-    years.add(now.getFullYear());
-    return Array.from(years).sort((a, b) => b - a);
-  }, [internalRewards]);
-
-  const isCurrentMonth = selectedYear === now.getFullYear() && selectedMonth === now.getMonth() + 1;
-
   // Build all invoice line items for the selected month
   const invoiceLineItems = useMemo(() => {
     const items: InvoiceLineItem[] = [];
-    
-    // Only show client work for current month (we don't have historical client data)
-    if (isCurrentMonth) {
-      // 1. Client rewards - fixed monthly fees (format: "Přímá služba – [klient] – správa účtu")
-      clientRewards.forEach((cr) => {
-        const invoiceName = cr.isProrated 
-          ? `Přímá služba – ${cr.clientName} – správa účtu (poměrná část od ${cr.startDay}.)`
-          : `Přímá služba – ${cr.clientName} – správa účtu`;
-        
-        items.push({
-          id: `client-${cr.engagementId}`,
-          category: 'client',
-          invoiceName,
-          amount: cr.amount,
-          note: cr.isProrated ? `od ${cr.startDay}.` : undefined,
-        });
-      });
 
-      // 2. Creative Boost rewards (format: "Přímá služba – [klient] – Creative Boost")
-      creativeBoostItems.forEach((cb, idx) => {
-        items.push({
-          id: `cb-${idx}`,
-          category: 'creative_boost',
-          invoiceName: `Přímá služba – ${cb.clientName} – Creative Boost (${cb.credits} kr.)`,
-          amount: cb.reward,
-        });
-      });
+    // 1. Client rewards - fixed monthly fees (format: "Přímá služba – [klient] – správa účtu")
+    clientRewards.forEach((cr) => {
+      const invoiceName = cr.isProrated
+        ? `Přímá služba – ${cr.clientName} – správa účtu (poměrná část od ${cr.startDay}.)`
+        : `Přímá služba – ${cr.clientName} – správa účtu`;
 
-      // 3. Approved commissions (format: "Přímá služba – [klient] – provize za upsell")
-      commissionItems.forEach((comm, idx) => {
-        items.push({
-          id: `comm-${idx}`,
-          category: 'commission',
-          invoiceName: `Přímá služba – ${comm.clientName} – provize za upsell`,
-          amount: comm.amount,
-        });
+      items.push({
+        id: `client-${cr.engagementId}`,
+        category: 'client',
+        invoiceName,
+        amount: cr.amount,
+        note: cr.isProrated ? `od ${cr.startDay}.` : undefined,
       });
+    });
 
-      // 4. Extra work (format: "Přímá služba – [klient] – [název práce]")
-      extraWorkItems.forEach((ew, idx) => {
-        const hoursNote = ew.hours && ew.hourlyRate
-          ? ` (${ew.hours}h × ${ew.hourlyRate} Kč)`
-          : '';
-        items.push({
-          id: `extra-${idx}`,
-          category: 'client',
-          invoiceName: `Přímá služba – ${ew.clientName} – ${ew.name}${hoursNote}`,
-          amount: ew.amount,
-        });
+    // 2. Creative Boost rewards (format: "Přímá služba – [klient] – Creative Boost")
+    creativeBoostItems.forEach((cb, idx) => {
+      items.push({
+        id: `cb-${idx}`,
+        category: 'creative_boost',
+        invoiceName: `Přímá služba – ${cb.clientName} – Creative Boost (${cb.credits} kr.)`,
+        amount: cb.reward,
       });
-    }
+    });
+
+    // 3. Approved commissions (format: "Přímá služba – [klient] – provize za upsell")
+    commissionItems.forEach((comm, idx) => {
+      items.push({
+        id: `comm-${idx}`,
+        category: 'commission',
+        invoiceName: `Přímá služba – ${comm.clientName} – provize za upsell`,
+        amount: comm.amount,
+      });
+    });
+
+    // 4. Extra work (format: "Přímá služba – [klient] – [název práce]")
+    extraWorkItems.forEach((ew, idx) => {
+      const hoursNote = ew.hours && ew.hourlyRate
+        ? ` (${ew.hours}h × ${ew.hourlyRate} Kč)`
+        : '';
+      items.push({
+        id: `extra-${idx}`,
+        category: 'client',
+        invoiceName: `Přímá služba – ${ew.clientName} – ${ew.name}${hoursNote}`,
+        amount: ew.amount,
+      });
+    });
 
     // 4. Internal work (marketing + overhead) - from activity rewards
     const categorized = getRewardsByCategory(selectedYear, selectedMonth);
@@ -253,7 +231,7 @@ export function InvoicingOverview({
     });
 
     return items;
-  }, [clientRewards, creativeBoostItems, commissionItems, extraWorkItems, getRewardsByCategory, selectedYear, selectedMonth, isCurrentMonth]);
+  }, [clientRewards, creativeBoostItems, commissionItems, extraWorkItems, getRewardsByCategory, selectedYear, selectedMonth]);
 
   // Group items by category for display
   const groupedItems = useMemo(() => {
@@ -290,7 +268,6 @@ export function InvoicingOverview({
   };
 
   const hasClientWork = groupedItems.client.length > 0 || groupedItems.client_work.length > 0 || groupedItems.creativeBoost.length > 0 || groupedItems.commission.length > 0;
-  const hasInternalWork = groupedItems.marketing.length > 0 || groupedItems.overhead.length > 0;
 
   // Helper to find reward by ID for editing
   const getRewardById = (id: string): ActivityReward | undefined => {
@@ -313,41 +290,12 @@ export function InvoicingOverview({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Month/Year filter — stack on narrow screens so selects stay clear of the bug-report FAB */}
-        <div className="flex max-sm:flex-col max-sm:gap-2 sm:items-center sm:gap-2">
+        {/* Selected month comes from the page-level month selector */}
+        <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground shrink-0">Fakturovat za</span>
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-          <Select
-            value={selectedMonth.toString()}
-            onValueChange={(v) => setSelectedMonth(Number(v))}
-          >
-            <SelectTrigger className="w-full sm:w-[110px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {MONTHS.map((month, index) => (
-                <SelectItem key={index + 1} value={(index + 1).toString()}>
-                  {month}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={selectedYear.toString()}
-            onValueChange={(v) => setSelectedYear(Number(v))}
-          >
-            <SelectTrigger className="w-full sm:w-20">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {availableYears.map((year) => (
-                <SelectItem key={year} value={year.toString()}>
-                  {year}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          </div>
+          <Badge variant="outline" className="text-sm font-normal">
+            {MONTHS[selectedMonth - 1]} {selectedYear}
+          </Badge>
         </div>
 
         {/* Invoice line items */}
@@ -359,7 +307,7 @@ export function InvoicingOverview({
           ) : (
             <>
               {/* CLIENT WORK SECTION */}
-              {hasClientWork && isCurrentMonth && (
+              {hasClientWork && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Briefcase className="h-4 w-4 text-primary" />
@@ -387,71 +335,61 @@ export function InvoicingOverview({
                 </div>
               )}
 
-              {/* Info for non-current months */}
-              {!isCurrentMonth && hasInternalWork && (
-                <div className="flex items-center gap-2 p-2 rounded bg-muted/50 text-xs text-muted-foreground">
-                  <AlertCircle className="h-3.5 w-3.5" />
-                  <span>Klientská práce se zobrazuje pouze pro aktuální měsíc</span>
-                </div>
-              )}
-
               {/* INTERNAL WORK SECTION */}
-              {(hasInternalWork || true) && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium">Režijní položky</span>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 h-7 text-xs"
-                      onClick={() => onAddInternalWork(selectedYear, selectedMonth)}
-                    >
-                      <Plus className="h-3 w-3" />
-                      Přidat položku
-                    </Button>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Režijní položky</span>
                   </div>
-                  
-                  {/* Marketing */}
-                  {groupedItems.marketing.length > 0 && (
-                    <div className="pl-2 border-l-2 border-primary/20">
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 px-2">
-                        <Megaphone className="h-3 w-3" />
-                        {CATEGORY_LABELS.marketing}
-                      </div>
-                      {groupedItems.marketing.map((item) => (
-                        <InvoiceLineItemRow 
-                          key={item.id} 
-                          item={item} 
-                          onCopy={handleCopy} 
-                          onEdit={() => handleEditReward(item.id)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  
-                  {/* Overhead */}
-                  {groupedItems.overhead.length > 0 && (
-                    <div className="pl-2 border-l-2 border-primary/20">
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 px-2">
-                        <Building2 className="h-3 w-3" />
-                        {CATEGORY_LABELS.overhead}
-                      </div>
-                      {groupedItems.overhead.map((item) => (
-                        <InvoiceLineItemRow
-                          key={item.id}
-                          item={item}
-                          onCopy={handleCopy}
-                          onEdit={() => handleEditReward(item.id)}
-                        />
-                      ))}
-                    </div>
-                  )}
-
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 h-7 text-xs"
+                    onClick={() => onAddInternalWork(selectedYear, selectedMonth)}
+                  >
+                    <Plus className="h-3 w-3" />
+                    Přidat položku
+                  </Button>
                 </div>
-              )}
+
+                {/* Marketing */}
+                {groupedItems.marketing.length > 0 && (
+                  <div className="pl-2 border-l-2 border-primary/20">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 px-2">
+                      <Megaphone className="h-3 w-3" />
+                      {CATEGORY_LABELS.marketing}
+                    </div>
+                    {groupedItems.marketing.map((item) => (
+                      <InvoiceLineItemRow 
+                        key={item.id} 
+                        item={item} 
+                        onCopy={handleCopy} 
+                        onEdit={() => handleEditReward(item.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Overhead */}
+                {groupedItems.overhead.length > 0 && (
+                  <div className="pl-2 border-l-2 border-primary/20">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 px-2">
+                      <Building2 className="h-3 w-3" />
+                      {CATEGORY_LABELS.overhead}
+                    </div>
+                    {groupedItems.overhead.map((item) => (
+                      <InvoiceLineItemRow
+                        key={item.id}
+                        item={item}
+                        onCopy={handleCopy}
+                        onEdit={() => handleEditReward(item.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+
+              </div>
             </>
           )}
         </div>
@@ -463,7 +401,7 @@ export function InvoicingOverview({
             <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">
-                  {isCurrentMonth ? 'Celkem k fakturaci' : `Celkem za ${MONTHS[selectedMonth - 1]} ${selectedYear}`}
+                  Celkem za {MONTHS[selectedMonth - 1]} {selectedYear}
                 </span>
                 <span className="text-xl font-bold text-primary">
                   {grandTotal.toLocaleString('cs-CZ')} Kč
