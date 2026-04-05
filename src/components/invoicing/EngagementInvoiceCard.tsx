@@ -31,6 +31,8 @@ interface EngagementInvoiceCardProps {
   onRemoveInvoice?: (invoice: MonthlyEngagementInvoice) => void;
   isIssued?: boolean;
   isDeliveredToFakturoid?: boolean;
+  isDeliveryProblem?: boolean;
+  isSelectable?: boolean;
   onApproveAllItems?: (invoiceId: string) => void;
 }
 
@@ -67,6 +69,8 @@ export function EngagementInvoiceCard({
   onRemoveInvoice,
   isIssued = false,
   isDeliveredToFakturoid = false,
+  isDeliveryProblem = false,
+  isSelectable = true,
   onApproveAllItems,
 }: EngagementInvoiceCardProps) {
   const { getClientById } = useCRMData();
@@ -113,8 +117,9 @@ export function EngagementInvoiceCard({
         !isIssued && "hover:bg-accent/5",
         isSelected && "ring-2 ring-primary",
         isSelected && !allApproved && "ring-amber-500 bg-amber-50/50 dark:bg-amber-950/20",
-        isIssued && isDeliveredToFakturoid && "ring-2 ring-green-500 bg-green-50/50 dark:bg-green-950/20 opacity-75",
-        isIssued && !isDeliveredToFakturoid && "ring-2 ring-amber-500 bg-amber-50/60 dark:bg-amber-950/20"
+        isIssued && isDeliveryProblem && "ring-2 ring-red-500 bg-red-50/60 dark:bg-red-950/20",
+        isIssued && isDeliveredToFakturoid && !isDeliveryProblem && "ring-2 ring-green-500 bg-green-50/50 dark:bg-green-950/20 opacity-75",
+        isIssued && !isDeliveredToFakturoid && !isDeliveryProblem && "ring-2 ring-amber-500 bg-amber-50/60 dark:bg-amber-950/20"
       )}
       onClick={handleCardClick}
     >
@@ -129,6 +134,7 @@ export function EngagementInvoiceCard({
                       <div className="relative" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={isSelected}
+                          disabled={!isSelectable}
                           onCheckedChange={(checked) => {
                             if (checked === true) {
                               onSelectionChange(true);
@@ -154,6 +160,11 @@ export function EngagementInvoiceCard({
                     {!allApproved && !isIssued && (
                       <TooltipContent>
                         <p>Faktura obsahuje neschválené položky</p>
+                      </TooltipContent>
+                    )}
+                    {isIssued && (
+                      <TooltipContent>
+                        <p>Vystavená faktura se znovu nevystaví hromadně. Použijte akci "Vystavit znovu".</p>
                       </TooltipContent>
                     )}
                   </Tooltip>
@@ -252,9 +263,17 @@ export function EngagementInvoiceCard({
               {isIssued && (
                 <span className={cn(
                   "text-xs font-medium px-2",
-                  isDeliveredToFakturoid ? "text-green-600" : "text-amber-700 dark:text-amber-400",
+                  isDeliveryProblem
+                    ? "text-red-700 dark:text-red-400"
+                    : isDeliveredToFakturoid
+                      ? "text-green-600"
+                      : "text-amber-700 dark:text-amber-400",
                 )}>
-                  {isDeliveredToFakturoid ? "✓ Odesláno do Fakturoid" : "⚠ Neodesláno do Fakturoid"}
+                  {isDeliveryProblem
+                    ? "⚠ Problém exportu do Fakturoid"
+                    : isDeliveredToFakturoid
+                      ? "✓ Odesláno do Fakturoid"
+                      : "⚠ Neodesláno do Fakturoid"}
                 </span>
               )}
               <DropdownMenu>
@@ -326,7 +345,11 @@ export function EngagementInvoiceCard({
                       <div onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={item.is_approved}
-                          onCheckedChange={(checked) => onUpdateLineItem(item.id, { is_approved: checked === true })}
+                          disabled={isIssued}
+                          onCheckedChange={(checked) => {
+                            if (isIssued) return;
+                            onUpdateLineItem(item.id, { is_approved: checked === true });
+                          }}
                           className={cn(
                             "h-3.5 w-3.5",
                             isIssued && "border-destructive data-[state=checked]:bg-destructive"
@@ -361,6 +384,7 @@ export function EngagementInvoiceCard({
                 key={item.id}
                 item={item}
                 currency={invoice.currency}
+                isLocked={isIssued}
                 onUpdate={(updates) => onUpdateLineItem(item.id, updates)}
                 onRemove={item.source === 'manual' ? () => onRemoveLineItem(item.id) : undefined}
                 onDuplicate={() => onDuplicateLineItem(item.id)}
@@ -371,8 +395,10 @@ export function EngagementInvoiceCard({
               variant="outline"
               size="sm"
               className="w-full border-dashed h-7 text-xs"
+              disabled={isIssued}
               onClick={(e) => {
                 e.stopPropagation();
+                if (isIssued) return;
                 onAddManualItem();
               }}
             >

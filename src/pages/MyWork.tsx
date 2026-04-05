@@ -78,7 +78,6 @@ function MyWorkContent() {
     isLoading: isLoadingRewards,
     error: rewardsError,
     refetch: refetchRewards,
-    currentMonthTotal: activityCurrentMonthTotal,
     getRewardsByMonth,
     getRewardsByCategory,
     getMonthlyTotals,
@@ -129,21 +128,30 @@ function MyWorkContent() {
   // Get assignments for current colleague
   const myAssignments = useMemo(() => {
     if (!currentColleague) return [];
-    const now = new Date();
+    const monthStart = new Date(currentYear, currentMonth - 1, 1);
+    const monthEnd = new Date(currentYear, currentMonth, 0);
+
     return assignments.filter(a => {
-      if (a.colleague_id !== currentColleague.id || a.end_date) return false;
+      if (a.colleague_id !== currentColleague.id) return false;
       const eng = engagements.find(e => e.id === a.engagement_id);
       if (!eng) return false;
       // Exclude cancelled/completed engagements
       if (eng.status === 'cancelled' || eng.status === 'completed') return false;
-      // Exclude engagements that have ended (end_date in the past)
-      if (eng.end_date && new Date(eng.end_date) < now) return false;
-      // Include active + planned that have already started
-      if (eng.status === 'active') return true;
-      if (eng.start_date && new Date(eng.start_date) <= now) return true;
-      return false;
+
+      // Include assignments and engagements that overlap selected month.
+      const assignmentStart = a.start_date ? new Date(a.start_date) : null;
+      const assignmentEnd = a.end_date ? new Date(a.end_date) : null;
+      const engagementStart = eng.start_date ? new Date(eng.start_date) : null;
+      const engagementEnd = eng.end_date ? new Date(eng.end_date) : null;
+
+      if (assignmentStart && assignmentStart > monthEnd) return false;
+      if (assignmentEnd && assignmentEnd < monthStart) return false;
+      if (engagementStart && engagementStart > monthEnd) return false;
+      if (engagementEnd && engagementEnd < monthStart) return false;
+
+      return true;
     });
-  }, [assignments, currentColleague, engagements]);
+  }, [assignments, currentColleague, engagements, currentYear, currentMonth]);
 
   // Calculate earnings and client data with prorated rewards
   const myWorkData = useMemo(() => {
@@ -238,6 +246,7 @@ function MyWorkContent() {
   // Internal work this month
   const internalWorkThisMonth = getRewardsByMonth(currentYear, currentMonth);
   const categorizedInternalWork = getRewardsByCategory(currentYear, currentMonth);
+  const manualItemsTotal = internalWorkThisMonth.reduce((sum, item) => sum + item.amount, 0);
 
   // Total client earnings this month (WITHOUT internal work)
   const totalClientEarnings = myWorkData.totalMonthlyProrated + totalCreativeBoostReward + totalApprovedCommission + totalExtraWork;
@@ -270,7 +279,7 @@ function MyWorkContent() {
   }));
 
   const commissionsForInvoice = approvedCommissions.map((comm) => ({
-    clientName: comm.brandName || comm.clientName || 'Neznámý klient',
+    clientName: comm.clientName || comm.brandName || 'Neznámý klient',
     amount: comm.commissionAmount,
   }));
 
@@ -314,7 +323,7 @@ function MyWorkContent() {
       const monthlyAmount = assignment.monthly_cost || 0;
       const prorated = calculateProratedReward(monthlyAmount, assignment.start_date, year, month);
       return {
-        clientName: client?.brand_name || client?.name || '',
+        clientName: client?.name || client?.brand_name || '',
         engagementId: assignment.engagement_id,
         amount: prorated.proratedAmount,
         isProrated: prorated.isProrated,
@@ -326,7 +335,7 @@ function MyWorkContent() {
     const cb = cbByClient.map(c => ({ clientName: c.clientName, credits: c.totalCredits, reward: c.totalReward }));
 
     const comms = getApprovedCommissionsForColleague(currentColleague.id, year, month)
-      .map(c => ({ clientName: c.brandName || c.clientName || 'Neznámý klient', amount: c.commissionAmount }));
+      .map(c => ({ clientName: c.clientName || c.brandName || 'Neznámý klient', amount: c.commissionAmount }));
 
     const monthExtraWorks = extraWorks.filter(ew => {
       if (!ew.colleague_id || ew.colleague_id !== currentColleague.id) return false;
@@ -660,7 +669,7 @@ function MyWorkContent() {
                         className="w-full flex items-center justify-between py-1 pl-5 hover:bg-muted/50 rounded px-2 text-left"
                       >
                         <span className="text-sm truncate">{item.invoice_item_name}</span>
-                        <span className="font-medium">{item.amount.toLocaleString()} Kč</span>
+                        <span className="font-medium">{formatAmountWithOptionalEur(item.amount)}</span>
                       </button>
                     ))}
                     {categorizedInternalWork.client_work.length > 3 && (
@@ -685,7 +694,7 @@ function MyWorkContent() {
                         className="w-full flex items-center justify-between py-1 pl-5 hover:bg-muted/50 rounded px-2 text-left"
                       >
                         <span className="text-sm truncate">{item.invoice_item_name}</span>
-                        <span className="font-medium">{item.amount.toLocaleString()} Kč</span>
+                        <span className="font-medium">{formatAmountWithOptionalEur(item.amount)}</span>
                       </button>
                     ))}
                     {categorizedInternalWork.marketing.length > 3 && (
@@ -710,7 +719,7 @@ function MyWorkContent() {
                         className="w-full flex items-center justify-between py-1 pl-5 hover:bg-muted/50 rounded px-2 text-left"
                       >
                         <span className="text-sm truncate">{item.invoice_item_name}</span>
-                        <span className="font-medium">{item.amount.toLocaleString()} Kč</span>
+                        <span className="font-medium">{formatAmountWithOptionalEur(item.amount)}</span>
                       </button>
                     ))}
                     {categorizedInternalWork.overhead.length > 3 && (
@@ -725,7 +734,7 @@ function MyWorkContent() {
 
                 <div className="flex items-center justify-between">
                   <span className="font-medium">Celkem manuální položky</span>
-                  <span className="text-lg font-bold text-primary">{activityCurrentMonthTotal.toLocaleString()} Kč</span>
+                  <span className="text-lg font-bold text-primary">{formatAmountWithOptionalEur(manualItemsTotal)}</span>
                 </div>
               </>
             )}
@@ -797,6 +806,8 @@ function MyWorkContent() {
         getClientDataForMonth={getClientDataForMonth}
         internalRewards={activityRewards}
         getRewardsByCategory={getRewardsByCategory}
+        invoiceCurrency={currentColleague.invoice_currency}
+        convertCzkToEur={convertCzkToEur}
         onAddInternalWork={(year, month) => {
           const defaultDate = `${year}-${String(month).padStart(2, '0')}-15`;
           setAddActivityDefaultDate(defaultDate);

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AnalyticsOverview } from '@/components/analytics/AnalyticsOverview';
@@ -17,6 +18,7 @@ import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { getEngagementMonthlyRevenue } from '@/utils/engagementRevenueUtils';
+import { getExchangeRateForDate } from '@/lib/currency';
 
 import { format, subMonths, startOfMonth, endOfMonth, differenceInDays } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -53,6 +55,10 @@ function getMonthKeysBetween(start: Date, end: Date): YearMonthKey[] {
   return keys;
 }
 
+function toYearMonthKey(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
+
 export default function Analytics() {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
@@ -62,7 +68,17 @@ export default function Analytics() {
 
   const { leads } = useLeadsData();
   const { getClientMonthSummaries, outputTypes, outputs, calculateOutputCredits } = useCreativeBoostData();
-  const { clients, engagements, engagementServices, extraWorks, colleagues, assignments, engagementMetrics, getClientById } = useCRMData();
+  const {
+    clients,
+    engagements,
+    engagementServices,
+    extraWorks,
+    colleagues,
+    assignments,
+    engagementMetrics,
+    issuedInvoices,
+    getClientById,
+  } = useCRMData();
   const { canAccessPage } = useUserRole();
   
   // Check permissions
@@ -146,6 +162,31 @@ export default function Analytics() {
     () => getMonthKeysBetween(comparisonStart, comparisonEnd),
     [comparisonStart, comparisonEnd]
   );
+
+  const financeRateMonthKeys = useMemo(() => {
+    const unique = new Map<string, YearMonthKey>();
+    [...currentPeriodMonthKeys, ...comparisonPeriodMonthKeys].forEach((key) => {
+      unique.set(toYearMonthKey(key.year, key.month), key);
+    });
+    return Array.from(unique.values());
+  }, [comparisonPeriodMonthKeys, currentPeriodMonthKeys]);
+
+  const { data: eurToCzkRatesByMonth = {} } = useQuery({
+    queryKey: ['analytics', 'eur-to-czk-by-month', financeRateMonthKeys],
+    enabled: financeRateMonthKeys.length > 0,
+    queryFn: async () => {
+      const entries = await Promise.all(
+        financeRateMonthKeys.map(async (key) => {
+          const monthEnd = endOfMonth(new Date(key.year, key.month - 1, 1));
+          const dateLabel = format(monthEnd, 'yyyy-MM-dd');
+          const rate = await getExchangeRateForDate('EUR', 'CZK', dateLabel);
+          return [toYearMonthKey(key.year, key.month), rate.rate] as const;
+        }),
+      );
+      return Object.fromEntries(entries) as Record<string, number>;
+    },
+    staleTime: 1000 * 60 * 60 * 12,
+  });
 
   // =====================================================
   // OVERVIEW DATA
@@ -647,121 +688,204 @@ export default function Analytics() {
   // FINANCE DATA
   // =====================================================
   const financeData = useMemo(() => {
-    const prevPeriodStart = comparisonStart;
-    const prevPeriodEnd = comparisonEnd;
+    const currentPeriodMonthKeySet = new Set(
+      currentPeriodMonthKeys.map((key) => toYearMonthKey(key.year, key.month)),
+    );
+    const comparisonPeriodMonthKeySet = new Set(
+      comparisonPeriodMonthKeys.map((key) => toYearMonthKey(key.year, key.month)),
+    );
 
-    // Active engagements
-    const activeEngs = engagements.filter(e => {
-      const start = new Date(e.start_date);
-      const end = e.end_date ? new Date(e.end_date) : null;
-      return e.status === 'active' && start <= periodEnd && (!end || end >= periodStart);
+    const convertToCzk = (amount: number, currency: string, year: number, month: number) => {
+      const normalizedCurrency = (currency || 'CZK').toUpperCase();
+      if (normalizedCurrency === 'CZK') return amount;
+      if (normalizedCurrency === 'EUR') {
+        const rate = eurToCzkRatesByMonth[toYearMonthKey(year, month)] ?? 0;
+        return amount * rate;
+      }
+      return amount;
+    };
+
+    const latestInvoicesByGeneratedId = new Map<string, (typeof issuedInvoices)[number]>();
+    issuedInvoices.forEach((invoice) => {
+      const generatedId = `inv-${invoice.engagement_id}-${invoice.year}-${invoice.month}`;
+      const existing = latestInvoicesByGeneratedId.get(generatedId);
+      if (!existing) {
+        latestInvoicesByGeneratedId.set(generatedId, invoice);
+        return;
+      }
+      const existingTime = new Date(existing.created_at || existing.issued_at).getTime();
+      const invoiceTime = new Date(invoice.created_at || invoice.issued_at).getTime();
+      if (!Number.isFinite(existingTime) || (Number.isFinite(invoiceTime) && invoiceTime > existingTime)) {
+        latestInvoicesByGeneratedId.set(generatedId, invoice);
+      }
     });
 
-    // Total invoicing
-    const totalInvoicing = activeEngs.reduce(
-      (sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []),
+    const canonicalIssuedInvoices = Array.from(latestInvoicesByGeneratedId.values());
+
+    const periodInvoices = canonicalIssuedInvoices.filter((invoice) =>
+      currentPeriodMonthKeySet.has(toYearMonthKey(invoice.year, invoice.month)),
+    );
+    const prevPeriodInvoices = canonicalIssuedInvoices.filter((invoice) =>
+      comparisonPeriodMonthKeySet.has(toYearMonthKey(invoice.year, invoice.month)),
+    );
+
+    const totalInvoicing = periodInvoices.reduce(
+      (sum, invoice) => sum + convertToCzk(invoice.total_amount, invoice.currency, invoice.year, invoice.month),
       0,
     );
-    const prevInvoicing = engagements
-      .filter(e => {
-        const start = new Date(e.start_date);
-        const end = e.end_date ? new Date(e.end_date) : null;
-        return e.status === 'active' && start <= prevPeriodEnd && (!end || end >= prevPeriodStart);
-      })
-      .reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []), 0);
-    const engagementRevenueMap = new Map(
-      activeEngs.map((engagement) => [
-        engagement.id,
-        getEngagementMonthlyRevenue(engagement.id, engagement.monthly_fee, engagementServices || []),
-      ]),
+    const prevInvoicing = prevPeriodInvoices.reduce(
+      (sum, invoice) => sum + convertToCzk(invoice.total_amount, invoice.currency, invoice.year, invoice.month),
+      0,
     );
-
-    const invoicingChange = prevInvoicing > 0 
-      ? ((totalInvoicing - prevInvoicing) / prevInvoicing) * 100 
+    const invoicingChange = prevInvoicing > 0
+      ? ((totalInvoicing - prevInvoicing) / prevInvoicing) * 100
       : 0;
 
-    // Metrics
-    const metrics = engagementMetrics.filter((m) =>
-      currentPeriodMonthKeys.some((key) => key.year === m.year && key.month === m.month)
-    );
-    const avgMarginPercent = metrics.length > 0 
-      ? metrics.reduce((sum, m) => sum + m.margin_percent, 0) / metrics.length 
-      : 0;
-    const marginAbsolute = metrics.reduce((sum, m) => sum + m.margin_amount, 0);
-
-    // Extra work
-    const periodExtraWorks = extraWorks.filter(ew => {
-      const date = new Date(ew.work_date);
-      return date >= periodStart && date <= periodEnd;
+    const engagementRevenueByMonth = new Map<string, number>();
+    const engagementRevenueTotals = new Map<string, number>();
+    periodInvoices.forEach((invoice) => {
+      const monthKey = toYearMonthKey(invoice.year, invoice.month);
+      const engagementMonthKey = `${invoice.engagement_id}::${monthKey}`;
+      const convertedAmount = convertToCzk(invoice.total_amount, invoice.currency, invoice.year, invoice.month);
+      engagementRevenueByMonth.set(
+        engagementMonthKey,
+        (engagementRevenueByMonth.get(engagementMonthKey) || 0) + convertedAmount,
+      );
+      engagementRevenueTotals.set(
+        invoice.engagement_id,
+        (engagementRevenueTotals.get(invoice.engagement_id) || 0) + convertedAmount,
+      );
     });
-    const extraWorkCount = periodExtraWorks.length;
-    const extraWorkAmount = periodExtraWorks.reduce((sum, ew) => sum + ew.amount, 0);
 
-    // Engagement margins
-    const engagementMargins = activeEngs.map(e => {
-      const client = getClientById(e.client_id);
-      const metric = metrics.find(m => m.engagement_id === e.id);
-      const engAssignments = assignments.filter(a => a.engagement_id === e.id);
-      const cost = engAssignments.reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
-      
+    const isAssignmentActiveInMonth = (assignmentStart: Date, assignmentEnd: Date | null, year: number, month: number) => {
+      const monthStart = startOfMonth(new Date(year, month - 1, 1));
+      const monthEnd = endOfMonth(monthStart);
+      return assignmentStart <= monthEnd && (!assignmentEnd || assignmentEnd >= monthStart);
+    };
+
+    const engagementMargins = Array.from(engagementRevenueTotals.entries()).map(([engagementId, revenue]) => {
+      const engagement = engagements.find((item) => item.id === engagementId);
+      const client = engagement ? getClientById(engagement.client_id) : undefined;
+
+      let cost = 0;
+      currentPeriodMonthKeys.forEach((periodMonth) => {
+        const monthKey = toYearMonthKey(periodMonth.year, periodMonth.month);
+        const monthRevenue = engagementRevenueByMonth.get(`${engagementId}::${monthKey}`) || 0;
+        if (monthRevenue <= 0) return;
+
+        cost += assignments
+          .filter((assignment) => assignment.engagement_id === engagementId)
+          .reduce((sum, assignment) => {
+            const assignmentStart = new Date(assignment.start_date);
+            const assignmentEnd = assignment.end_date ? new Date(assignment.end_date) : null;
+            if (!isAssignmentActiveInMonth(assignmentStart, assignmentEnd, periodMonth.year, periodMonth.month)) {
+              return sum;
+            }
+            if (assignment.cost_model === 'percentage') {
+              return sum + (monthRevenue * (assignment.percentage_of_revenue || 0)) / 100;
+            }
+            return sum + (assignment.monthly_cost || 0);
+          }, 0);
+      });
+
+      const marginAbsolute = revenue - cost;
+      const marginPercent = revenue > 0 ? (marginAbsolute / revenue) * 100 : 0;
+
       return {
-        id: e.id,
-        name: e.name,
+        id: engagementId,
+        name: engagement?.name || 'Neznámá zakázka',
         client: client?.brand_name || '',
-        revenue: engagementRevenueMap.get(e.id) || 0,
+        revenue,
         cost,
-        marginAbsolute: metric?.margin_amount || ((engagementRevenueMap.get(e.id) || 0) - cost),
-        marginPercent: metric?.margin_percent || (() => {
-          const engagementRevenue = engagementRevenueMap.get(e.id) || 0;
-          if (engagementRevenue <= 0) return 0;
-          return ((engagementRevenue - cost) / engagementRevenue) * 100;
-        })(),
+        marginAbsolute,
+        marginPercent,
       };
     }).sort((a, b) => b.marginPercent - a.marginPercent);
 
-    // Margin trend
+    const marginAbsolute = engagementMargins.reduce((sum, engagement) => sum + engagement.marginAbsolute, 0);
+    const avgMarginPercent = totalInvoicing > 0 ? (marginAbsolute / totalInvoicing) * 100 : 0;
+
+    const periodExtraWorks = extraWorks.filter((item) => {
+      const date = new Date(item.work_date);
+      return date >= periodStart && date <= periodEnd;
+    });
+    const extraWorkCount = periodExtraWorks.length;
+    const extraWorkAmount = periodExtraWorks.reduce((sum, item) => {
+      const workDate = new Date(item.work_date);
+      return sum + convertToCzk(item.amount, item.currency, workDate.getFullYear(), workDate.getMonth() + 1);
+    }, 0);
+
     const marginTrend = Array.from({ length: 12 }, (_, i) => {
       const date = subMonths(periodStart, 11 - i);
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
 
-      const monthMetrics = engagementMetrics.filter(m => m.year === year && m.month === month);
-      const avgPercent = monthMetrics.length > 0 
-        ? monthMetrics.reduce((sum, m) => sum + m.margin_percent, 0) / monthMetrics.length
-        : 0;
-      const totalAbsolute = monthMetrics.reduce((sum, m) => sum + m.margin_amount, 0);
+      const monthInvoices = canonicalIssuedInvoices.filter(
+        (invoice) => invoice.year === year && invoice.month === month,
+      );
+      const monthRevenue = monthInvoices.reduce(
+        (sum, invoice) => sum + convertToCzk(invoice.total_amount, invoice.currency, invoice.year, invoice.month),
+        0,
+      );
+
+      const monthEngagementRevenue = new Map<string, number>();
+      monthInvoices.forEach((invoice) => {
+        const convertedAmount = convertToCzk(invoice.total_amount, invoice.currency, invoice.year, invoice.month);
+        monthEngagementRevenue.set(
+          invoice.engagement_id,
+          (monthEngagementRevenue.get(invoice.engagement_id) || 0) + convertedAmount,
+        );
+      });
+
+      const monthCost = assignments.reduce((sum, assignment) => {
+        const engagementRevenue = monthEngagementRevenue.get(assignment.engagement_id) || 0;
+        if (engagementRevenue <= 0) return sum;
+        const assignmentStart = new Date(assignment.start_date);
+        const assignmentEnd = assignment.end_date ? new Date(assignment.end_date) : null;
+        if (!isAssignmentActiveInMonth(assignmentStart, assignmentEnd, year, month)) return sum;
+        if (assignment.cost_model === 'percentage') {
+          return sum + (engagementRevenue * (assignment.percentage_of_revenue || 0)) / 100;
+        }
+        return sum + (assignment.monthly_cost || 0);
+      }, 0);
+
+      const absolute = monthRevenue - monthCost;
+      const percent = monthRevenue > 0 ? (absolute / monthRevenue) * 100 : 0;
 
       return {
         month: format(date, 'MMM', { locale: cs }),
-        percent: avgPercent,
-        absolute: totalAbsolute,
+        percent,
+        absolute,
       };
     });
 
-    // Margin distribution
     const ranges = ['0-10%', '10-20%', '20-30%', '30-40%', '40-50%', '50%+'];
     const marginDistribution = ranges.map((range, i) => {
       const min = i * 10;
       const max = i === 5 ? 100 : (i + 1) * 10;
-      const count = engagementMargins.filter(e => e.marginPercent >= min && e.marginPercent < max).length;
+      const count = engagementMargins.filter((item) => item.marginPercent >= min && item.marginPercent < max).length;
       return { range, count };
     });
 
-    // Extra work trend
     const extraWorkTrend = Array.from({ length: 12 }, (_, i) => {
       const date = subMonths(periodStart, 11 - i);
       const monthStart = startOfMonth(date);
       const monthEnd = endOfMonth(date);
 
-      const monthWorks = extraWorks.filter(ew => {
-        const workDate = new Date(ew.work_date);
+      const monthWorks = extraWorks.filter((item) => {
+        const workDate = new Date(item.work_date);
         return workDate >= monthStart && workDate <= monthEnd;
       });
+
+      const monthAmount = monthWorks.reduce((sum, item) => {
+        const workDate = new Date(item.work_date);
+        return sum + convertToCzk(item.amount, item.currency, workDate.getFullYear(), workDate.getMonth() + 1);
+      }, 0);
 
       return {
         month: format(date, 'MMM', { locale: cs }),
         count: monthWorks.length,
-        amount: monthWorks.reduce((sum, ew) => sum + ew.amount, 0),
+        amount: monthAmount,
       };
     });
 
@@ -840,7 +964,23 @@ export default function Analytics() {
         creditsTrend,
       },
     };
-  }, [comparisonEnd, comparisonStart, currentPeriodMonthKeys, periodEnd, periodStart, engagements, engagementMetrics, engagementServices, extraWorks, assignments, getClientById, colleagues, getClientMonthSummaries, outputTypes, outputs, calculateOutputCredits]);
+  }, [
+    currentPeriodMonthKeys,
+    comparisonPeriodMonthKeys,
+    periodStart,
+    periodEnd,
+    engagements,
+    issuedInvoices,
+    extraWorks,
+    assignments,
+    eurToCzkRatesByMonth,
+    getClientById,
+    colleagues,
+    getClientMonthSummaries,
+    outputTypes,
+    outputs,
+    calculateOutputCredits,
+  ]);
 
   const creativeBoostData = useMemo(() => {
     const allSummaries = currentPeriodMonthKeys.flatMap((key) =>

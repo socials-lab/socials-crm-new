@@ -32,46 +32,76 @@ serve(async (req) => {
       );
     }
 
-    // Get all invoices that have fakturoid_id but URL doesn't contain /p/ (not public)
-    const { data: invoices, error: fetchError } = await supabaseAdmin
+    const body = await req.json().catch(() => ({})) as { invoice_ids?: string[] };
+    const invoiceIds = Array.isArray(body.invoice_ids)
+      ? body.invoice_ids.filter((id) => typeof id === "string" && id.trim().length > 0)
+      : [];
+
+    // Get linked invoices (optionally filtered by ids)
+    let query = supabaseAdmin
       .from("issued_invoices")
       .select("id, invoice_number, fakturoid_id, fakturoid_url")
       .not("fakturoid_id", "is", null);
+
+    if (invoiceIds.length > 0) {
+      query = query.in("id", invoiceIds);
+    }
+
+    const { data: invoices, error: fetchError } = await query;
 
     if (fetchError) throw fetchError;
 
     const accountSlug = getAccountSlug();
     const accessToken = await getFakturoidAccessToken();
 
-    const updates: Array<{ invoice_number: string; old_url: string; new_url: string }> = [];
+    const updates: Array<{
+      id: string;
+      old_invoice_number: string;
+      new_invoice_number: string;
+      old_url: string | null;
+      new_url: string | null;
+    }> = [];
 
     for (const invoice of invoices || []) {
-      // Skip if already has public URL
-      if (invoice.fakturoid_url?.includes("/p/")) {
-        continue;
-      }
-
-      // Fetch invoice from Fakturoid to get public URL
+      // Fetch invoice from Fakturoid to get public URL + canonical number
       const fakturoidInvoice = await getInvoiceById(
         accessToken,
         accountSlug,
         parseInt(invoice.fakturoid_id)
       );
 
-      if (fakturoidInvoice.public_html_url) {
-        // Update the URL in database
-        const { error: updateError } = await supabaseAdmin
-          .from("issued_invoices")
-          .update({ fakturoid_url: fakturoidInvoice.public_html_url })
-          .eq("id", invoice.id);
+      const fakturoidNumber = typeof fakturoidInvoice.number === "string" ? fakturoidInvoice.number.trim() : "";
+      const nextPublicUrl = fakturoidInvoice.public_html_url ?? null;
+      const nextInvoiceNumber = fakturoidNumber || invoice.invoice_number;
+      const shouldUpdateUrl = !!nextPublicUrl && nextPublicUrl !== invoice.fakturoid_url;
+      const shouldUpdateNumber = !!fakturoidNumber && fakturoidNumber !== invoice.invoice_number;
 
-        if (!updateError) {
-          updates.push({
-            invoice_number: invoice.invoice_number,
-            old_url: invoice.fakturoid_url,
-            new_url: fakturoidInvoice.public_html_url,
-          });
+      if (!shouldUpdateUrl && !shouldUpdateNumber) {
+        continue;
+      }
+
+      const { error: updateError } = await supabaseAdmin
+        .from("issued_invoices")
+        .update({
+          ...(shouldUpdateUrl ? { fakturoid_url: nextPublicUrl } : {}),
+          ...(shouldUpdateNumber ? { invoice_number: nextInvoiceNumber } : {}),
+        })
+        .eq("id", invoice.id);
+
+      if (!updateError) {
+        if (shouldUpdateNumber) {
+          await supabaseAdmin
+            .from("extra_works")
+            .update({ invoice_number: nextInvoiceNumber })
+            .eq("invoice_id", invoice.id);
         }
+        updates.push({
+          id: invoice.id,
+          old_invoice_number: invoice.invoice_number,
+          new_invoice_number: nextInvoiceNumber,
+          old_url: invoice.fakturoid_url,
+          new_url: nextPublicUrl,
+        });
       }
     }
 

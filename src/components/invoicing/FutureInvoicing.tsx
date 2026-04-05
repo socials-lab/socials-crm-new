@@ -88,6 +88,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   const [showMixedCurrencyWarning, setShowMixedCurrencyWarning] = useState(false);
   const [issuedInvoiceIds, setIssuedInvoiceIds] = useState<Set<string>>(new Set());
   const [issuedInvoiceDeliveryByGeneratedId, setIssuedInvoiceDeliveryByGeneratedId] = useState<Map<string, boolean>>(new Map());
+  const [issuedInvoiceProblemByGeneratedId, setIssuedInvoiceProblemByGeneratedId] = useState<Map<string, boolean>>(new Map());
   const [savingDraft, setSavingDraft] = useState(false);
 
   // Clear draft state when year/month changes and reload from localStorage
@@ -120,6 +121,8 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   useEffect(() => {
     const alreadyIssuedIds = new Set<string>();
     const deliveryMap = new Map<string, boolean>();
+    const problemMap = new Map<string, boolean>();
+    const invoicesByGeneratedId = new Map<string, typeof issuedInvoices>();
 
     // Check which engagements already have issued invoices for this year/month
     issuedInvoices
@@ -127,12 +130,33 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
       .forEach(inv => {
         // The generated invoice ID format is `inv-{engagement_id}-{year}-{month}`
         const generatedId = `inv-${inv.engagement_id}-${year}-${month}`;
-        alreadyIssuedIds.add(generatedId);
-        deliveryMap.set(generatedId, !!inv.fakturoid_id);
+        const group = invoicesByGeneratedId.get(generatedId) ?? [];
+        invoicesByGeneratedId.set(generatedId, [...group, inv]);
       });
+
+    invoicesByGeneratedId.forEach((group, generatedId) => {
+      alreadyIssuedIds.add(generatedId);
+
+      const latest = group.reduce((selected, current) => {
+        const selectedTime = new Date(selected.created_at ?? selected.issued_at).getTime();
+        const currentTime = new Date(current.created_at ?? current.issued_at).getTime();
+        if (Number.isFinite(currentTime) && currentTime > selectedTime) {
+          return current;
+        }
+        return selected;
+      });
+
+      const latestDelivered = !!latest.fakturoid_id || !!latest.fakturoid_url;
+      const latestHasLegacyNumber = /^FV-\d{4}-\d+$/.test(latest.invoice_number);
+      const latestProblem = !latestDelivered || latestHasLegacyNumber;
+
+      deliveryMap.set(generatedId, latestDelivered);
+      problemMap.set(generatedId, latestProblem);
+    });
 
     setIssuedInvoiceIds(alreadyIssuedIds);
     setIssuedInvoiceDeliveryByGeneratedId(deliveryMap);
+    setIssuedInvoiceProblemByGeneratedId(problemMap);
   }, [issuedInvoices, year, month]);
 
   // Generate invoices from engagements - ONE INVOICE PER ENGAGEMENT
@@ -785,25 +809,42 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   const issuedInvoicesInPeriod = currentInvoices.filter(inv => issuedInvoiceIds.has(inv.id));
   const issuedAmount = issuedInvoicesInPeriod.reduce((sum, inv) => sum + inv.total_amount, 0);
   const pendingInvoices = currentInvoices.filter(inv => !issuedInvoiceIds.has(inv.id));
+  const deliveredInvoiceIds = useMemo(() => {
+    const ids = new Set<string>();
+    currentInvoices.forEach((invoice) => {
+      const delivered = issuedInvoiceDeliveryByGeneratedId.get(invoice.id) ?? false;
+      const hasProblem = issuedInvoiceProblemByGeneratedId.get(invoice.id) ?? false;
+      if (delivered && !hasProblem) {
+        ids.add(invoice.id);
+      }
+    });
+    return ids;
+  }, [currentInvoices, issuedInvoiceDeliveryByGeneratedId, issuedInvoiceProblemByGeneratedId]);
+  const deliveredInvoicesInPeriod = currentInvoices.filter(inv => deliveredInvoiceIds.has(inv.id));
 
   // Helper to check if invoice is fully approved
   const isInvoiceApproved = (invoice: MonthlyEngagementInvoice) => 
     invoice.line_items.every(item => item.is_approved);
 
-  // Get approved invoices that can be selected
-  const approvedInvoices = currentInvoices.filter(isInvoiceApproved);
-  const allApprovedSelected = approvedInvoices.length > 0 && 
-    approvedInvoices.every(inv => selectedInvoiceIds.has(inv.id));
+  // Get approved invoices that can be selected for first-time issuing
+  const selectableInvoices = currentInvoices.filter(
+    (inv) => isInvoiceApproved(inv) && !issuedInvoiceIds.has(inv.id)
+  );
+  const allApprovedSelected = selectableInvoices.length > 0 &&
+    selectableInvoices.every(inv => selectedInvoiceIds.has(inv.id));
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedInvoiceIds(new Set(approvedInvoices.map(inv => inv.id)));
+      setSelectedInvoiceIds(new Set(selectableInvoices.map(inv => inv.id)));
     } else {
       setSelectedInvoiceIds(new Set());
     }
   };
 
   const handleInvoiceSelection = (invoiceId: string, selected: boolean) => {
+    if (issuedInvoiceIds.has(invoiceId)) {
+      return;
+    }
     setSelectedInvoiceIds(prev => {
       const next = new Set(prev);
       if (selected) {
@@ -855,6 +896,19 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
     return inv.line_items.some(item => requireCurrency(item.currency, `line item ${item.id}`) !== invCurrency);
   };
   const hasMixedCurrencyInSelected = invoicesToIssue.some(hasMixedCurrency);
+
+  // Keep selection clean: only invoices that still exist and are not already issued.
+  useEffect(() => {
+    setSelectedInvoiceIds(prev => {
+      const next = new Set(
+        Array.from(prev).filter((id) => {
+          const invoice = currentInvoices.find((inv) => inv.id === id);
+          return !!invoice && !issuedInvoiceIds.has(id);
+        })
+      );
+      return next.size === prev.size ? prev : next;
+    });
+  }, [currentInvoices, issuedInvoiceIds]);
 
   // Helper to calculate detailed issued stats by category
   const calculateIssuedStats = (issuedIds: Set<string>): IssuedStats => {
@@ -912,6 +966,11 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
     setIssuedInvoiceDeliveryByGeneratedId(prev => {
       const next = new Map(prev);
       invoiceIds.forEach(id => next.set(id, true));
+      return next;
+    });
+    setIssuedInvoiceProblemByGeneratedId(prev => {
+      const next = new Map(prev);
+      invoiceIds.forEach(id => next.set(id, false));
       return next;
     });
     // Clear selection for issued invoices
@@ -972,20 +1031,20 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
         <div className="flex items-center gap-3">
           <Checkbox
             checked={allApprovedSelected}
-            disabled={approvedInvoices.length === 0}
+            disabled={selectableInvoices.length === 0}
             onCheckedChange={handleSelectAll}
           />
           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
             <span className="text-sm text-muted-foreground">
               {selectedInvoiceIds.size > 0 
                 ? `Vybráno ${selectedInvoiceIds.size} z ${currentInvoices.length} faktur`
-                : `${approvedInvoices.length} z ${currentInvoices.length} faktur připraveno k vystavení`
+                : `${selectableInvoices.length} z ${currentInvoices.length} faktur připraveno k vystavení`
               }
             </span>
-            {issuedInvoiceIds.size > 0 && (
+            {deliveredInvoiceIds.size > 0 && (
               <span className="text-xs font-medium text-green-600 flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" />
-                {issuedInvoiceIds.size}/{currentInvoices.length} vystaveno ({formatAmountsByCurrency(issuedInvoicesInPeriod)})
+                {deliveredInvoiceIds.size}/{currentInvoices.length} vystaveno ({formatAmountsByCurrency(deliveredInvoicesInPeriod)})
               </span>
             )}
           </div>
@@ -1015,6 +1074,8 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
             onRemoveInvoice={handleRemoveInvoice}
             isIssued={issuedInvoiceIds.has(invoice.id)}
             isDeliveredToFakturoid={issuedInvoiceDeliveryByGeneratedId.get(invoice.id) ?? false}
+            isDeliveryProblem={issuedInvoiceProblemByGeneratedId.get(invoice.id) ?? false}
+            isSelectable={!issuedInvoiceIds.has(invoice.id)}
             onApproveAllItems={handleApproveAllItems}
           />
         ))}

@@ -36,6 +36,8 @@ interface IssuedInvoiceInfo {
   fakturoid_url: string | null;
 }
 
+const ECO_BAMBOO_CLIENT_ID = '1ec67350-44d6-4f64-bfd4-668b166f1afe';
+
 function withPromiseTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
   return Promise.race([
     promise,
@@ -53,23 +55,8 @@ function requireCurrency(value: string | null | undefined, context: string): str
   return value;
 }
 
-function normalizeText(value: string | null | undefined): string {
-  return (value ?? '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim();
-}
-
-function isEcoBambooClient(clientName: string | null | undefined, clientBrandName: string | null | undefined): boolean {
-  const name = normalizeText(clientName);
-  const brand = normalizeText(clientBrandName);
-  return (
-    name.includes('ecobamboo') ||
-    name.includes('eco bamboo') ||
-    brand.includes('ecobamboo') ||
-    brand.includes('eco bamboo')
-  );
+function isEcoBambooClient(clientId: string | null | undefined): boolean {
+  return clientId === ECO_BAMBOO_CLIENT_ID;
 }
 
 function getIsoEndOfInvoiceMonth(year: number, month: number): string {
@@ -131,7 +118,7 @@ export function IssueInvoicesDialog({
   const ecoBambooInvoiceIds = invoices
     .filter((inv) => {
       const client = getClientById(inv.client_id);
-      return isEcoBambooClient(client?.name, client?.brand_name);
+      return isEcoBambooClient(client?.id);
     })
     .map((inv) => inv.id);
 
@@ -240,7 +227,7 @@ export function IssueInvoicesDialog({
 
       // Eco Bamboo exception:
       // default issued date in CRM = DUZP = last day of invoiced month.
-      if (isEcoBambooClient(client?.name, client?.brand_name)) {
+      if (isEcoBambooClient(client?.id)) {
         const ecoIssuedAt = getIsoEndOfInvoiceMonth(invoice.year, invoice.month);
         const { error: ecoIssuedAtUpdateError } = await withPromiseTimeout(
           (async () =>
@@ -260,6 +247,7 @@ export function IssueInvoicesDialog({
       const { data: fakturoidResult, error: fakturoidError } = await invokeWithTimeout<{
         success?: boolean;
         partial_success?: boolean;
+        fakturoid_number?: string;
         fakturoid_url?: string;
         error?: string;
       }>(
@@ -298,7 +286,7 @@ export function IssueInvoicesDialog({
       }
 
       issuedInvoiceInfos.push({
-        invoice_number: createdInvoice.invoice_number,
+        invoice_number: fakturoidResult.fakturoid_number || createdInvoice.invoice_number,
         engagement_name: invoice.engagement_name,
         amount: invoice.total_amount,
         currency: requireCurrency(invoice.currency, `invoice ${invoice.id}`),

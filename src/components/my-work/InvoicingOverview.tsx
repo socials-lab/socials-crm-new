@@ -69,6 +69,8 @@ interface InvoicingOverviewProps {
   // Actions
   onAddInternalWork: (year: number, month: number) => void;
   onEditReward?: (reward: ActivityReward) => void;
+  invoiceCurrency?: 'CZK' | 'EUR';
+  convertCzkToEur?: (amountCzk: number) => number | null;
 }
 
 const MONTHS = [
@@ -76,14 +78,37 @@ const MONTHS = [
   'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec'
 ];
 
+function withManualItemPrefix(category: ActivityCategory, invoiceItemName: string): string {
+  const baseName = invoiceItemName.trim();
+  if (!baseName) return baseName;
+
+  // Avoid double-prefixing when the name already contains a manual-item prefix.
+  if (/^(Přímá služba|Režijní služba|Marketing)\s*[-–]\s*/i.test(baseName)) {
+    return baseName;
+  }
+
+  switch (category) {
+    case 'client_work':
+      return `Přímá služba – ${baseName}`;
+    case 'marketing':
+      return `Marketing – ${baseName}`;
+    case 'overhead':
+      return `Režijní služba – ${baseName}`;
+    default:
+      return baseName;
+  }
+}
+
 function InvoiceLineItemRow({ 
   item, 
   onCopy,
   onEdit,
+  formatAmount,
 }: { 
   item: InvoiceLineItem; 
   onCopy: (text: string) => void;
   onEdit?: () => void;
+  formatAmount: (amountCzk: number) => string;
 }) {
   const getCategoryIcon = () => {
     switch (item.category) {
@@ -98,6 +123,7 @@ function InvoiceLineItemRow({
   };
   
   const Icon = getCategoryIcon();
+  const amountLabel = formatAmount(item.amount);
   
   return (
     <div className="flex items-center gap-2 py-2 group hover:bg-muted/50 rounded px-2 -mx-2">
@@ -119,6 +145,15 @@ function InvoiceLineItemRow({
           >
             <Copy className="h-3 w-3" />
           </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 flex-shrink-0"
+            onClick={() => onCopy(amountLabel)}
+            title="Kopírovat částku položky"
+          >
+            <Copy className="h-3 w-3" />
+          </Button>
           {item.isEditable && onEdit && (
             <Button
               variant="ghost"
@@ -133,7 +168,7 @@ function InvoiceLineItemRow({
         </div>
       </div>
       <span className="font-medium whitespace-nowrap text-sm">
-        {item.amount.toLocaleString('cs-CZ')} Kč
+        {amountLabel}
       </span>
     </div>
   );
@@ -151,7 +186,19 @@ export function InvoicingOverview({
   getRewardsByCategory,
   onAddInternalWork,
   onEditReward,
+  invoiceCurrency = 'CZK',
+  convertCzkToEur,
 }: InvoicingOverviewProps) {
+  const formatAmount = (amountCzk: number) => {
+    if (invoiceCurrency === 'EUR') {
+      const eur = convertCzkToEur?.(amountCzk);
+      if (eur != null) {
+        return `${eur.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR`;
+      }
+    }
+    return `${amountCzk.toLocaleString('cs-CZ')} Kč`;
+  };
+
   // Build all invoice line items for the selected month
   const invoiceLineItems = useMemo(() => {
     const items: InvoiceLineItem[] = [];
@@ -222,7 +269,7 @@ export function InvoicingOverview({
       items.push({
         id: r.id,
         category: 'marketing',
-        invoiceName: `Režijní služba – ${r.invoice_item_name}`,
+        invoiceName: withManualItemPrefix('marketing', r.invoice_item_name),
         amount: r.amount,
         isEditable: true,
       });
@@ -232,7 +279,7 @@ export function InvoicingOverview({
       items.push({
         id: r.id,
         category: 'overhead',
-        invoiceName: `Režijní služba – ${r.invoice_item_name}`,
+        invoiceName: withManualItemPrefix('overhead', r.invoice_item_name),
         amount: r.amount,
         isEditable: true,
       });
@@ -243,7 +290,7 @@ export function InvoicingOverview({
       items.push({
         id: r.id,
         category: 'client_work',
-        invoiceName: r.invoice_item_name,
+        invoiceName: withManualItemPrefix('client_work', r.invoice_item_name),
         amount: r.amount,
         isEditable: true,
       });
@@ -334,7 +381,7 @@ export function InvoicingOverview({
                   </div>
                   <div className="pl-2 border-l-2 border-primary/20 space-y-0.5">
                     {groupedItems.client.map((item) => (
-                      <InvoiceLineItemRow key={item.id} item={item} onCopy={handleCopy} />
+                      <InvoiceLineItemRow key={item.id} item={item} onCopy={handleCopy} formatAmount={formatAmount} />
                     ))}
                     {groupedItems.client_work.map((item) => (
                       <InvoiceLineItemRow
@@ -342,13 +389,14 @@ export function InvoicingOverview({
                         item={item}
                         onCopy={handleCopy}
                         onEdit={() => handleEditReward(item.id)}
+                        formatAmount={formatAmount}
                       />
                     ))}
                     {groupedItems.creativeBoost.map((item) => (
-                      <InvoiceLineItemRow key={item.id} item={item} onCopy={handleCopy} />
+                      <InvoiceLineItemRow key={item.id} item={item} onCopy={handleCopy} formatAmount={formatAmount} />
                     ))}
                     {groupedItems.commission.map((item) => (
-                      <InvoiceLineItemRow key={item.id} item={item} onCopy={handleCopy} />
+                      <InvoiceLineItemRow key={item.id} item={item} onCopy={handleCopy} formatAmount={formatAmount} />
                     ))}
                   </div>
                 </div>
@@ -385,6 +433,7 @@ export function InvoicingOverview({
                         item={item} 
                         onCopy={handleCopy} 
                         onEdit={() => handleEditReward(item.id)}
+                        formatAmount={formatAmount}
                       />
                     ))}
                   </div>
@@ -403,6 +452,7 @@ export function InvoicingOverview({
                         item={item}
                         onCopy={handleCopy}
                         onEdit={() => handleEditReward(item.id)}
+                        formatAmount={formatAmount}
                       />
                     ))}
                   </div>
@@ -423,7 +473,7 @@ export function InvoicingOverview({
                   Celkem za {MONTHS[selectedMonth - 1]} {selectedYear}
                 </span>
                 <span className="text-xl font-bold text-primary">
-                  {grandTotal.toLocaleString('cs-CZ')} Kč
+                  {formatAmount(grandTotal)}
                 </span>
               </div>
             </div>

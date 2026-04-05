@@ -34,6 +34,7 @@ interface FakturoidInvoiceItem {
 }
 
 const ALLOWED_CURRENCIES = ["CZK", "EUR", "USD"] as const;
+const ECO_BAMBOO_CLIENT_ID = "1ec67350-44d6-4f64-bfd4-668b166f1afe";
 
 class ValidationError extends Error {}
 
@@ -60,19 +61,6 @@ function parseNumber(value: unknown, context: string, opts: { min?: number; allo
     throw new ValidationError(`Invalid numeric value for ${context}: must be > 0`);
   }
   return parsed;
-}
-
-function normalizeText(value: string | null | undefined): string {
-  return (value ?? "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
-}
-
-function isEcoBambooClient(clientName: string | null | undefined): boolean {
-  const normalized = normalizeText(clientName);
-  return normalized.includes("ecobamboo") || normalized.includes("eco bamboo");
 }
 
 function formatDateYYYYMMDD(date: Date): string {
@@ -194,13 +182,11 @@ serve(async (req) => {
       vat_rate: useReverseCharge ? 0 : (isVatPayer ? (item.is_reverse_charge ? 0 : parseNumber(item.vat_rate ?? 21, `line item ${index + 1} vat_rate`, { min: 0 })) : 0),
     }));
 
-    const ecoBambooMode = isEcoBambooClient(client.name);
+    const ecoBambooMode = client.id === ECO_BAMBOO_CLIENT_ID;
 
-    // Default DUZP behavior: last day of previous month relative to invoiced period.
-    // Eco Bamboo exception: DUZP = issued_on = last day of invoiced month.
-    const duzpDate = ecoBambooMode
-      ? new Date(invoice.year, invoice.month, 0)
-      : new Date(invoice.year, invoice.month - 1, 0);
+    // DUZP is always the last day of invoiced month (e.g. March invoice => 31.03).
+    // Eco Bamboo exception remains: issued_on = DUZP.
+    const duzpDate = new Date(invoice.year, invoice.month, 0);
     const duzpFormatted = formatDateYYYYMMDD(duzpDate);
 
     const payload = {
@@ -212,7 +198,6 @@ serve(async (req) => {
       due_in: 14,
       taxable_fulfillment_due: duzpFormatted,
       ...(ecoBambooMode ? { issued_on: duzpFormatted } : {}),
-      note: `Faktura ${invoice.invoice_number}`,
     };
 
     // Create invoice in Fakturoid
@@ -224,9 +209,15 @@ serve(async (req) => {
       || fakturoidInvoice.html_url
       || `https://app.fakturoid.cz/${accountSlug}/invoices/${fakturoidInvoice.id}`;
 
+    const fakturoidNumber = typeof fakturoidInvoice.number === "string" ? fakturoidInvoice.number.trim() : "";
+    if (!fakturoidNumber) {
+      throw new Error("Fakturoid returned empty invoice number");
+    }
+
     const { error: updateError } = await supabaseAdmin
       .from("issued_invoices")
       .update({
+        invoice_number: fakturoidNumber,
         fakturoid_id: String(fakturoidInvoice.id),
         fakturoid_url: fakturoidInvoiceUrl,
       })
@@ -245,6 +236,7 @@ serve(async (req) => {
           fakturoid_invoice: fakturoidInvoice,
           db_error: updateError.message,
           recovery_info: {
+            fakturoid_number: fakturoidNumber,
             fakturoid_id: fakturoidInvoice.id,
             fakturoid_url: fakturoidInvoiceUrl,
             local_invoice_id: invoiceId,
@@ -270,6 +262,14 @@ serve(async (req) => {
       );
     }
 
+    const { error: extraWorkNumberUpdateError } = await supabaseAdmin
+      .from("extra_works")
+      .update({ invoice_number: fakturoidNumber })
+      .eq("invoice_id", invoice_id);
+    if (extraWorkNumberUpdateError) {
+      console.error("Failed to sync invoice number to extra_works:", extraWorkNumberUpdateError);
+    }
+
     await supabaseAdmin.from('integration_log').insert({
       service: 'fakturoid',
       action: 'create_invoice',
@@ -286,6 +286,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
+        fakturoid_number: fakturoidNumber,
         fakturoid_id: fakturoidInvoice.id,
         fakturoid_url: fakturoidInvoiceUrl,
       }),

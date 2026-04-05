@@ -495,7 +495,7 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
       const existingClientIds = getClientsForMonth(year, month);
       // Get clients with active Creative Boost engagement services
       const cbClients = engagements
-        .filter(e => e.status === 'active')
+        .filter(e => e.status !== 'cancelled' && e.status !== 'completed')
         .map(e => e.client_id)
         .filter((id, index, self) => self.indexOf(id) === index)
         .map(clientId => getClientById(clientId))
@@ -514,7 +514,26 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
 
   const getClientMonthByClientId = useCallback(
     (clientId: string, year: number, month: number) => {
-      return clientMonths.find(cm => cm.clientId === clientId && cm.year === year && cm.month === month);
+      const monthRows = clientMonths.filter(
+        (cm) => cm.clientId === clientId && cm.year === year && cm.month === month
+      );
+      if (monthRows.length === 0) return undefined;
+
+      return monthRows.reduce((selected, current) => {
+        const selectedHasService = !!selected.engagementServiceId;
+        const currentHasService = !!current.engagementServiceId;
+        if (!selectedHasService && currentHasService) {
+          return current;
+        }
+        if (selectedHasService === currentHasService) {
+          const selectedUpdated = new Date(selected.updatedAt).getTime();
+          const currentUpdated = new Date(current.updatedAt).getTime();
+          if (Number.isFinite(currentUpdated) && currentUpdated > selectedUpdated) {
+            return current;
+          }
+        }
+        return selected;
+      });
     },
     [clientMonths]
   );
@@ -543,9 +562,32 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
 
   const getClientMonthSummaries = useCallback(
     (year: number, month: number): ClientMonthSummary[] => {
-    return clientMonths
-      .filter(cm => cm.year === year && cm.month === month)
-      .map(monthData => {
+    const preferredByClient = new Map<string, CreativeBoostClientMonth>();
+    clientMonths
+      .filter((cm) => cm.year === year && cm.month === month)
+      .forEach((cm) => {
+        const existing = preferredByClient.get(cm.clientId);
+        if (!existing) {
+          preferredByClient.set(cm.clientId, cm);
+          return;
+        }
+        const existingHasService = !!existing.engagementServiceId;
+        const currentHasService = !!cm.engagementServiceId;
+        if (!existingHasService && currentHasService) {
+          preferredByClient.set(cm.clientId, cm);
+          return;
+        }
+        if (existingHasService === currentHasService) {
+          const existingUpdated = new Date(existing.updatedAt).getTime();
+          const currentUpdated = new Date(cm.updatedAt).getTime();
+          if (Number.isFinite(currentUpdated) && currentUpdated > existingUpdated) {
+            preferredByClient.set(cm.clientId, cm);
+          }
+        }
+      });
+
+    return Array.from(preferredByClient.values())
+      .map((monthData) => {
         const clientData = getClientById(monthData.clientId);
         if (!clientData) return null;
 
@@ -853,7 +895,7 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
       const promises: Promise<void>[] = [];
     
     engagements.forEach(engagement => {
-      if (engagement.status !== 'active') return;
+      if (engagement.status === 'cancelled' || engagement.status === 'completed') return;
       
       const startDate = new Date(engagement.start_date);
       const endDate = engagement.end_date ? new Date(engagement.end_date) : null;

@@ -14,6 +14,7 @@ import { cs } from 'date-fns/locale';
 interface InvoiceLineItemCardProps {
   item: InvoiceLineItem;
   currency: string;
+  isLocked?: boolean;
   onUpdate: (updates: Partial<InvoiceLineItem>) => void;
   onRemove?: () => void;
   onDuplicate?: () => void;
@@ -27,7 +28,7 @@ function requireCurrency(value: string | null | undefined, context: string): str
   return value;
 }
 
-export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDuplicate }: InvoiceLineItemCardProps) {
+export function InvoiceLineItemCard({ item, currency, isLocked = false, onUpdate, onRemove, onDuplicate }: InvoiceLineItemCardProps) {
   const isProrated = item.prorated_days < item.total_days_in_month;
   const isManual = item.source === 'manual';
   const hasNote = item.note && item.note.trim().length > 0;
@@ -102,6 +103,7 @@ export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDupl
             <Switch
               id={`approve-${item.id}`}
               checked={item.is_approved}
+              disabled={isLocked}
               onCheckedChange={(checked) => onUpdate({ is_approved: checked })}
               className="scale-90"
             />
@@ -122,6 +124,7 @@ export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDupl
           <Input
             id={`desc-${item.id}`}
             value={item.line_description}
+            disabled={isLocked}
             onChange={(e) => onUpdate({ line_description: e.target.value })}
             className="mt-0.5 h-8 text-sm"
           />
@@ -133,6 +136,7 @@ export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDupl
             id={`price-${item.id}`}
             type="number"
             value={item.unit_price}
+            disabled={isLocked}
             onChange={(e) => onUpdate({ unit_price: Number(e.target.value) })}
             className="mt-0.5 h-8 text-sm"
           />
@@ -145,6 +149,7 @@ export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDupl
             type="number"
             min={1}
             value={item.quantity}
+            disabled={isLocked}
             onChange={(e) => onUpdate({ quantity: Number(e.target.value) })}
             className="mt-0.5 h-8 text-sm"
           />
@@ -165,6 +170,7 @@ export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDupl
               step="0.5"
               min="0"
               value={item.hours || ''}
+              disabled={isLocked}
               onChange={(e) => onUpdate({ hours: e.target.value ? Number(e.target.value) : null })}
               className="mt-0.5 h-8 text-sm"
               placeholder="0"
@@ -180,6 +186,7 @@ export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDupl
               type="number"
               min="0"
               value={item.hourly_rate || ''}
+              disabled={isLocked}
               onChange={(e) => onUpdate({ hourly_rate: e.target.value ? Number(e.target.value) : null })}
               className="mt-0.5 h-8 text-sm"
               placeholder="0"
@@ -210,6 +217,7 @@ export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDupl
           <Textarea
             id={`note-${item.id}`}
             value={item.note || ''}
+            disabled={isLocked}
             onChange={(e) => onUpdate({ note: e.target.value })}
             placeholder="Poznámka pro fakturantku..."
             className="mt-0.5 min-h-[32px] h-8 text-sm resize-none py-1.5"
@@ -222,6 +230,7 @@ export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDupl
             id={`adj-${item.id}`}
             type="number"
             value={item.adjustment_amount}
+            disabled={isLocked}
             onChange={(e) => onUpdate({ adjustment_amount: Number(e.target.value) })}
             className="mt-0.5 h-8 text-sm"
           />
@@ -232,6 +241,7 @@ export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDupl
           <Input
             id={`reason-${item.id}`}
             value={item.adjustment_reason}
+            disabled={isLocked}
             onChange={(e) => onUpdate({ adjustment_reason: e.target.value })}
             placeholder="Volitelný"
             className="mt-0.5 h-8 text-sm"
@@ -271,13 +281,13 @@ export function InvoiceLineItemCard({ item, currency, onUpdate, onRemove, onDupl
         
         <div className="flex items-center gap-1">
           {onDuplicate && (
-            <Button variant="ghost" size="sm" onClick={onDuplicate} className="h-6 text-xs px-2">
+            <Button variant="ghost" size="sm" onClick={onDuplicate} className="h-6 text-xs px-2" disabled={isLocked}>
               <Copy className="h-3 w-3 mr-1" />
               Duplikovat
             </Button>
           )}
           {onRemove && (
-            <Button variant="ghost" size="sm" className="text-destructive h-6 text-xs px-2" onClick={onRemove}>
+            <Button variant="ghost" size="sm" className="text-destructive h-6 text-xs px-2" onClick={onRemove} disabled={isLocked}>
               <Trash2 className="h-3 w-3 mr-1" />
               Odstranit
             </Button>

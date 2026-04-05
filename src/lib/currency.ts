@@ -31,6 +31,10 @@ function getCacheKey(from: SupportedCurrency, to: SupportedCurrency): string {
   return `${from}->${to}`;
 }
 
+function getDatedCacheKey(from: SupportedCurrency, to: SupportedCurrency, date: string): string {
+  return `${from}->${to}@${date}`;
+}
+
 export async function getExchangeRate(fromRaw: string, toRaw: string): Promise<ExchangeRateResult> {
   const from = toSupportedCurrency(fromRaw);
   const to = toSupportedCurrency(toRaw);
@@ -92,6 +96,66 @@ export async function getExchangeRate(fromRaw: string, toRaw: string): Promise<E
   rateCache.set(key, result);
   cacheTimestampByPair.set(key, Date.now());
   return result;
+}
+
+export async function getExchangeRateForDate(
+  fromRaw: string,
+  toRaw: string,
+  date: string,
+): Promise<ExchangeRateResult> {
+  const from = toSupportedCurrency(fromRaw);
+  const to = toSupportedCurrency(toRaw);
+
+  if (from === to) {
+    return {
+      from,
+      to,
+      rate: 1,
+      providerDate: date,
+    };
+  }
+
+  const normalizedDate = date.slice(0, 10);
+  const key = getDatedCacheKey(from, to, normalizedDate);
+  const cachedRate = rateCache.get(key);
+  const cachedAt = cacheTimestampByPair.get(key);
+  if (cachedRate && cachedAt && Date.now() - cachedAt <= CACHE_TTL_MS) {
+    return cachedRate;
+  }
+
+  const endpoint = `https://api.frankfurter.app/${normalizedDate}?from=${from}&to=${to}`;
+  try {
+    const response = await fetch(endpoint);
+    if (!response.ok) {
+      throw new Error(`Failed to load historical exchange rate ${from}/${to} (${response.status})`);
+    }
+    const payload = (await response.json()) as ExchangeRateResponse;
+    const rate = payload.rates[to];
+    if (typeof rate !== 'number' || Number.isNaN(rate) || rate <= 0) {
+      throw new Error(`Invalid historical exchange rate received for ${from}/${to}`);
+    }
+
+    const result: ExchangeRateResult = {
+      from,
+      to,
+      rate,
+      providerDate: payload.date || normalizedDate,
+    };
+
+    rateCache.set(key, result);
+    cacheTimestampByPair.set(key, Date.now());
+    return result;
+  } catch {
+    // Fallback to latest available rate when historical endpoint is unavailable.
+    const fallback = await getExchangeRate(from, to);
+    const result: ExchangeRateResult = {
+      ...fallback,
+      providerDate: normalizedDate,
+    };
+    rateCache.set(key, result);
+    cacheTimestampByPair.set(key, Date.now());
+    return result;
+  }
 }
 
 export async function convertCurrencyAmount(

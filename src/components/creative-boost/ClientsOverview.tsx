@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { useCRMData } from '@/hooks/useCRMData';
@@ -79,6 +79,32 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
   const [draftNumbers, setDraftNumbers] = useState<Record<string, string>>({});
   const lastEnsureKeyRef = useRef<string>('');
 
+  const getPreferredClientMonth = useCallback(
+    (clientId: string) => {
+      const monthRows = clientMonths.filter(
+        (cm) => cm.clientId === clientId && cm.year === year && cm.month === month
+      );
+      if (monthRows.length === 0) return undefined;
+
+      return monthRows.reduce((selected, current) => {
+        const selectedHasService = !!selected.engagementServiceId;
+        const currentHasService = !!current.engagementServiceId;
+        if (!selectedHasService && currentHasService) {
+          return current;
+        }
+        if (selectedHasService === currentHasService) {
+          const selectedUpdated = new Date(selected.updatedAt).getTime();
+          const currentUpdated = new Date(current.updatedAt).getTime();
+          if (Number.isFinite(currentUpdated) && currentUpdated > selectedUpdated) {
+            return current;
+          }
+        }
+        return selected;
+      });
+    },
+    [clientMonths, year, month]
+  );
+
   // Auto-sync: Ensure Creative Boost records exist for all active engagements
   useEffect(() => {
     const ensureKey = `${year}-${month}-${engagements.length}-${engagementServices.length}`;
@@ -97,9 +123,7 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
     const monthEnd = new Date(year, month, 0);
 
     return getClientMonthSummaries(year, month).filter((summary) => {
-      const monthData = clientMonths.find(
-        (cm) => cm.clientId === summary.clientId && cm.year === year && cm.month === month
-      );
+      const monthData = getPreferredClientMonth(summary.clientId);
       if (!monthData?.engagementId) {
         return false;
       }
@@ -125,13 +149,11 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
         (!engagementEndDate || engagementEndDate >= monthStart)
       );
     });
-  }, [getClientMonthSummaries, year, month, clientMonths, engagementServices, engagements]);
+  }, [getClientMonthSummaries, year, month, engagementServices, engagements, getPreferredClientMonth]);
 
   const filteredSummaries = useMemo(() => {
     return summaries.filter(s => {
-      const monthData = clientMonths.find(
-        (cm) => cm.clientId === s.clientId && cm.year === year && cm.month === month
-      );
+      const monthData = getPreferredClientMonth(s.clientId);
       const linkedEngagement = monthData?.engagementId
         ? engagements.find((e) => e.id === monthData.engagementId)
         : null;
@@ -144,7 +166,7 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
       const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [summaries, search, statusFilter, clientMonths, engagements, year, month]);
+  }, [summaries, search, statusFilter, engagements, getPreferredClientMonth]);
 
   const activeOutputTypes = useMemo(() => getActiveOutputTypes(), [getActiveOutputTypes]);
   
@@ -244,7 +266,7 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
   }
 
   const handleSettingsChange = async (clientId: string, field: SettingsField, value: number | MonthStatus | string) => {
-    const monthData = clientMonths.find(cm => cm.clientId === clientId && cm.year === year && cm.month === month);
+    const monthData = getPreferredClientMonth(clientId);
     if (monthData) {
       // Build list of updates to execute together
       const updates: Promise<unknown>[] = [];
@@ -283,7 +305,7 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
 
   const getSettingsDialogData = () => {
     if (!settingsDialogClient) return null;
-    const monthData = clientMonths.find(cm => cm.clientId === settingsDialogClient && cm.year === year && cm.month === month);
+    const monthData = getPreferredClientMonth(settingsDialogClient);
     const summary = summaries.find(s => s.clientId === settingsDialogClient);
     return { monthData, summary };
   };
@@ -336,7 +358,7 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
             : 0;
           const isOverMax = summary.usedCredits > summary.maxCredits;
           const clientOutputs = getClientOutputs(summary.clientId, year, month);
-          const monthData = clientMonths.find(cm => cm.clientId === summary.clientId && cm.year === year && cm.month === month);
+          const monthData = getPreferredClientMonth(summary.clientId);
           const assignedColleague = monthData?.colleagueId 
             ? designerColleagues.find(c => c.id === monthData.colleagueId)
             : null;
@@ -927,7 +949,7 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
       {/* Share Creative Boost Dialog */}
       {shareDialogClient && (() => {
         const summary = summaries.find(s => s.clientId === shareDialogClient);
-        const monthData = clientMonths.find(cm => cm.clientId === shareDialogClient && cm.year === year && cm.month === month);
+        const monthData = getPreferredClientMonth(shareDialogClient);
         if (!summary || !monthData) return null;
         return (
           <ShareCreativeBoostDialog
