@@ -59,6 +59,9 @@ function toYearMonthKey(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, '0')}`;
 }
 
+const BANNER_OUTPUT_CATEGORIES = ['banner', 'banner_translation', 'banner_revision', 'ai_photo'] as const;
+const VIDEO_OUTPUT_CATEGORIES = ['video', 'video_translation', 'video_revision'] as const;
+
 export default function Analytics() {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
@@ -67,7 +70,7 @@ export default function Analytics() {
   const [selectedQuarter, setSelectedQuarter] = useState(() => Math.ceil((new Date().getMonth() + 1) / 3));
 
   const { leads } = useLeadsData();
-  const { getClientMonthSummaries, outputTypes, outputs, calculateOutputCredits } = useCreativeBoostData();
+  const { getClientMonthSummaries, outputTypes, outputs, clientMonths, calculateOutputCredits } = useCreativeBoostData();
   const {
     clients,
     engagements,
@@ -763,6 +766,84 @@ export default function Analytics() {
       return assignmentStart <= monthEnd && (!assignmentEnd || assignmentEnd >= monthStart);
     };
 
+    const preferredClientMonthByClientPeriod = new Map<string, (typeof clientMonths)[number]>();
+    clientMonths.forEach((clientMonth) => {
+      const key = `${clientMonth.clientId}::${toYearMonthKey(clientMonth.year, clientMonth.month)}`;
+      const existing = preferredClientMonthByClientPeriod.get(key);
+      if (!existing) {
+        preferredClientMonthByClientPeriod.set(key, clientMonth);
+        return;
+      }
+
+      const existingHasService = !!existing.engagementServiceId;
+      const currentHasService = !!clientMonth.engagementServiceId;
+      if (!existingHasService && currentHasService) {
+        preferredClientMonthByClientPeriod.set(key, clientMonth);
+        return;
+      }
+
+      if (existingHasService === currentHasService) {
+        const existingUpdated = new Date(existing.updatedAt).getTime();
+        const currentUpdated = new Date(clientMonth.updatedAt).getTime();
+        if (Number.isFinite(currentUpdated) && currentUpdated > existingUpdated) {
+          preferredClientMonthByClientPeriod.set(key, clientMonth);
+        }
+      }
+    });
+
+    const creativeBoostCostByEngagementMonth = new Map<string, number>();
+    preferredClientMonthByClientPeriod.forEach((clientMonth) => {
+      const engagementId = clientMonth.engagementId;
+      if (!engagementId) return;
+
+      const outputsForClientMonth = outputs.filter(
+        (output) =>
+          output.clientId === clientMonth.clientId &&
+          output.year === clientMonth.year &&
+          output.month === clientMonth.month,
+      );
+      if (outputsForClientMonth.length === 0) return;
+
+      const service =
+        (clientMonth.engagementServiceId
+          ? engagementServices.find((item) => item.id === clientMonth.engagementServiceId)
+          : undefined) ||
+        engagementServices.find(
+          (item) =>
+            item.engagement_id === engagementId &&
+            item.is_active &&
+            item.creative_boost_price_per_credit !== null,
+        );
+      if (!service) return;
+
+      const bannerRewardPerCredit = service.creative_boost_reward_per_credit_banner ?? 150;
+      const videoRewardPerCredit = service.creative_boost_reward_per_credit_video ?? 100;
+
+      let bannerCredits = 0;
+      let videoCredits = 0;
+      outputsForClientMonth.forEach((output) => {
+        const outputType = outputTypes.find((type) => type.id === output.outputTypeId);
+        if (!outputType) return;
+        const credits = calculateOutputCredits(output.outputTypeId, output.normalCount, output.expressCount);
+        if (BANNER_OUTPUT_CATEGORIES.includes(outputType.category as (typeof BANNER_OUTPUT_CATEGORIES)[number])) {
+          bannerCredits += credits.totalCredits;
+          return;
+        }
+        if (VIDEO_OUTPUT_CATEGORIES.includes(outputType.category as (typeof VIDEO_OUTPUT_CATEGORIES)[number])) {
+          videoCredits += credits.totalCredits;
+        }
+      });
+
+      const creativeBoostCost = (bannerCredits * bannerRewardPerCredit) + (videoCredits * videoRewardPerCredit);
+      if (creativeBoostCost <= 0) return;
+
+      const engagementMonthKey = `${engagementId}::${toYearMonthKey(clientMonth.year, clientMonth.month)}`;
+      creativeBoostCostByEngagementMonth.set(
+        engagementMonthKey,
+        (creativeBoostCostByEngagementMonth.get(engagementMonthKey) || 0) + creativeBoostCost,
+      );
+    });
+
     const engagementMargins = Array.from(engagementRevenueTotals.entries()).map(([engagementId, revenue]) => {
       const engagement = engagements.find((item) => item.id === engagementId);
       const client = engagement ? getClientById(engagement.client_id) : undefined;
@@ -786,6 +867,8 @@ export default function Analytics() {
             }
             return sum + (assignment.monthly_cost || 0);
           }, 0);
+
+        cost += creativeBoostCostByEngagementMonth.get(`${engagementId}::${monthKey}`) || 0;
       });
 
       const marginAbsolute = revenue - cost;
@@ -849,7 +932,11 @@ export default function Analytics() {
         return sum + (assignment.monthly_cost || 0);
       }, 0);
 
-      const absolute = monthRevenue - monthCost;
+      const monthCreativeBoostCost = Array.from(monthEngagementRevenue.keys()).reduce((sum, engagementId) => {
+        return sum + (creativeBoostCostByEngagementMonth.get(`${engagementId}::${toYearMonthKey(year, month)}`) || 0);
+      }, 0);
+
+      const absolute = monthRevenue - (monthCost + monthCreativeBoostCost);
       const percent = monthRevenue > 0 ? (absolute / monthRevenue) * 100 : 0;
 
       return {
@@ -973,7 +1060,9 @@ export default function Analytics() {
     issuedInvoices,
     extraWorks,
     assignments,
+    engagementServices,
     eurToCzkRatesByMonth,
+    clientMonths,
     getClientById,
     colleagues,
     getClientMonthSummaries,

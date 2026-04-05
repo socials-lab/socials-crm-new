@@ -18,10 +18,12 @@ import {
   TrendingUp, 
   Briefcase,
   Sparkles,
+  ArrowUpDown,
   ArrowUp,
   ArrowDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useMemo, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -63,6 +65,9 @@ interface FinanceAnalyticsProps {
   };
 }
 
+type SortKey = 'revenue' | 'cost' | 'marginAbsolute' | 'marginPercent';
+type SortDirection = 'asc' | 'desc';
+
 export function FinanceAnalytics({
   totalInvoicing,
   avgMarginPercent,
@@ -77,6 +82,8 @@ export function FinanceAnalytics({
   creativeBoostStats,
 }: FinanceAnalyticsProps) {
   const formatCurrency = (value: number) => `${(value / 1000).toFixed(0)}K`;
+  const [sortKey, setSortKey] = useState<SortKey>('marginPercent');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   
   const getMarginColor = (margin: number) => {
     if (margin >= 40) return 'text-status-active';
@@ -88,6 +95,31 @@ export function FinanceAnalytics({
     if (margin >= 40) return 'default';
     if (margin >= 20) return 'secondary';
     return 'destructive';
+  };
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+    setSortKey(key);
+    setSortDirection('desc');
+  };
+
+  const sortedEngagementMargins = useMemo(() => {
+    const sorted = [...engagementMargins];
+    sorted.sort((a, b) => {
+      const direction = sortDirection === 'asc' ? 1 : -1;
+      return (a[sortKey] - b[sortKey]) * direction;
+    });
+    return sorted;
+  }, [engagementMargins, sortDirection, sortKey]);
+
+  const sortIcon = (key: SortKey) => {
+    if (sortKey !== key) return <ArrowUpDown className="h-3 w-3 text-muted-foreground" />;
+    return sortDirection === 'asc'
+      ? <ArrowUp className="h-3 w-3 text-foreground" />
+      : <ArrowDown className="h-3 w-3 text-foreground" />;
   };
   
   return (
@@ -143,21 +175,57 @@ export function FinanceAnalytics({
                 <TableRow>
                   <TableHead>Zakázka</TableHead>
                   <TableHead>Klient</TableHead>
-                  <TableHead className="text-right">Příjem</TableHead>
-                  <TableHead className="text-right">Náklady</TableHead>
-                  <TableHead className="text-right">Marže abs.</TableHead>
-                  <TableHead className="text-right">Marže %</TableHead>
+                  <TableHead className="text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleSort('revenue')}
+                      className="inline-flex items-center gap-1 ml-auto hover:text-foreground transition-colors"
+                    >
+                      Příjem
+                      {sortIcon('revenue')}
+                    </button>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleSort('cost')}
+                      className="inline-flex items-center gap-1 ml-auto hover:text-foreground transition-colors"
+                    >
+                      Náklady
+                      {sortIcon('cost')}
+                    </button>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleSort('marginAbsolute')}
+                      className="inline-flex items-center gap-1 ml-auto hover:text-foreground transition-colors"
+                    >
+                      Marže abs.
+                      {sortIcon('marginAbsolute')}
+                    </button>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleSort('marginPercent')}
+                      className="inline-flex items-center gap-1 ml-auto hover:text-foreground transition-colors"
+                    >
+                      Marže %
+                      {sortIcon('marginPercent')}
+                    </button>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {engagementMargins.length === 0 ? (
+                {sortedEngagementMargins.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       Žádné zakázky s dostupnými daty o maržích
                     </TableCell>
                   </TableRow>
                 ) : (
-                  engagementMargins.map((engagement) => (
+                  sortedEngagementMargins.map((engagement) => (
                     <TableRow key={engagement.id}>
                       <TableCell className="font-medium">{engagement.name}</TableCell>
                       <TableCell className="text-muted-foreground">{engagement.client}</TableCell>
