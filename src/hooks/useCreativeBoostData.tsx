@@ -562,9 +562,42 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
 
   const getClientMonthSummaries = useCallback(
     (year: number, month: number): ClientMonthSummary[] => {
+    const monthStart = new Date(year, month - 1, 1);
+    const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
+
+    const isClientMonthActiveForSelectedMonth = (cm: CreativeBoostClientMonth): boolean => {
+      const serviceFromRow = cm.engagementServiceId
+        ? engagementServices.find((service) => service.id === cm.engagementServiceId)
+        : null;
+      const engagementId = cm.engagementId || serviceFromRow?.engagement_id || null;
+      if (!engagementId) return false;
+
+      const engagement = engagements.find((item) => item.id === engagementId);
+      if (!engagement) return false;
+
+      const engagementStart = new Date(engagement.start_date);
+      if (!Number.isFinite(engagementStart.getTime())) return false;
+      const engagementEnd = engagement.end_date ? new Date(engagement.end_date) : null;
+
+      // Only include rows for engagements that actually overlap selected month.
+      if (engagementStart > monthEnd) return false;
+      if (engagementEnd && Number.isFinite(engagementEnd.getTime()) && engagementEnd < monthStart) return false;
+
+      // If service has effective start in future month, skip this row for current month.
+      if (serviceFromRow?.effective_from) {
+        const serviceStart = new Date(serviceFromRow.effective_from);
+        if (Number.isFinite(serviceStart.getTime()) && serviceStart > monthEnd) {
+          return false;
+        }
+      }
+
+      return true;
+    };
+
     const preferredByClient = new Map<string, CreativeBoostClientMonth>();
     clientMonths
       .filter((cm) => cm.year === year && cm.month === month)
+      .filter(isClientMonthActiveForSelectedMonth)
       .forEach((cm) => {
         const existing = preferredByClient.get(cm.clientId);
         if (!existing) {
@@ -624,7 +657,7 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
       })
       .filter((s): s is ClientMonthSummary => s !== null);
     },
-    [clientMonths, getClientById, getClientOutputs, calculateOutputCredits]
+    [clientMonths, engagementServices, engagements, getClientById, getClientOutputs, calculateOutputCredits]
   );
 
   const getColleagueCredits = useCallback(

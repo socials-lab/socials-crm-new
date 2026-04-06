@@ -35,6 +35,7 @@ import {
   BookOpen,
   FileText,
   Bug,
+  Megaphone,
   UserSearch,
   BarChart3,
   Settings,
@@ -98,6 +99,7 @@ const navGroups: NavGroup[] = [
     label: 'Tým & interní',
     items: [
       { title: 'Kolegové', url: '/colleagues', page: 'colleagues', icon: Users },
+      { title: 'Marketing', url: '/marketing', page: 'marketing', icon: Megaphone },
       { title: 'Nábor', url: '/recruitment', page: 'recruitment', icon: GraduationCap },
       { title: 'Feedback Zone', url: '/feedback', page: 'feedback', icon: Lightbulb },
       { title: 'Akademie', url: '/academy', page: 'academy', icon: BookOpen },

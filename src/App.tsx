@@ -29,6 +29,7 @@ import FinanceInvoices from "./pages/FinanceInvoices";
 import CreativeBoost from "./pages/CreativeBoost";
 import Services from "./pages/Services";
 import Colleagues from "./pages/Colleagues";
+import Marketing from "./pages/Marketing";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import ExtraWork from "./pages/ExtraWork";
@@ -174,6 +175,7 @@ const App = () => (
                               <Route path="/meetings" element={<Meetings />} />
                               <Route path="/services" element={<Services />} />
                               <Route path="/colleagues" element={<Colleagues />} />
+                              <Route path="/marketing" element={<Marketing />} />
                               <Route path="/recruitment" element={<Recruitment />} />
                               <Route path="/analytics" element={<Analytics />} />
                               <Route path="/upsells" element={<Upsells />} />

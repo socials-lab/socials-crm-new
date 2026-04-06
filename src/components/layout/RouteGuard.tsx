@@ -25,6 +25,7 @@ const ROUTE_TO_PAGE: Record<string, string> = {
   '/finance-invoices': 'finance-invoices',
   '/services': 'services',
   '/colleagues': 'colleagues',
+  '/marketing': 'marketing',
   '/recruitment': 'recruitment',
   '/feedback': 'feedback',
   '/academy': 'academy',

@@ -21,6 +21,7 @@ export const ALL_PAGES = [
   { id: 'services', label: 'Služby', emoji: '📦' },
   // Tým & interní
   { id: 'colleagues', label: 'Kolegové', emoji: '👥' },
+  { id: 'marketing', label: 'Marketing', emoji: '📣' },
   { id: 'recruitment', label: 'Nábor', emoji: '🎓' },
   { id: 'feedback', label: 'Feedback Zone', emoji: '💡' },
   { id: 'academy', label: 'Akademie', emoji: '🎓' },
@@ -39,6 +40,6 @@ export const PAGE_GROUPS = [
   { label: 'Obchodní proces', pages: ['leads', 'prospects', 'clients', 'contacts', 'engagements', 'modifications', 'broadcasts', 'upsells'] },
   { label: 'Práce & dodávka', pages: ['extra-work', 'creative-boost', 'meetings'] },
   { label: 'Finance & služby', pages: ['invoicing', 'finance-invoices', 'services'] },
-  { label: 'Tým & interní', pages: ['colleagues', 'recruitment', 'feedback', 'academy', 'sop', 'bug-reports'] },
+  { label: 'Tým & interní', pages: ['colleagues', 'marketing', 'recruitment', 'feedback', 'academy', 'sop', 'bug-reports'] },
   { label: 'Reporting & nastavení', pages: ['analytics', 'settings'] },
 ] as const;

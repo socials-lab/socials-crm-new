@@ -8,74 +8,73 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
 } from 'recharts';
 import {
   Users,
   DollarSign,
-  Briefcase,
-  TrendingUp,
+  UserCheck,
+  Building2,
 } from 'lucide-react';
-
-const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
-
-const COST_MODEL_LABELS: Record<string, string> = {
-  hourly: 'Hodinová sazba',
-  fixed_monthly: 'Fixní měsíční',
-  percentage: 'Procento z revenue',
-};
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 
 interface TeamCapacityAnalyticsProps {
   activeColleagues: number;
   totalTeamCost: number;
-  avgCostPerEngagement: number;
-  revenuePerColleague: number;
-  colleagueWorkload: { name: string; assignments: number; revenue: number }[];
-  costBreakdown: { costModel: string; amount: number; count: number }[];
-  topRevenueGenerators: { name: string; revenue: number; engagements: number }[];
-  freelancerVsEmployee: { type: string; count: number; cost: number }[];
+  avgCostPerActiveColleague: number;
+  costByPosition: { position: string; amount: number; colleagues: number }[];
+  costByColleague: { colleagueId: string; name: string; position: string; cost: number; assignments: number }[];
 }
 
 export function TeamCapacityAnalytics({
   activeColleagues,
   totalTeamCost,
-  avgCostPerEngagement,
-  revenuePerColleague,
-  colleagueWorkload,
-  costBreakdown,
-  topRevenueGenerators,
-  freelancerVsEmployee,
+  avgCostPerActiveColleague,
+  costByPosition,
+  costByColleague,
 }: TeamCapacityAnalyticsProps) {
   const formatCurrency = (value: number) => `${(value / 1000).toFixed(0)}K`;
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <KPICard title="Aktivní kolegové" value={activeColleagues} icon={Users} subtitle="se statusem active" />
-        <KPICard title="Celkové náklady na tým" value={`${formatCurrency(totalTeamCost)} Kč`} icon={DollarSign} subtitle="měsíční" />
-        <KPICard title="Prům. náklady/zakázka" value={`${formatCurrency(avgCostPerEngagement)} Kč`} icon={Briefcase} />
-        <KPICard title="Revenue/Kolega" value={`${formatCurrency(revenuePerColleague)} Kč`} icon={TrendingUp} subtitle="MRR / aktivní kolegové" />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <KPICard
+          title="Aktivní kolegové"
+          value={activeColleagues}
+          icon={Users}
+          subtitle="s výkazem v období"
+        />
+        <KPICard
+          title="Celkové náklady"
+          value={`${formatCurrency(totalTeamCost)} Kč`}
+          icon={DollarSign}
+          subtitle="součet za vybrané období"
+        />
+        <KPICard
+          title="Průměr na aktivního kolegu"
+          value={`${formatCurrency(avgCostPerActiveColleague)} Kč`}
+          icon={UserCheck}
+          subtitle="náklad na kolegu v období"
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Workload kolegů (počet přiřazení)</CardTitle>
+            <CardTitle className="text-base font-medium">Struktura nákladů podle pozice</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={colleagueWorkload} layout="vertical">
+                <BarChart data={costByPosition} layout="vertical" margin={{ left: 8, right: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} axisLine={{ stroke: 'hsl(var(--border))' }} />
-                  <YAxis type="category" dataKey="name" width={100} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={{ stroke: 'hsl(var(--border))' }} />
+                  <YAxis type="category" dataKey="position" width={130} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={{ stroke: 'hsl(var(--border))' }} />
                   <Tooltip
-                    formatter={(value: number, name: string) => {
-                      if (name === 'assignments') return [`${value} zakázek`, 'Přiřazení'];
-                      if (name === 'revenue') return [`${value.toLocaleString()} Kč`, 'Revenue'];
-                      return [value, name];
+                    formatter={(value: number) => [`${value.toLocaleString('cs-CZ')} Kč`, 'Náklady']}
+                    labelFormatter={(label) => {
+                      const row = costByPosition.find((item) => item.position === label);
+                      return row ? `${label} (${row.colleagues} kolegů)` : String(label);
                     }}
                     contentStyle={{
                       backgroundColor: 'hsl(var(--card))',
@@ -83,7 +82,7 @@ export function TeamCapacityAnalytics({
                       borderRadius: '8px',
                     }}
                   />
-                  <Bar dataKey="assignments" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="amount" fill="hsl(var(--chart-2))" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -92,87 +91,43 @@ export function TeamCapacityAnalytics({
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Struktura nákladů podle modelu</CardTitle>
+            <CardTitle className="text-base font-medium">Rozdělení nákladů po kolezích</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={costBreakdown} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2} dataKey="amount" nameKey="costModel">
-                    {costBreakdown.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: number) => [`${value.toLocaleString()} Kč`, 'Náklady']}
-                    labelFormatter={(label) => COST_MODEL_LABELS[label] || label}
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Top kolegové podle revenue zakázek</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topRevenueGenerators} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} axisLine={{ stroke: 'hsl(var(--border))' }} tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`} />
-                  <YAxis type="category" dataKey="name" width={100} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={{ stroke: 'hsl(var(--border))' }} />
-                  <Tooltip
-                    formatter={(value: number, name: string) => {
-                      if (name === 'revenue') return [`${value.toLocaleString()} Kč`, 'Revenue'];
-                      if (name === 'engagements') return [`${value}`, 'Zakázky'];
-                      return [value, name];
-                    }}
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Bar dataKey="revenue" fill="hsl(var(--status-active))" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Interní vs Freelanceři</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={freelancerVsEmployee}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="type" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} axisLine={{ stroke: 'hsl(var(--border))' }} />
-                  <YAxis yAxisId="left" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} axisLine={{ stroke: 'hsl(var(--border))' }} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} axisLine={{ stroke: 'hsl(var(--border))' }} tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Bar yAxisId="left" dataKey="count" fill="hsl(var(--chart-1))" name="Počet" radius={[4, 4, 0, 0]} />
-                  <Bar yAxisId="right" dataKey="cost" fill="hsl(var(--chart-2))" name="Náklady" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Kolega</TableHead>
+                    <TableHead>Pozice</TableHead>
+                    <TableHead className="text-right">Měsíce s výkazem</TableHead>
+                    <TableHead className="text-right">Náklad</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {costByColleague.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                        Žádné náklady v tomto období.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    costByColleague.map((row) => (
+                      <TableRow key={row.colleagueId}>
+                        <TableCell className="font-medium">{row.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-normal">
+                            <Building2 className="h-3 w-3 mr-1" />
+                            {row.position}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">{row.assignments}</TableCell>
+                        <TableCell className="text-right">{Math.round(row.cost).toLocaleString('cs-CZ')} Kč</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>

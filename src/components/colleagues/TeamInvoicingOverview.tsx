@@ -31,6 +31,7 @@ import { ColleagueInvoiceSheet } from './ColleagueInvoiceSheet';
 import type { Colleague, Client, Engagement, EngagementAssignment, ExtraWork } from '@/types/crm';
 import type { ActivityReward } from '@/hooks/useActivityRewards';
 import { toast } from 'sonner';
+import { endOfMonth, startOfMonth } from 'date-fns';
 
 const MONTHS = [
   'Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen',
@@ -87,14 +88,32 @@ export function buildColleagueInvoiceData(
   getColleagueCreditsByClient: (colleagueId: string, year: number, month: number) => CreditClientSummary[],
   getApprovedCommissionsForColleague: (colleagueId: string, year?: number, month?: number) => ApprovedCommissionSummary[],
 ): ColleagueInvoiceData & { itemCount: number } {
+  const monthStart = startOfMonth(new Date(selectedYear, selectedMonth - 1, 1));
+  const monthEnd = endOfMonth(monthStart);
+  const isDateRangeOverlappingMonth = (startDate: string | null | undefined, endDate: string | null | undefined) => {
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
+    if (start && Number.isFinite(start.getTime()) && start > monthEnd) return false;
+    if (end && Number.isFinite(end.getTime()) && end < monthStart) return false;
+    return true;
+  };
+
   const colleagueAssignments = assignments.filter(
-    (assignment) => assignment.colleague_id === colleague.id && !assignment.end_date,
+    (assignment) => assignment.colleague_id === colleague.id,
   );
 
   const clientItems: ColleagueInvoiceData['clientItems'] = [];
   for (const assignment of colleagueAssignments) {
     const engagement = engagements.find((item) => item.id === assignment.engagement_id);
-    if (!engagement || engagement.status !== 'active') {
+    if (!engagement) {
+      continue;
+    }
+
+    // Include only assignments/engagements that are active in selected month.
+    if (!isDateRangeOverlappingMonth(assignment.start_date, assignment.end_date)) {
+      continue;
+    }
+    if (!isDateRangeOverlappingMonth(engagement.start_date, engagement.end_date)) {
       continue;
     }
 
@@ -104,9 +123,17 @@ export function buildColleagueInvoiceData(
     }
 
     const monthlyAmount = assignment.monthly_cost || 0;
-    const prorated = calculateProratedReward(monthlyAmount, assignment.start_date, selectedYear, selectedMonth);
+    const assignmentStart = assignment.start_date ? new Date(assignment.start_date) : null;
+    const engagementStart = engagement.start_date ? new Date(engagement.start_date) : null;
+    const effectiveStartDate = (() => {
+      if (!assignmentStart && !engagementStart) return assignment.start_date;
+      if (!assignmentStart) return engagement.start_date;
+      if (!engagementStart) return assignment.start_date;
+      return engagementStart < assignmentStart ? engagement.start_date : assignment.start_date;
+    })();
+    const prorated = calculateProratedReward(monthlyAmount, effectiveStartDate, selectedYear, selectedMonth);
     clientItems.push({
-      name: `${client.brand_name || client.name} - sprava uctu`,
+      name: `${engagement.name || client.brand_name || client.name} - sprava uctu`,
       amount: prorated.proratedAmount,
       note: prorated.isProrated && prorated.startDay ? `od ${prorated.startDay}.` : undefined,
     });

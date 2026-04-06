@@ -1039,7 +1039,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-medium flex items-center gap-2">
                 <UserPlus className="h-4 w-4 text-primary" />
-                🆕 Noví klienti
+                🆕 Nové zakázky
               </CardTitle>
               <Link to="/clients">
                 <Button variant="ghost" size="sm" className="text-xs">

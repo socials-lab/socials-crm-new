@@ -73,6 +73,7 @@ export function CreativeBoostAnalytics({
   revenueChange,
 }: CreativeBoostAnalyticsProps) {
   const formatCurrency = (value: number) => `${(value / 1000).toFixed(0)}K`;
+  const creditsByTypeChartHeight = Math.max(280, creditsByType.length * 52);
 
   function getUtilizationBadge(percent: number) {
     if (percent >= 90) return 'default';
@@ -172,12 +173,19 @@ export function CreativeBoostAnalytics({
             <CardTitle className="text-base font-medium">Kredity podle typu výstupu</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[280px]">
+            <div style={{ height: `${creditsByTypeChartHeight}px` }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={creditsByType} layout="vertical">
+                <BarChart data={creditsByType} layout="vertical" margin={{ top: 4, right: 8, bottom: 4, left: 8 }} barCategoryGap="35%">
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} axisLine={{ stroke: 'hsl(var(--border))' }} />
-                  <YAxis type="category" dataKey="type" width={100} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} axisLine={{ stroke: 'hsl(var(--border))' }} />
+                  <YAxis
+                    type="category"
+                    dataKey="type"
+                    width={180}
+                    interval={0}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                  />
                   <Tooltip
                     formatter={(value: number) => [`${value} kreditů`, 'Kredity']}
                     contentStyle={{
@@ -186,7 +194,7 @@ export function CreativeBoostAnalytics({
                       borderRadius: '8px',
                     }}
                   />
-                  <Bar dataKey="credits" fill="hsl(var(--chart-4))" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="credits" fill="hsl(var(--chart-4))" radius={[0, 4, 4, 0]} barSize={18} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

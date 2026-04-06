@@ -11,6 +11,9 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts';
 import { 
   DollarSign, 
@@ -66,6 +69,14 @@ interface FinanceAnalyticsProps {
     creditsByColleague: { name: string; credits: number }[];
     creditsTrend: { month: string; credits: number }[];
   };
+  servicePerformance: {
+    serviceName: string;
+    usageCount: number;
+    revenue: number;
+    cost: number;
+    marginAbsolute: number;
+    marginPercent: number;
+  }[];
 }
 
 type SortKey = 'revenue' | 'cost' | 'marginAbsolute' | 'marginPercent';
@@ -85,6 +96,7 @@ export function FinanceAnalytics({
   eurConversionRate,
   eurConversionDate,
   creativeBoostStats,
+  servicePerformance,
 }: FinanceAnalyticsProps) {
   const formatCurrency = (value: number) => `${(value / 1000).toFixed(0)}K`;
   const [sortKey, setSortKey] = useState<SortKey>('marginPercent');
@@ -126,6 +138,28 @@ export function FinanceAnalytics({
       ? <ArrowUp className="h-3 w-3 text-foreground" />
       : <ArrowDown className="h-3 w-3 text-foreground" />;
   };
+
+  const serviceUsageTotal = useMemo(
+    () => servicePerformance.reduce((sum, item) => sum + item.usageCount, 0),
+    [servicePerformance]
+  );
+  const topServiceRows = useMemo(
+    () => [...servicePerformance].sort((a, b) => b.usageCount - a.usageCount).slice(0, 10),
+    [servicePerformance]
+  );
+  const pieData = useMemo(
+    () => topServiceRows.map((item) => ({ name: item.serviceName, value: item.usageCount })),
+    [topServiceRows]
+  );
+  const pieColors = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
+  const topServiceByRevenue = useMemo(
+    () => [...servicePerformance].sort((a, b) => b.revenue - a.revenue)[0] ?? null,
+    [servicePerformance]
+  );
+  const topServiceByMarginAbsolute = useMemo(
+    () => [...servicePerformance].sort((a, b) => b.marginAbsolute - a.marginAbsolute)[0] ?? null,
+    [servicePerformance]
+  );
 
   return (
     <div className="space-y-6">
@@ -180,7 +214,7 @@ export function FinanceAnalytics({
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-medium">Marže na zakázkách</CardTitle>
           <p className="text-xs text-muted-foreground pt-1">
-            Jen klienti s alespoň 3 vystavenými fakturami v CRM (all-time); jednorázové subjekty jsou vynechané.
+            Z vystavených faktur z CRM, které jsou navázané na konkrétní zakázku.
           </p>
         </CardHeader>
         <CardContent>
@@ -266,6 +300,103 @@ export function FinanceAnalytics({
                 )}
               </TableBody>
             </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-medium">Nejvyužívanější a nejziskovější služby</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Poměrové využití služeb a marže podle aktuálně fakturovaných zakázek v období.
+          </p>
+          <div className="flex flex-wrap gap-2 text-xs">
+            {topServiceByRevenue && (
+              <Badge variant="outline">
+                Nejvyšší revenue: {topServiceByRevenue.serviceName} ({Math.round(topServiceByRevenue.revenue).toLocaleString()} Kč)
+              </Badge>
+            )}
+            {topServiceByMarginAbsolute && (
+              <Badge variant="outline">
+                Nejvyšší marže abs.: {topServiceByMarginAbsolute.serviceName} ({Math.round(topServiceByMarginAbsolute.marginAbsolute).toLocaleString()} Kč)
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="h-[320px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={65}
+                    outerRadius={110}
+                    paddingAngle={2}
+                  >
+                    {pieData.map((_, index) => (
+                      <Cell key={`service-pie-${index}`} fill={pieColors[index % pieColors.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number, _name: string, item) => {
+                      const share = serviceUsageTotal > 0 ? (Number(value) / serviceUsageTotal) * 100 : 0;
+                      return [`${value} využití (${share.toFixed(1)} %)`, item?.payload?.name || 'Služba'];
+                    }}
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Služba</TableHead>
+                    <TableHead className="text-right">Využití</TableHead>
+                    <TableHead className="text-right">Podíl</TableHead>
+                  <TableHead className="text-right">Příjem</TableHead>
+                    <TableHead className="text-right">Marže %</TableHead>
+                    <TableHead className="text-right">Marže abs.</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {topServiceRows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        Žádná data o službách v tomto období
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    topServiceRows.map((service) => {
+                      const share = serviceUsageTotal > 0 ? (service.usageCount / serviceUsageTotal) * 100 : 0;
+                      return (
+                        <TableRow key={service.serviceName}>
+                          <TableCell className="font-medium">{service.serviceName}</TableCell>
+                          <TableCell className="text-right">{service.usageCount}</TableCell>
+                          <TableCell className="text-right">{share.toFixed(1)}%</TableCell>
+                          <TableCell className="text-right">{Math.round(service.revenue).toLocaleString()} Kč</TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant={getMarginBadgeVariant(service.marginPercent)}>
+                              {service.marginPercent.toFixed(1)}%
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">{service.marginAbsolute.toLocaleString()} Kč</TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>

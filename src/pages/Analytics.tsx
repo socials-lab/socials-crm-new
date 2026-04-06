@@ -8,8 +8,6 @@ import { ClientsEngagementsAnalytics } from '@/components/analytics/ClientsEngag
 import { FinanceAnalytics } from '@/components/analytics/FinanceAnalytics';
 import { CreativeBoostAnalytics } from '@/components/analytics/CreativeBoostAnalytics';
 import { TeamCapacityAnalytics } from '@/components/analytics/TeamCapacityAnalytics';
-import { RevenuePlanForecast } from '@/components/analytics/RevenuePlanForecast';
-import { TeamCapacityForecast } from '@/components/analytics/TeamCapacityForecast';
 import { LongTermAnalytics } from '@/components/analytics/LongTermAnalytics';
 import { ExtraWorkMarginSection } from '@/components/analytics/ExtraWorkMarginSection';
 import { UpsellCommissionsAnalytics } from '@/components/analytics/UpsellCommissionsAnalytics';
@@ -17,7 +15,11 @@ import { PeriodSelector, type PeriodMode } from '@/components/analytics/PeriodSe
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
+import { useTeamEarnings } from '@/hooks/useTeamEarnings';
+import { useUpsellApprovals } from '@/hooks/useUpsellApprovals';
 import { useUserRole } from '@/hooks/useUserRole';
+import { buildColleagueInvoiceData } from '@/components/colleagues/TeamInvoicingOverview';
+import { canonicalizeAssignmentRole } from '@/lib/assignmentRoles';
 import { getEngagementMonthlyRevenue } from '@/utils/engagementRevenueUtils';
 import { getExchangeRate, getExchangeRateForDate } from '@/lib/currency';
 
@@ -71,7 +73,9 @@ export default function Analytics() {
   const [selectedQuarter, setSelectedQuarter] = useState(() => Math.ceil((new Date().getMonth() + 1) / 3));
 
   const { leads } = useLeadsData();
-  const { getClientMonthSummaries, outputTypes, outputs, clientMonths, calculateOutputCredits } = useCreativeBoostData();
+  const { getClientMonthSummaries, outputTypes, outputs, clientMonths, calculateOutputCredits, getColleagueCreditsByClient } = useCreativeBoostData();
+  const { getApprovedCommissionsForColleague } = useUpsellApprovals();
+  const { getColleagueActivities } = useTeamEarnings();
   const {
     clients,
     engagements,
@@ -744,71 +748,42 @@ export default function Analytics() {
       return amount;
     };
 
-    const latestInvoicesByGeneratedId = new Map<string, (typeof issuedInvoices)[number]>();
-    issuedInvoices.forEach((invoice) => {
-      const generatedId = `inv-${invoice.engagement_id}-${invoice.year}-${invoice.month}`;
-      const existing = latestInvoicesByGeneratedId.get(generatedId);
-      if (!existing) {
-        latestInvoicesByGeneratedId.set(generatedId, invoice);
-        return;
-      }
-      const existingTime = new Date(existing.created_at || existing.issued_at).getTime();
-      const invoiceTime = new Date(invoice.created_at || invoice.issued_at).getTime();
-      if (!Number.isFinite(existingTime) || (Number.isFinite(invoiceTime) && invoiceTime > existingTime)) {
-        latestInvoicesByGeneratedId.set(generatedId, invoice);
-      }
-    });
-
-    const canonicalIssuedInvoices = Array.from(latestInvoicesByGeneratedId.values());
-
-    const MIN_INVOICES_FOR_FINANCE_STATS = 3;
-    const normalizeEntityKeyFinance = (value: string) => value.toLowerCase().replace(/\s+/g, ' ').trim();
-
-    const latestInvoicesByExternalKeyFinance = new Map<string, (typeof issuedInvoices)[number]>();
+    const latestInvoicesByExternalKey = new Map<string, (typeof issuedInvoices)[number]>();
     issuedInvoices.forEach((invoice) => {
       const externalKey = invoice.fakturoid_id
         ? `f-${invoice.fakturoid_id}`
         : `n-${invoice.invoice_number}`;
-      const existing = latestInvoicesByExternalKeyFinance.get(externalKey);
+      const existing = latestInvoicesByExternalKey.get(externalKey);
       if (!existing) {
-        latestInvoicesByExternalKeyFinance.set(externalKey, invoice);
+        latestInvoicesByExternalKey.set(externalKey, invoice);
         return;
       }
       const existingTime = new Date(existing.created_at || existing.issued_at).getTime();
       const invoiceTime = new Date(invoice.created_at || invoice.issued_at).getTime();
       if (!Number.isFinite(existingTime) || (Number.isFinite(invoiceTime) && invoiceTime > existingTime)) {
-        latestInvoicesByExternalKeyFinance.set(externalKey, invoice);
+        latestInvoicesByExternalKey.set(externalKey, invoice);
       }
     });
-    const allFakturoidInvoicesForFinanceCount = Array.from(latestInvoicesByExternalKeyFinance.values()).filter(
-      (invoice) => Boolean(invoice.fakturoid_id || invoice.fakturoid_url),
-    );
-    const invoiceCountByClientKeyFinance = new Map<string, number>();
-    allFakturoidInvoicesForFinanceCount.forEach((invoice) => {
-      const legalClientName = invoice.client_id ? (getClientById(invoice.client_id)?.name || null) : null;
-      const clientName = (invoice.client_name || legalClientName || 'Neznámý klient').trim();
-      const clientKey = normalizeEntityKeyFinance(clientName);
-      invoiceCountByClientKeyFinance.set(clientKey, (invoiceCountByClientKeyFinance.get(clientKey) || 0) + 1);
-    });
-    const isInvoiceFromFinanceEligibleClient = (invoice: (typeof issuedInvoices)[number]) => {
-      const legalClientName = invoice.client_id ? (getClientById(invoice.client_id)?.name || null) : null;
-      const clientName = (invoice.client_name || legalClientName || 'Neznámý klient').trim();
-      const clientKey = normalizeEntityKeyFinance(clientName);
-      return (invoiceCountByClientKeyFinance.get(clientKey) || 0) >= MIN_INVOICES_FOR_FINANCE_STATS;
-    };
 
-    const periodInvoices = canonicalIssuedInvoices
-      .filter((invoice) => currentPeriodMonthKeySet.has(toYearMonthKey(invoice.year, invoice.month)))
-      .filter(isInvoiceFromFinanceEligibleClient);
-    const prevPeriodInvoices = canonicalIssuedInvoices
-      .filter((invoice) => comparisonPeriodMonthKeySet.has(toYearMonthKey(invoice.year, invoice.month)))
-      .filter(isInvoiceFromFinanceEligibleClient);
+    const canonicalIssuedInvoices = Array.from(latestInvoicesByExternalKey.values());
+    const canonicalFakturoidInvoices = canonicalIssuedInvoices.filter((invoice) => Boolean(invoice.fakturoid_id || invoice.fakturoid_url));
 
-    const totalInvoicing = periodInvoices.reduce(
+    const hasMappedEngagement = (invoice: (typeof issuedInvoices)[number]) =>
+      !!invoice.engagement_id && engagements.some((engagement) => engagement.id === invoice.engagement_id);
+
+    // Keep totals aligned with "Finance > Faktury" (all issued invoices from CRM, deduped by external key).
+    const periodInvoicesAll = canonicalFakturoidInvoices
+      .filter((invoice) => currentPeriodMonthKeySet.has(toYearMonthKey(invoice.year, invoice.month)));
+    const prevPeriodInvoicesAll = canonicalFakturoidInvoices
+      .filter((invoice) => comparisonPeriodMonthKeySet.has(toYearMonthKey(invoice.year, invoice.month)));
+    // Margin table requires a concrete engagement mapping.
+    const periodInvoices = periodInvoicesAll.filter(hasMappedEngagement);
+
+    const totalInvoicing = periodInvoicesAll.reduce(
       (sum, invoice) => sum + convertToCzk(invoice.total_amount, invoice.currency, invoice.year, invoice.month),
       0,
     );
-    const prevInvoicing = prevPeriodInvoices.reduce(
+    const prevInvoicing = prevPeriodInvoicesAll.reduce(
       (sum, invoice) => sum + convertToCzk(invoice.total_amount, invoice.currency, invoice.year, invoice.month),
       0,
     );
@@ -845,6 +820,20 @@ export default function Analytics() {
       return assignmentStart <= monthEnd && (!assignmentEnd || assignmentEnd >= monthStart);
     };
 
+    const isServiceActiveInMonth = (
+      service: (typeof engagementServices)[number],
+      year: number,
+      month: number
+    ) => {
+      if (!service.is_active) return false;
+      if (service.billing_type !== 'monthly') return false;
+      const monthEnd = endOfMonth(new Date(year, month - 1, 1));
+      if (!service.effective_from) return true;
+      const effectiveFrom = new Date(service.effective_from);
+      if (!Number.isFinite(effectiveFrom.getTime())) return true;
+      return effectiveFrom <= monthEnd;
+    };
+
     const preferredClientMonthByClientPeriod = new Map<string, (typeof clientMonths)[number]>();
     clientMonths.forEach((clientMonth) => {
       const key = `${clientMonth.clientId}::${toYearMonthKey(clientMonth.year, clientMonth.month)}`;
@@ -871,6 +860,8 @@ export default function Analytics() {
     });
 
     const creativeBoostCostByEngagementMonth = new Map<string, number>();
+    const creativeBoostCostByServiceMonth = new Map<string, number>();
+    const creativeBoostRevenueByServiceMonth = new Map<string, number>();
     preferredClientMonthByClientPeriod.forEach((clientMonth) => {
       const engagementId = clientMonth.engagementId;
       if (!engagementId) return;
@@ -895,6 +886,8 @@ export default function Analytics() {
         );
       if (!service) return;
 
+      const monthKey = toYearMonthKey(clientMonth.year, clientMonth.month);
+      const serviceMonthKey = `${service.id}::${monthKey}`;
       const bannerRewardPerCredit = service.creative_boost_reward_per_credit_banner ?? 150;
       const videoRewardPerCredit = service.creative_boost_reward_per_credit_video ?? 100;
 
@@ -913,13 +906,36 @@ export default function Analytics() {
         }
       });
 
+      const totalCredits = bannerCredits + videoCredits;
+      const billedCredits = service.creative_boost_fixed_billing
+        ? Math.max(0, clientMonth.maxCredits || 0)
+        : Math.max(0, totalCredits);
+      const serviceRevenue = billedCredits > 0
+        ? convertToCzk(
+          billedCredits * (clientMonth.pricePerCredit || service.creative_boost_price_per_credit || 0),
+          service.currency || 'CZK',
+          clientMonth.year,
+          clientMonth.month
+        )
+        : 0;
+      if (serviceRevenue > 0) {
+        creativeBoostRevenueByServiceMonth.set(
+          serviceMonthKey,
+          (creativeBoostRevenueByServiceMonth.get(serviceMonthKey) || 0) + serviceRevenue,
+        );
+      }
+
       const creativeBoostCost = (bannerCredits * bannerRewardPerCredit) + (videoCredits * videoRewardPerCredit);
       if (creativeBoostCost <= 0) return;
 
-      const engagementMonthKey = `${engagementId}::${toYearMonthKey(clientMonth.year, clientMonth.month)}`;
+      const engagementMonthKey = `${engagementId}::${monthKey}`;
       creativeBoostCostByEngagementMonth.set(
         engagementMonthKey,
         (creativeBoostCostByEngagementMonth.get(engagementMonthKey) || 0) + creativeBoostCost,
+      );
+      creativeBoostCostByServiceMonth.set(
+        serviceMonthKey,
+        (creativeBoostCostByServiceMonth.get(serviceMonthKey) || 0) + creativeBoostCost,
       );
     });
 
@@ -965,6 +981,156 @@ export default function Analytics() {
       };
     }).sort((a, b) => b.marginPercent - a.marginPercent);
 
+    const servicePerformanceMap = new Map<string, {
+      serviceName: string;
+      usageCount: number;
+      revenue: number;
+      cost: number;
+    }>();
+    const addServiceStat = (serviceName: string, revenue: number, cost: number) => {
+      const existing = servicePerformanceMap.get(serviceName) || {
+        serviceName,
+        usageCount: 0,
+        revenue: 0,
+        cost: 0,
+      };
+      existing.usageCount += 1;
+      existing.revenue += revenue;
+      existing.cost += cost;
+      servicePerformanceMap.set(serviceName, existing);
+    };
+
+    currentPeriodMonthKeys.forEach((periodMonth) => {
+      const monthKey = toYearMonthKey(periodMonth.year, periodMonth.month);
+
+      engagementRevenueTotals.forEach((_, engagementId) => {
+        const monthRevenue = engagementRevenueByMonth.get(`${engagementId}::${monthKey}`) || 0;
+        if (monthRevenue <= 0) return;
+
+        const activeServices = engagementServices.filter((service) =>
+          service.engagement_id === engagementId &&
+          isServiceActiveInMonth(service, periodMonth.year, periodMonth.month)
+        );
+
+        const activeAssignments = assignments.filter((assignment) => {
+          if (assignment.engagement_id !== engagementId) return false;
+          const assignmentStart = new Date(assignment.start_date);
+          const assignmentEnd = assignment.end_date ? new Date(assignment.end_date) : null;
+          return isAssignmentActiveInMonth(assignmentStart, assignmentEnd, periodMonth.year, periodMonth.month);
+        });
+
+        if (activeServices.length === 0) {
+          const assignmentCost = activeAssignments.reduce((sum, assignment) => {
+            if (assignment.cost_model === 'percentage') {
+              return sum + (monthRevenue * (assignment.percentage_of_revenue || 0)) / 100;
+            }
+            return sum + (assignment.monthly_cost || 0);
+          }, 0);
+          const creativeBoostCost = creativeBoostCostByEngagementMonth.get(`${engagementId}::${monthKey}`) || 0;
+          addServiceStat('Neznámá služba', monthRevenue, assignmentCost + creativeBoostCost);
+          return;
+        }
+
+        const serviceWeights = activeServices.map((service) => {
+          const cbRevenue = creativeBoostRevenueByServiceMonth.get(`${service.id}::${monthKey}`) || 0;
+          if (cbRevenue > 0) {
+            return {
+              service,
+              weight: cbRevenue,
+            };
+          }
+          const monthlyServiceValue = convertToCzk(
+            Math.max(0, service.price || 0),
+            service.currency || 'CZK',
+            periodMonth.year,
+            periodMonth.month
+          );
+          return {
+            service,
+            weight: monthlyServiceValue,
+          };
+        });
+        const totalWeight = serviceWeights.reduce((sum, item) => sum + Math.max(0, item.weight), 0);
+        const getShare = (serviceId: string) => {
+          if (totalWeight > 0) {
+            const item = serviceWeights.find((row) => row.service.id === serviceId);
+            return item ? Math.max(0, item.weight) / totalWeight : 0;
+          }
+          return 1 / activeServices.length;
+        };
+        const creativeBoostServices = activeServices.filter(
+          (service) => service.creative_boost_price_per_credit !== null
+        );
+        const creativeBoostTotalShare = creativeBoostServices.reduce(
+          (sum, service) => sum + getShare(service.id),
+          0
+        );
+        const getCreativeBoostShare = (serviceId: string) => {
+          if (creativeBoostServices.length === 0) return 0;
+          if (creativeBoostTotalShare > 0) {
+            return getShare(serviceId) / creativeBoostTotalShare;
+          }
+          return 1 / creativeBoostServices.length;
+        };
+
+        activeServices.forEach((service) => {
+          const share = getShare(service.id);
+          const serviceRevenue = monthRevenue * share;
+          let serviceCost = 0;
+
+          activeAssignments.forEach((assignment) => {
+            const isServiceSpecific = !!assignment.engagement_service_id;
+            if (isServiceSpecific && assignment.engagement_service_id !== service.id) return;
+
+            const role = canonicalizeAssignmentRole(assignment.role_on_engagement || '');
+            const isCreativeRole = role === 'Graphic Designer' || role === 'Video Editor';
+            const isCreativeBoostService = service.creative_boost_price_per_credit !== null;
+            const assignmentShare = (() => {
+              if (isServiceSpecific) {
+                return 1;
+              }
+              if (isCreativeRole) {
+                if (!isCreativeBoostService || creativeBoostServices.length === 0) {
+                  return 0;
+                }
+                return getCreativeBoostShare(service.id);
+              }
+              return share;
+            })();
+            if (assignmentShare <= 0) return;
+
+            if (assignment.cost_model === 'percentage') {
+              const baseRevenue = isServiceSpecific ? serviceRevenue : (monthRevenue * assignmentShare);
+              serviceCost += (baseRevenue * (assignment.percentage_of_revenue || 0)) / 100;
+              return;
+            }
+
+            const monthlyCost = assignment.monthly_cost || 0;
+            serviceCost += isServiceSpecific ? monthlyCost : (monthlyCost * assignmentShare);
+          });
+
+          serviceCost += creativeBoostCostByServiceMonth.get(`${service.id}::${monthKey}`) || 0;
+
+          addServiceStat(service.name || 'Neznámá služba', serviceRevenue, serviceCost);
+        });
+      });
+    });
+
+    const servicePerformance = Array.from(servicePerformanceMap.values())
+      .map((service) => {
+        const marginAbsoluteService = service.revenue - service.cost;
+        const marginPercentService = service.revenue > 0 ? (marginAbsoluteService / service.revenue) * 100 : 0;
+        return {
+          serviceName: service.serviceName,
+          usageCount: service.usageCount,
+          revenue: service.revenue,
+          cost: service.cost,
+          marginAbsolute: marginAbsoluteService,
+          marginPercent: marginPercentService,
+        };
+      })
+      .sort((a, b) => b.usageCount - a.usageCount);
+
     const marginAbsolute = engagementMargins.reduce((sum, engagement) => sum + engagement.marginAbsolute, 0);
     const avgMarginPercent = totalInvoicing > 0 ? (marginAbsolute / totalInvoicing) * 100 : 0;
 
@@ -983,9 +1149,9 @@ export default function Analytics() {
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
 
-      const monthInvoices = canonicalIssuedInvoices
+      const monthInvoices = canonicalFakturoidInvoices
         .filter((invoice) => invoice.year === year && invoice.month === month)
-        .filter(isInvoiceFromFinanceEligibleClient);
+        .filter(hasMappedEngagement);
       const monthRevenue = monthInvoices.reduce(
         (sum, invoice) => sum + convertToCzk(invoice.total_amount, invoice.currency, invoice.year, invoice.month),
         0,
@@ -1130,6 +1296,7 @@ export default function Analytics() {
         creditsByColleague,
         creditsTrend,
       },
+      servicePerformance,
       eurConversionRate: eurToCzkCurrent?.rate ?? null,
       eurConversionDate: eurToCzkCurrent?.providerDate ?? null,
     };
@@ -1347,6 +1514,9 @@ export default function Analytics() {
     const prevSummaries = comparisonPeriodMonthKeys.flatMap((key) =>
       getClientMonthSummaries(key.year, key.month)
     );
+    const validSummaryKeys = new Set(
+      allSummaries.map((summary) => `${summary.clientId}:${summary.year}:${summary.month}`)
+    );
 
     const totalCredits = allSummaries.reduce((sum, s) => sum + s.usedCredits, 0);
     const prevTotalCredits = prevSummaries.reduce((sum, s) => sum + s.usedCredits, 0);
@@ -1354,8 +1524,67 @@ export default function Analytics() {
       ? ((totalCredits - prevTotalCredits) / prevTotalCredits) * 100
       : 0;
 
-    const totalRevenue = allSummaries.reduce((sum, s) => sum + s.estimatedInvoice, 0);
-    const prevTotalRevenue = prevSummaries.reduce((sum, s) => sum + s.estimatedInvoice, 0);
+    const getPreferredClientMonthRecord = (clientId: string, year: number, month: number) => {
+      return clientMonths
+        .filter((cm) => cm.clientId === clientId && cm.year === year && cm.month === month)
+        .sort((a, b) => {
+          const aHasService = !!a.engagementServiceId;
+          const bHasService = !!b.engagementServiceId;
+          if (aHasService !== bHasService) return aHasService ? -1 : 1;
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        })[0];
+    };
+
+    const getCreativeBoostServiceForSummary = (summary: (typeof allSummaries)[number]) => {
+      const monthRecord = getPreferredClientMonthRecord(summary.clientId, summary.year, summary.month);
+      if (!monthRecord) return null;
+      if (monthRecord.engagementServiceId) {
+        return engagementServices.find((service) => service.id === monthRecord.engagementServiceId) || null;
+      }
+      if (!monthRecord.engagementId) return null;
+      return engagementServices.find(
+        (service) =>
+          service.engagement_id === monthRecord.engagementId &&
+          service.is_active &&
+          service.creative_boost_price_per_credit !== null
+      ) || null;
+    };
+
+    const toCzkPriceForSummary = (summary: (typeof allSummaries)[number], pricePerCredit: number, currency: string) => {
+      const normalizedCurrency = (currency || 'CZK').toUpperCase();
+      if (normalizedCurrency === 'CZK') return pricePerCredit;
+      if (normalizedCurrency === 'EUR') {
+        const rate =
+          eurToCzkRatesByMonth[toYearMonthKey(summary.year, summary.month)] ??
+          eurToCzkCurrent?.rate ??
+          1;
+        return pricePerCredit * rate;
+      }
+      return pricePerCredit;
+    };
+
+    const enrichSummary = (summary: (typeof allSummaries)[number]) => {
+      const cbService = getCreativeBoostServiceForSummary(summary);
+      const engagementCurrency = cbService?.currency || 'CZK';
+      const fixedBilling = cbService?.creative_boost_fixed_billing === true;
+      const billedCredits = fixedBilling
+        ? Math.max(0, summary.maxCredits)
+        : Math.max(0, summary.usedCredits);
+      const unitPriceCzk = toCzkPriceForSummary(summary, summary.pricePerCredit, engagementCurrency);
+      const revenueCzk = billedCredits * unitPriceCzk;
+      return {
+        ...summary,
+        billedCredits,
+        unitPriceCzk,
+        revenueCzk,
+      };
+    };
+
+    const enrichedSummaries = allSummaries.map(enrichSummary);
+    const enrichedPrevSummaries = prevSummaries.map(enrichSummary);
+
+    const totalRevenue = enrichedSummaries.reduce((sum, s) => sum + s.revenueCzk, 0);
+    const prevTotalRevenue = enrichedPrevSummaries.reduce((sum, s) => sum + s.revenueCzk, 0);
     const revenueChange = prevTotalRevenue > 0
       ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue) * 100
       : 0;
@@ -1363,18 +1592,31 @@ export default function Analytics() {
     const totalMaxCredits = allSummaries.reduce((sum, s) => sum + s.maxCredits, 0);
     const avgUtilization = totalMaxCredits > 0 ? (totalCredits / totalMaxCredits) * 100 : 0;
     const activeClients = new Set(allSummaries.map((summary) => summary.clientId)).size;
-    const avgPricePerCredit = allSummaries.length > 0
-      ? allSummaries.reduce((sum, s) => sum + s.pricePerCredit, 0) / allSummaries.length
-      : 0;
+    // Use weighted average by package size (max credits),
+    // so "avg selling price per credit" reflects real contracted mix.
+    const totalUsedCredits = enrichedSummaries.reduce((sum, s) => sum + Math.max(0, s.usedCredits), 0);
+    const totalBilledCredits = enrichedSummaries.reduce((sum, s) => sum + Math.max(0, s.billedCredits), 0);
+    const weightedPackageCredits = enrichedSummaries.reduce((sum, s) => sum + Math.max(0, s.maxCredits), 0);
+    const weightedPackageRevenue = enrichedSummaries.reduce(
+      (sum, s) => sum + (Math.max(0, s.maxCredits) * s.unitPriceCzk),
+      0,
+    );
+    // "Za kolik prodáváme kredity" = blended selling price from billed credits.
+    // This is aligned with invoicing logic (fixed billing => maxCredits, usage-based => usedCredits).
+    const avgPricePerCredit = totalBilledCredits > 0
+      ? totalRevenue / totalBilledCredits
+      : weightedPackageCredits > 0
+        ? weightedPackageRevenue / weightedPackageCredits
+        : 0;
 
     const creditsTrend = Array.from({ length: 12 }, (_, i) => {
       const date = subMonths(periodStart, 11 - i);
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
 
-      const monthSummaries = getClientMonthSummaries(year, month);
+      const monthSummaries = getClientMonthSummaries(year, month).map(enrichSummary);
       const monthCredits = monthSummaries.reduce((sum, s) => sum + s.usedCredits, 0);
-      const monthRevenue = monthSummaries.reduce((sum, s) => sum + s.estimatedInvoice, 0);
+      const monthRevenue = monthSummaries.reduce((sum, s) => sum + s.revenueCzk, 0);
       const maxCredits = monthSummaries.reduce((sum, s) => sum + s.maxCredits, 0);
       const utilization = maxCredits > 0 ? (monthCredits / maxCredits) * 100 : 0;
 
@@ -1387,7 +1629,7 @@ export default function Analytics() {
     });
 
     const periodOutputs = outputs.filter((output) =>
-      currentPeriodMonthKeys.some((key) => key.year === output.year && key.month === output.month)
+      validSummaryKeys.has(`${output.clientId}:${output.year}:${output.month}`)
     );
 
     const creditsByTypeMap = new Map<string, number>();
@@ -1425,7 +1667,7 @@ export default function Analytics() {
       revenue: number;
     }>();
 
-    allSummaries.forEach((summary) => {
+    enrichedSummaries.forEach((summary) => {
       const existing = clientTotals.get(summary.clientId) || {
         clientId: summary.clientId,
         clientName: summary.clientName,
@@ -1439,9 +1681,9 @@ export default function Analytics() {
 
       existing.usedCredits += summary.usedCredits;
       existing.maxCredits += summary.maxCredits;
-      existing.pricePerCreditTotal += summary.pricePerCredit;
+      existing.pricePerCreditTotal += summary.unitPriceCzk;
       existing.pricePerCreditSamples += 1;
-      existing.revenue += summary.estimatedInvoice;
+      existing.revenue += summary.revenueCzk;
       clientTotals.set(summary.clientId, existing);
     });
 
@@ -1472,100 +1714,121 @@ export default function Analytics() {
       creditsChange,
       revenueChange,
     };
-  }, [calculateOutputCredits, colleagues, comparisonPeriodMonthKeys, currentPeriodMonthKeys, getClientMonthSummaries, outputTypes, outputs, periodStart]);
+  }, [
+    calculateOutputCredits,
+    clientMonths,
+    colleagues,
+    comparisonPeriodMonthKeys,
+    currentPeriodMonthKeys,
+    engagementServices,
+    eurToCzkCurrent,
+    eurToCzkRatesByMonth,
+    getClientMonthSummaries,
+    outputTypes,
+    outputs,
+    periodStart,
+  ]);
 
   const teamData = useMemo(() => {
-    const activeColleaguesList = colleagues.filter((c) => c.status === 'active');
-    const activeColleagues = activeColleaguesList.length;
+    const costByColleagueMap = new Map<string, {
+      colleagueId: string;
+      name: string;
+      position: string;
+      cost: number;
+      reportMonths: Set<string>;
+    }>();
 
-    const activeEngs = engagements.filter((e) => {
-      const start = new Date(e.start_date);
-      const end = e.end_date ? new Date(e.end_date) : null;
-      return e.status === 'active' && start <= periodEnd && (!end || end >= periodStart);
+    const activeColleagueRows = colleagues.filter((colleague) => colleague.status === 'active');
+    currentPeriodMonthKeys.forEach((monthKey) => {
+      const monthId = toYearMonthKey(monthKey.year, monthKey.month);
+      activeColleagueRows.forEach((colleague) => {
+        const activities = getColleagueActivities(colleague.id, monthKey.year, monthKey.month);
+        const sanitizedActivities = activities.map((activity) => {
+          if (activity.invoice_item_name && activity.invoice_item_name.trim().length > 0) {
+            return activity;
+          }
+          return {
+            ...activity,
+            invoice_item_name: (activity.description || 'Manuální položka').trim(),
+          };
+        });
+        const invoiceData = buildColleagueInvoiceData(
+          colleague,
+          monthKey.year,
+          monthKey.month,
+          assignments,
+          engagements,
+          clients,
+          extraWorks,
+          sanitizedActivities,
+          getColleagueCreditsByClient,
+          getApprovedCommissionsForColleague,
+        );
+
+        if (invoiceData.grandTotal <= 0 && invoiceData.itemCount <= 0) return;
+
+        const existing = costByColleagueMap.get(colleague.id) || {
+          colleagueId: colleague.id,
+          name: colleague.full_name || 'Neznámý kolega',
+          position: colleague.position || 'Neznámá pozice',
+          cost: 0,
+          reportMonths: new Set<string>(),
+        };
+
+        existing.cost += invoiceData.grandTotal;
+        existing.reportMonths.add(monthId);
+        costByColleagueMap.set(colleague.id, existing);
+      });
     });
 
-    const mrr = activeEngs.reduce(
-      (sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []),
-      0,
-    );
-    const totalTeamCost = assignments
-      .filter((a) => activeEngs.some((e) => e.id === a.engagement_id))
-      .reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
+    const costByColleague = Array.from(costByColleagueMap.values())
+      .map((item) => ({
+        colleagueId: item.colleagueId,
+        name: item.name,
+        position: item.position,
+        cost: item.cost,
+        assignments: item.reportMonths.size,
+      }))
+      .sort((a, b) => b.cost - a.cost);
 
-    const avgCostPerEngagement = activeEngs.length > 0 ? totalTeamCost / activeEngs.length : 0;
-    const revenuePerColleague = activeColleagues > 0 ? mrr / activeColleagues : 0;
+    const totalTeamCost = costByColleague.reduce((sum, item) => sum + item.cost, 0);
+    const activeColleagues = costByColleague.length;
+    const avgCostPerActiveColleague = activeColleagues > 0 ? totalTeamCost / activeColleagues : 0;
 
-    const colleagueWorkload = activeColleaguesList.map((c) => {
-      const colleagueAssignments = assignments.filter((a) =>
-        a.colleague_id === c.id && activeEngs.some((e) => e.id === a.engagement_id)
-      );
-      const revenue = colleagueAssignments.reduce((sum, a) => {
-        const eng = activeEngs.find((e) => e.id === a.engagement_id);
-        if (!eng) return sum;
-        return sum + getEngagementMonthlyRevenue(eng.id, eng.monthly_fee, engagementServices || []);
-      }, 0);
-      return {
-        name: c.full_name.split(' ')[0] || c.full_name,
-        assignments: colleagueAssignments.length,
-        revenue,
-      };
-    }).sort((a, b) => b.assignments - a.assignments).slice(0, 10);
+    const positionMap = new Map<string, { amount: number; colleagues: Set<string> }>();
+    costByColleague.forEach((item) => {
+      const existing = positionMap.get(item.position) || { amount: 0, colleagues: new Set<string>() };
+      existing.amount += item.cost;
+      existing.colleagues.add(item.colleagueId);
+      positionMap.set(item.position, existing);
+    });
 
-    const costModels = ['hourly', 'fixed_monthly', 'percentage'] as const;
-    const costBreakdown = costModels.map((model) => {
-      const modelAssignments = assignments.filter((a) =>
-        a.cost_model === model && activeEngs.some((e) => e.id === a.engagement_id)
-      );
-      return {
-        costModel: model,
-        amount: modelAssignments.reduce((sum, a) => sum + (a.monthly_cost || 0), 0),
-        count: modelAssignments.length,
-      };
-    }).filter((c) => c.count > 0);
-
-    const topRevenueGenerators = activeColleaguesList.map((c) => {
-      const colleagueAssignments = assignments.filter((a) =>
-        a.colleague_id === c.id && activeEngs.some((e) => e.id === a.engagement_id)
-      );
-      const engagementCount = new Set(colleagueAssignments.map((a) => a.engagement_id)).size;
-      const revenue = colleagueAssignments.reduce((sum, a) => {
-        const eng = activeEngs.find((e) => e.id === a.engagement_id);
-        if (!eng) return sum;
-        return sum + getEngagementMonthlyRevenue(eng.id, eng.monthly_fee, engagementServices || []);
-      }, 0);
-      return {
-        name: c.full_name,
-        revenue,
-        engagements: engagementCount,
-      };
-    }).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
-
-    const employees = activeColleaguesList.filter((c) => !c.is_freelancer);
-    const freelancers = activeColleaguesList.filter((c) => c.is_freelancer);
-
-    const employeeCost = assignments
-      .filter((a) => employees.some((e) => e.id === a.colleague_id) && activeEngs.some((e) => e.id === a.engagement_id))
-      .reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
-    const freelancerCost = assignments
-      .filter((a) => freelancers.some((f) => f.id === a.colleague_id) && activeEngs.some((e) => e.id === a.engagement_id))
-      .reduce((sum, a) => sum + (a.monthly_cost || 0), 0);
-
-    const freelancerVsEmployee = [
-      { type: 'Interní', count: employees.length, cost: employeeCost },
-      { type: 'Freelanceři', count: freelancers.length, cost: freelancerCost },
-    ];
+    const costByPosition = Array.from(positionMap.entries())
+      .map(([position, data]) => ({
+        position,
+        amount: data.amount,
+        colleagues: data.colleagues.size,
+      }))
+      .sort((a, b) => b.amount - a.amount);
 
     return {
       activeColleagues,
       totalTeamCost,
-      avgCostPerEngagement,
-      revenuePerColleague,
-      colleagueWorkload,
-      costBreakdown,
-      topRevenueGenerators,
-      freelancerVsEmployee,
+      avgCostPerActiveColleague,
+      costByPosition,
+      costByColleague,
     };
-  }, [assignments, colleagues, engagements, engagementServices, periodEnd, periodStart]);
+  }, [
+    assignments,
+    clients,
+    colleagues,
+    currentPeriodMonthKeys,
+    engagements,
+    extraWorks,
+    getApprovedCommissionsForColleague,
+    getColleagueActivities,
+    getColleagueCreditsByClient,
+  ]);
 
   if (!canSeeAnalytics) {
     return (
@@ -1611,7 +1874,6 @@ export default function Analytics() {
             <TabsTrigger value="creative-boost" className="text-xs sm:text-sm px-2 sm:px-3">CB</TabsTrigger>
             <TabsTrigger value="team" className="text-xs sm:text-sm px-2 sm:px-3">Tým</TabsTrigger>
             <TabsTrigger value="long-term" className="text-xs sm:text-sm px-2 sm:px-3">Dlouhodobě</TabsTrigger>
-            <TabsTrigger value="plan-forecast" className="text-xs sm:text-sm px-2 sm:px-3">Forecast</TabsTrigger>
           </TabsList>
         </div>
 
@@ -1681,22 +1943,6 @@ export default function Analytics() {
 
         <TabsContent value="long-term" className="mt-6">
           <LongTermAnalytics {...longTermData} />
-        </TabsContent>
-
-        <TabsContent value="plan-forecast" className="mt-6">
-          <div className="space-y-6">
-            <RevenuePlanForecast
-              selectedYear={selectedYear}
-              selectedMonth={selectedMonth}
-            />
-            <TeamCapacityForecast
-              engagements={engagements}
-              colleagues={colleagues}
-              assignments={assignments}
-              selectedYear={selectedYear}
-              selectedMonth={selectedMonth}
-            />
-          </div>
         </TabsContent>
       </Tabs>
     </div>
