@@ -48,6 +48,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useFakturoid, type FakturoidSubjectData } from '@/hooks/useFakturoid';
 import { isEngagementServiceActiveInMonth } from '@/lib/engagementServiceLifecycle';
+import { supabase } from '@/integrations/supabase/client';
 import { ClientForm } from '@/components/forms/ClientForm';
 import { AddContactDialog } from '@/components/clients/AddContactDialog';
 import { LeadOriginSection } from '@/components/clients/LeadOriginSection';
@@ -110,19 +111,24 @@ export default function Clients() {
   } = useCRMData();
 
   const { isSuperAdmin: superAdmin, role } = useUserRole();
+  const canDeleteClient = superAdmin || role === 'admin';
   const { leads } = useLeadsData();
   const getLeadByClientId = useCallback((clientId: string) => {
     return leads.find(lead => lead.converted_to_client_id === clientId);
   }, [leads]);
   // Allow editing for super admin or roles: admin, management, project_manager, specialist
   const canModifyContactsFlag = superAdmin || ['admin', 'management', 'project_manager', 'specialist'].includes(role || '');
+  const canDeleteContactAction = superAdmin || role === 'admin';
   const { createSubjectInFakturoid, syncSubjectToFakturoid, getSubjectFromFakturoid, isLoading: isFakturoidLoading } = useFakturoid();
   const [creatingSubjectForClient, setCreatingSubjectForClient] = useState<string | null>(null);
 
   // Initialize state from URL params
   const [searchInput, setSearchInput] = useState(searchParams.get('q') || '');
-  const [statusFilter, setStatusFilter] = useState<ClientStatus | 'all'>(
-    (searchParams.get('status') as ClientStatus | 'all') || 'all'
+  const initialStatusParam = searchParams.get('status');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>(
+    initialStatusParam === 'all' || initialStatusParam === 'active' || initialStatusParam === 'completed'
+      ? initialStatusParam
+      : 'active'
   );
   const [tierFilter, setTierFilter] = useState<ClientTier | 'all'>(
     (searchParams.get('tier') as ClientTier | 'all') || 'all'
@@ -154,7 +160,7 @@ export default function Clients() {
   }, [searchQuery, updateUrlParams]);
 
   // Update URL when filters change
-  const handleStatusChange = (value: ClientStatus | 'all') => {
+  const handleStatusChange = (value: 'all' | 'active' | 'completed') => {
     setStatusFilter(value);
     updateUrlParams({ status: value === 'all' ? null : value });
   };
@@ -165,17 +171,18 @@ export default function Clients() {
   };
 
   // Check if any filters are active
-  const hasActiveFilters = searchInput !== '' || statusFilter !== 'all' || tierFilter !== 'all';
+  const hasActiveFilters = searchInput !== '' || statusFilter !== 'active' || tierFilter !== 'all';
 
   const clearAllFilters = () => {
     setSearchInput('');
-    setStatusFilter('all');
+    setStatusFilter('active');
     setTierFilter('all');
     setSearchParams(prev => {
       const newParams = new URLSearchParams();
       // Preserve only highlight param
       const highlight = prev.get('highlight');
       if (highlight) newParams.set('highlight', highlight);
+      newParams.set('status', 'active');
       return newParams;
     }, { replace: true });
   };
@@ -184,12 +191,14 @@ export default function Clients() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deleteClientId, setDeleteClientId] = useState<string | null>(null);
   const [isDeletingClient, setIsDeletingClient] = useState(false);
+  const [deleteClientConfirmText, setDeleteClientConfirmText] = useState('');
   
   // Contact dialog state
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [contactDialogClientId, setContactDialogClientId] = useState<string | null>(null);
   const [editingContact, setEditingContact] = useState<ClientContact | null>(null);
   const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
+  const [deleteContactConfirmText, setDeleteContactConfirmText] = useState('');
 
   // Pinned notes editing state
   const [editingNotesClientId, setEditingNotesClientId] = useState<string | null>(null);
@@ -226,12 +235,23 @@ export default function Clients() {
         client.industry.toLowerCase().includes(lowerSearch) ||
         client.ico.includes(searchQuery);
 
-      const matchesStatus = statusFilter === 'all' || client.status === statusFilter;
+      const matchesStatus =
+        statusFilter === 'all'
+          ? true
+          : statusFilter === 'active'
+            ? client.status === 'active'
+            : client.status !== 'active';
       const matchesTier = tierFilter === 'all' || client.tier === tierFilter;
 
       return matchesSearch && matchesStatus && matchesTier;
     });
   }, [clients, searchQuery, statusFilter, tierFilter]);
+
+  const clientsInSelectedStatusCount = useMemo(() => {
+    if (statusFilter === 'all') return clients.length;
+    if (statusFilter === 'active') return clients.filter((client) => client.status === 'active').length;
+    return clients.filter((client) => client.status !== 'active').length;
+  }, [clients, statusFilter]);
 
   // Memoize client details for all visible clients to prevent recalculation on every render
   const clientDetailsMap = useMemo(() => {
@@ -396,6 +416,30 @@ export default function Clients() {
         }
         await updateClient(editingClient.id, data);
 
+        // When client is switched to inactive/completed, cascade inactive state to engagements and contacts.
+        if (data.status !== 'active') {
+          const clientEngagements = getEngagementsByClientId(editingClient.id);
+          const engagementsToPause = clientEngagements.filter(
+            (engagement) => engagement.status !== 'cancelled' && engagement.status !== 'completed'
+          );
+
+          await Promise.all(
+            engagementsToPause.map((engagement) =>
+              updateEngagement(engagement.id, { status: 'paused' })
+            )
+          );
+
+          const { error: contactsDeactivateError } = await supabase
+            .from('client_contacts')
+            .update({ deleted_at: new Date().toISOString() })
+            .eq('client_id', editingClient.id)
+            .is('deleted_at', null);
+
+          if (contactsDeactivateError) {
+            throw contactsDeactivateError;
+          }
+        }
+
         // Sync to Fakturoid if linked and billing fields changed
         if (editingClient.fakturoid_subject_id && billingFieldsChanged(editingClient, data)) {
           try {
@@ -463,6 +507,11 @@ export default function Clients() {
 
   const handleDeleteContact = async () => {
     if (!deleteContactId) return;
+    if (!canDeleteContactAction) {
+      toast.error('Kontakt může smazat pouze administrátor');
+      setDeleteContactId(null);
+      return;
+    }
 
     // Use centralized canDeleteContact utility for validation
     const { allowed, reason } = await canDeleteContact(deleteContactId);
@@ -478,6 +527,7 @@ export default function Clients() {
       console.error('Failed to delete contact:', error);
     } finally {
       setDeleteContactId(null);
+      setDeleteContactConfirmText('');
     }
   };
 
@@ -509,6 +559,13 @@ export default function Clients() {
       setIsDeletingClient(false);
       setDeleteClientId(null);
     }
+  };
+
+  const renderClientStatusBadge = (status: ClientStatus) => {
+    if (status === 'active') {
+      return <Badge className="bg-status-active/10 text-status-active border-status-active/20">Aktivní</Badge>;
+    }
+    return <Badge className="bg-muted text-muted-foreground border-border">Dokončeno</Badge>;
   };
 
   return (
@@ -545,10 +602,7 @@ export default function Clients() {
           <SelectContent>
             <SelectItem value="all">Všechny statusy</SelectItem>
             <SelectItem value="active">Aktivní</SelectItem>
-            <SelectItem value="lead">Lead</SelectItem>
-            <SelectItem value="paused">Pozastaveno</SelectItem>
-            <SelectItem value="potential">Potenciální</SelectItem>
-            <SelectItem value="lost">Ztraceno</SelectItem>
+            <SelectItem value="completed">Dokončeno</SelectItem>
           </SelectContent>
         </Select>
         <Select value={tierFilter} onValueChange={handleTierChange}>
@@ -575,6 +629,12 @@ export default function Clients() {
             Zrušit filtry
           </Button>
         )}
+      </div>
+
+      <div className="flex items-center">
+        <Badge variant="secondary" className="text-xs">
+          Klienti ve zvoleném statusu: {clientsInSelectedStatusCount}
+        </Badge>
       </div>
 
       <div className="space-y-3">
@@ -642,7 +702,7 @@ export default function Clients() {
                     <span>{details.activeCount}</span>
                   </div>
                   <TierBadgeWithTooltip tier={client.tier} compact />
-                  <StatusBadge status={client.status} />
+                  {renderClientStatusBadge(client.status)}
                   {superAdmin && (
                     <>
                       <Button
@@ -653,18 +713,6 @@ export default function Clients() {
                         aria-label={`Upravit klienta ${client.brand_name}`}
                       >
                         <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteClientId(client.id);
-                        }}
-                        aria-label={`Odstranit klienta ${client.brand_name}`}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                       </Button>
                     </>
                   )}
@@ -1011,18 +1059,21 @@ export default function Clients() {
                                     >
                                       <Pencil className="h-3 w-3" aria-hidden="true" />
                                     </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-6 w-6 text-destructive hover:text-destructive"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setDeleteContactId(contact.id);
-                                      }}
-                                      aria-label={`Smazat kontakt ${contact.name}`}
-                                    >
-                                      <Trash2 className="h-3 w-3" aria-hidden="true" />
-                                    </Button>
+                                    {canDeleteContactAction && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 text-destructive hover:text-destructive"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setDeleteContactId(contact.id);
+                                          setDeleteContactConfirmText('');
+                                        }}
+                                        aria-label={`Smazat kontakt ${contact.name}`}
+                                      >
+                                        <Trash2 className="h-3 w-3" aria-hidden="true" />
+                                      </Button>
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -1112,6 +1163,24 @@ export default function Clients() {
                       </div>
                     </div>
                   )}
+
+                  {canDeleteClient && (
+                    <div className="mt-6 pt-4 border-t">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 text-xs text-destructive/70 hover:text-destructive transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteClientId(client.id);
+                          setDeleteClientConfirmText('');
+                        }}
+                        aria-label={`Odstranit klienta ${client.brand_name}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Smazat klienta
+                      </button>
+                    </div>
+                  )}
                 </CardContent>
               )}
             </Card>
@@ -1160,17 +1229,37 @@ export default function Clients() {
         />
       )}
 
-      <AlertDialog open={!!deleteContactId} onOpenChange={(open) => !open && setDeleteContactId(null)}>
+      <AlertDialog
+        open={!!deleteContactId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteContactId(null);
+            setDeleteContactConfirmText('');
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Smazat kontakt?</AlertDialogTitle>
             <AlertDialogDescription>
               Tato akce je nevratná. Kontakt bude trvale odstraněn.
+              Pro potvrzení napište <strong>smazat</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-2">
+            <Input
+              value={deleteContactConfirmText}
+              onChange={(e) => setDeleteContactConfirmText(e.target.value)}
+              placeholder="Napište: smazat"
+            />
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Zrušit</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteContact} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleDeleteContact}
+              disabled={deleteContactConfirmText.trim().toLowerCase() !== 'smazat'}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Smazat
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1180,7 +1269,10 @@ export default function Clients() {
       <AlertDialog
         open={!!deleteClientId}
         onOpenChange={(open) => {
-          if (!open && !isDeletingClient) setDeleteClientId(null);
+          if (!open && !isDeletingClient) {
+            setDeleteClientId(null);
+            setDeleteClientConfirmText('');
+          }
         }}
       >
         <AlertDialogContent>
@@ -1188,13 +1280,22 @@ export default function Clients() {
             <AlertDialogTitle>Odstranit klienta?</AlertDialogTitle>
             <AlertDialogDescription>
               Tato akce klienta archivuje a skryje ze seznamu. Historie dat zůstane zachovaná.
+              Pro potvrzení napište <strong>smazat</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-2">
+            <Input
+              value={deleteClientConfirmText}
+              onChange={(e) => setDeleteClientConfirmText(e.target.value)}
+              placeholder="Napište: smazat"
+              disabled={isDeletingClient}
+            />
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeletingClient}>Zrušit</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteClient}
-              disabled={isDeletingClient}
+              disabled={isDeletingClient || deleteClientConfirmText.trim().toLowerCase() !== 'smazat'}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeletingClient ? (

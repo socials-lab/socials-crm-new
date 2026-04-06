@@ -11,6 +11,7 @@ import { EmailCcBccFields } from '@/components/shared/EmailCcBccFields';
 import { Send, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { invokeWithTimeout } from '@/lib/supabaseUtils';
+import { endOfMonth, parseISO, startOfMonth } from 'date-fns';
 
 interface CreateBroadcastDialogProps {
   open: boolean;
@@ -38,6 +39,25 @@ export function CreateBroadcastDialog({ open, onOpenChange, onCreated }: CreateB
   async function loadRecipients() {
     setLoading(true);
     try {
+      const now = new Date();
+      const monthStart = startOfMonth(now);
+      const monthEnd = endOfMonth(now);
+
+      const { data: engagements } = await supabase
+        .from('engagements')
+        .select('client_id, start_date, end_date')
+        .eq('status', 'active');
+
+      const activeClientIds = new Set(
+        (engagements || [])
+          .filter((engagement) => {
+            const engagementStart = parseISO(engagement.start_date);
+            const engagementEnd = engagement.end_date ? parseISO(engagement.end_date) : null;
+            return engagementStart <= monthEnd && (!engagementEnd || engagementEnd >= monthStart);
+          })
+          .map((engagement) => engagement.client_id),
+      );
+
       const { data: clients } = await supabase
         .from('clients')
         .select('id, name')
@@ -69,7 +89,11 @@ export function CreateBroadcastDialog({ open, onOpenChange, onCreated }: CreateB
         }));
 
       setRecipients(mapped);
-      setSelectedIds(mapped.map((recipient) => recipient.contact_id));
+      setSelectedIds(
+        mapped
+          .filter((recipient) => activeClientIds.has(recipient.client_id))
+          .map((recipient) => recipient.contact_id),
+      );
     } catch (error) {
       console.error(error);
     }
@@ -209,7 +233,7 @@ export function CreateBroadcastDialog({ open, onOpenChange, onCreated }: CreateB
           </p>
 
           <div>
-            <Label>Příjemci (kontakty aktivních klientů)</Label>
+            <Label>Příjemci (defaultně předvybráni klienti s aktivní zakázkou v aktuálním měsíci)</Label>
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />

@@ -243,6 +243,26 @@ function MyWorkContent() {
     return [...new Set(clients.map(c => c.brand_name || c.name))].sort((a, b) => a.localeCompare(b, 'cs'));
   }, [clients]);
 
+  const clientWorkOptions = useMemo(() => {
+    const optionMap = new Map<string, { id: string; label: string; legalName: string }>();
+    engagements
+      .filter((engagement) => engagement.status !== 'cancelled' && engagement.status !== 'completed')
+      .forEach((engagement) => {
+        const client = clients.find((c) => c.id === engagement.client_id);
+        if (!client) return;
+        const legalName = client.name;
+        const brandName = client.brand_name || client.name;
+        const label = `${engagement.name} - ${brandName}`;
+        optionMap.set(engagement.id, {
+          id: engagement.id,
+          label,
+          legalName,
+        });
+      });
+
+    return Array.from(optionMap.values()).sort((a, b) => a.label.localeCompare(b.label, 'cs'));
+  }, [engagements, clients]);
+
   // Internal work this month
   const internalWorkThisMonth = getRewardsByMonth(currentYear, currentMonth);
   const categorizedInternalWork = getRewardsByCategory(currentYear, currentMonth);
@@ -827,6 +847,7 @@ function MyWorkContent() {
           onAdd={addReward}
           colleagueId={colleagueId}
           clientNames={clientNames}
+          clientOptions={clientWorkOptions}
           defaultDate={addActivityDefaultDate}
         />
       )}
@@ -839,6 +860,7 @@ function MyWorkContent() {
         onUpdate={updateReward}
         onDelete={deleteReward}
         clientNames={clientNames}
+        clientOptions={clientWorkOptions}
       />
     </div>
   );

@@ -59,6 +59,9 @@ verify_jwt = false
 [functions.fakturoid-bidirectional-sync]
 verify_jwt = false
 
+[functions.fakturoid-import-historical-invoices]
+verify_jwt = false
+
 [functions.digisign-create-contract]
 verify_jwt = false
 

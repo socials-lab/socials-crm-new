@@ -91,6 +91,7 @@ const navGroups: NavGroup[] = [
     label: 'Finance',
     items: [
       { title: 'Fakturace', url: '/invoicing', page: 'invoicing', icon: Receipt },
+      { title: 'Faktury', url: '/finance-invoices', page: 'finance-invoices', icon: FileText },
     ],
   },
   {

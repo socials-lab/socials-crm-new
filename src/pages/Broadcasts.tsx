@@ -71,7 +71,7 @@ export default function Broadcasts() {
     <div className="space-y-6 animate-fade-in p-4 md:p-6">
       <PageHeader
         title="Rozesílky"
-        description="Hromadné emaily kontaktům aktivních klientů"
+        description="Hromadné emaily kontaktům klientů (defaultně předvybráni dle aktivních zakázek v aktuálním měsíci)"
         actions={
           isSuperAdmin ? (
             <Button onClick={() => setDialogOpen(true)}>

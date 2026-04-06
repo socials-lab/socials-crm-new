@@ -25,6 +25,7 @@ import Contacts from "./pages/Contacts";
 import Leads from "./pages/Leads";
 import Engagements from "./pages/Engagements";
 import Invoicing from "./pages/Invoicing";
+import FinanceInvoices from "./pages/FinanceInvoices";
 import CreativeBoost from "./pages/CreativeBoost";
 import Services from "./pages/Services";
 import Colleagues from "./pages/Colleagues";
@@ -168,6 +169,7 @@ const App = () => (
                               <Route path="/broadcasts" element={<Broadcasts />} />
                               <Route path="/extra-work" element={<ExtraWork />} />
                               <Route path="/invoicing" element={<Invoicing />} />
+                              <Route path="/finance-invoices" element={<FinanceInvoices />} />
                               <Route path="/creative-boost" element={<CreativeBoost />} />
                               <Route path="/meetings" element={<Meetings />} />
                               <Route path="/services" element={<Services />} />

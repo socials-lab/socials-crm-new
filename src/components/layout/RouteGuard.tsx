@@ -22,6 +22,7 @@ const ROUTE_TO_PAGE: Record<string, string> = {
   '/creative-boost': 'creative-boost',
   '/meetings': 'meetings',
   '/invoicing': 'invoicing',
+  '/finance-invoices': 'finance-invoices',
   '/services': 'services',
   '/colleagues': 'colleagues',
   '/recruitment': 'recruitment',

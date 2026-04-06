@@ -46,6 +46,11 @@ const INDUSTRY_OPTIONS = [
   { value: 'LeadGen', label: 'LeadGen' },
 ] as const;
 
+const CLIENT_STATUS_OPTIONS = [
+  { value: 'active', label: 'Aktivní' },
+  { value: 'paused', label: 'Dokončeno' },
+] as const;
+
 function isCzechCountry(country: string): boolean {
   const normalized = country.trim().toLowerCase();
   return normalized === 'czech republic' || normalized === 'czechia' || normalized === 'česká republika';
@@ -177,7 +182,7 @@ export function ClientForm({ client, hasActiveEngagements = false, hasEngagement
     website: c?.website || '',
     country: c?.country || 'Czech Republic',
     industry: isValidIndustryValue(c?.industry) ? c.industry : '',
-    status: c?.status || 'lead',
+    status: c?.status === 'active' ? 'active' : 'paused',
     currency: normalizeClientCurrency(c?.currency),
     billing_email: c?.billing_email || '',
     billing_street: c?.billing_street || '',
@@ -550,6 +555,30 @@ export function ClientForm({ client, hasActiveEngagements = false, hasEngagement
           <h4 className="font-medium text-sm border-b pb-2">Další údaje</h4>
           
           <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status klienta</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vyberte status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {CLIENT_STATUS_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="acquisition_channel"

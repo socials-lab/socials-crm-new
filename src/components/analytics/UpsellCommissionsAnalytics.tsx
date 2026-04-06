@@ -80,12 +80,13 @@ export function UpsellCommissionsAnalytics({
     // By type
     const extraWorkCount = currentMonthUpsells.filter(u => u.type === 'extra_work').length;
     const serviceCount = currentMonthUpsells.filter(u => u.type === 'service').length;
+    const manualCount = currentMonthUpsells.filter(u => u.type === 'manual_commission').length;
 
     const prevUpsells = comparisonPeriodMonthKeys.flatMap((key) => getUpsellsForMonth(key.year, key.month));
     const prevTotal = prevUpsells.reduce((sum, u) => sum + u.commissionAmount, 0);
     const change = prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : 0;
 
-    return { total, approved, pending, count, change, extraWorkCount, serviceCount };
+    return { total, approved, pending, count, change, extraWorkCount, serviceCount, manualCount };
   }, [comparisonPeriodMonthKeys, currentMonthUpsells, getUpsellsForMonth]);
 
   // 12-month trend
@@ -123,6 +124,7 @@ export function UpsellCommissionsAnalytics({
       approvedCommission: number;
       extraWorkCount: number;
       serviceCount: number;
+      manualCount: number;
     }>();
 
     for (let i = 0; i < 6; i++) {
@@ -142,6 +144,7 @@ export function UpsellCommissionsAnalytics({
           approvedCommission: 0,
           extraWorkCount: 0,
           serviceCount: 0,
+          manualCount: 0,
         };
         
         existing.totalAmount += upsell.amount;
@@ -152,8 +155,10 @@ export function UpsellCommissionsAnalytics({
         }
         if (upsell.type === 'extra_work') {
           existing.extraWorkCount += 1;
-        } else {
+        } else if (upsell.type === 'service') {
           existing.serviceCount += 1;
+        } else {
+          existing.manualCount += 1;
         }
         
         colleagueStats.set(upsell.upsoldById, existing);
@@ -169,10 +174,12 @@ export function UpsellCommissionsAnalytics({
   const typeDistribution = useMemo(() => {
     const extraWork = currentMonthUpsells.filter(u => u.type === 'extra_work');
     const services = currentMonthUpsells.filter(u => u.type === 'service');
+    const manual = currentMonthUpsells.filter(u => u.type === 'manual_commission');
 
     return [
       { name: 'Vícepráce', value: extraWork.reduce((sum, u) => sum + u.commissionAmount, 0), count: extraWork.length },
       { name: 'Nové služby', value: services.reduce((sum, u) => sum + u.commissionAmount, 0), count: services.length },
+      { name: 'Manuální provize', value: manual.reduce((sum, u) => sum + u.commissionAmount, 0), count: manual.length },
     ].filter(d => d.value > 0);
   }, [currentMonthUpsells]);
 
@@ -237,7 +244,7 @@ export function UpsellCommissionsAnalytics({
         <KPICard
           title="Počet upsellů"
           value={currentMonthStats.count.toString()}
-          subtitle={`${currentMonthStats.extraWorkCount} víceprací, ${currentMonthStats.serviceCount} služeb (${periodLabel})`}
+          subtitle={`${currentMonthStats.extraWorkCount} víceprací, ${currentMonthStats.serviceCount} služeb, ${currentMonthStats.manualCount} manuálních (${periodLabel})`}
           icon={Users}
         />
       </div>
@@ -358,6 +365,7 @@ export function UpsellCommissionsAnalytics({
                     <TableHead>Kolega</TableHead>
                     <TableHead className="text-right">Vícepráce</TableHead>
                     <TableHead className="text-right">Služby</TableHead>
+                    <TableHead className="text-right">Manuální</TableHead>
                     <TableHead className="text-right">Celkem upsellů</TableHead>
                     <TableHead className="text-right">Objem prodeje</TableHead>
                     <TableHead className="text-right">Provize celkem</TableHead>
@@ -373,6 +381,7 @@ export function UpsellCommissionsAnalytics({
                       <TableCell className="font-medium">{seller.name}</TableCell>
                       <TableCell className="text-right text-muted-foreground">{seller.extraWorkCount}</TableCell>
                       <TableCell className="text-right text-muted-foreground">{seller.serviceCount}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{seller.manualCount}</TableCell>
                       <TableCell className="text-right font-medium">{seller.count}</TableCell>
                       <TableCell className="text-right">{formatCurrency(seller.totalAmount)}</TableCell>
                       <TableCell className="text-right font-medium text-primary">
@@ -430,10 +439,15 @@ export function UpsellCommissionsAnalytics({
                             <FileText className="h-3 w-3 mr-1" />
                             Vícepráce
                           </Badge>
-                        ) : (
+                        ) : upsell.type === 'service' ? (
                           <Badge variant="outline" className="bg-chart-3/10 text-chart-3 border-chart-3/20">
                             <Sparkles className="h-3 w-3 mr-1" />
                             Služba
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                            <Coins className="h-3 w-3 mr-1" />
+                            Manuální
                           </Badge>
                         )}
                       </TableCell>

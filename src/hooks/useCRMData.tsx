@@ -316,9 +316,31 @@ export function CRMDataProvider({ children }: { children: ReactNode }) {
   const { data: issuedInvoices = [], isLoading: invoicesLoading } = useQuery({
     queryKey: ['issued_invoices'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('issued_invoices').select('*').order('issued_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
+      // Supabase REST can cap single response size (commonly 1000 rows).
+      // Read issued invoices in pages to avoid truncating historical analytics.
+      const pageSize = 1000;
+      const allRows: IssuedInvoice[] = [];
+      let page = 0;
+
+      while (true) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+        const { data, error } = await supabase
+          .from('issued_invoices')
+          .select('*')
+          .order('issued_at', { ascending: false })
+          .range(from, to);
+        if (error) throw error;
+
+        const chunk = (data || []) as IssuedInvoice[];
+        allRows.push(...chunk);
+        if (chunk.length < pageSize) {
+          break;
+        }
+        page += 1;
+      }
+
+      return allRows;
     },
   });
 

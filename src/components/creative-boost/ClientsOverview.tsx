@@ -18,6 +18,7 @@ import { SettingsHistoryDialog } from './SettingsHistoryDialog';
 import { ShareCreativeBoostDialog } from './ShareCreativeBoostDialog';
 import type { MonthStatus, ClientMonthOutput, OutputCategory } from '@/types/creativeBoost';
 import { cn } from '@/lib/utils';
+import { canonicalizeAssignmentRole } from '@/lib/assignmentRoles';
 import { toast } from 'sonner';
 
 // Category colors for output types
@@ -68,10 +69,11 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
     getSettingsHistory,
     ensureClientMonthsForActiveEngagements,
   } = useCreativeBoostData();
-  const { colleagues, engagements, engagementServices, getClientById, updateEngagementService } = useCRMData();
+  const { colleagues, engagements, engagementServices, assignments, getClientById, updateEngagementService } = useCRMData();
   
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<MonthStatus | 'all'>('all');
+  const [designerFilter, setDesignerFilter] = useState<string>('all');
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const [settingsDialogClient, setSettingsDialogClient] = useState<string | null>(null);
   const [historyDialogClient, setHistoryDialogClient] = useState<string | null>(null);
@@ -103,6 +105,32 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
       });
     },
     [clientMonths, year, month]
+  );
+
+  const getPrimaryDesignerIdForEngagement = useCallback(
+    (engagementId: string | undefined): string | null => {
+      if (!engagementId) return null;
+
+      const monthStart = new Date(year, month - 1, 1);
+      const monthEnd = new Date(year, month, 0);
+
+      const designerAssignments = assignments
+        .filter((assignment) => assignment.engagement_id === engagementId)
+        .filter((assignment) => canonicalizeAssignmentRole(assignment.role_on_engagement) === 'Graphic Designer')
+        .filter((assignment) => {
+          const assignmentStart = assignment.start_date ? new Date(assignment.start_date) : null;
+          const assignmentEnd = assignment.end_date ? new Date(assignment.end_date) : null;
+          return (!assignmentStart || assignmentStart <= monthEnd) && (!assignmentEnd || assignmentEnd >= monthStart);
+        })
+        .sort((a, b) => {
+          if (a.end_date === null && b.end_date !== null) return -1;
+          if (a.end_date !== null && b.end_date === null) return 1;
+          return new Date(b.start_date).getTime() - new Date(a.start_date).getTime();
+        });
+
+      return designerAssignments[0]?.colleague_id ?? null;
+    },
+    [assignments, year, month]
   );
 
   // Auto-sync: Ensure Creative Boost records exist for all active engagements
@@ -158,15 +186,21 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
         ? engagements.find((e) => e.id === monthData.engagementId)
         : null;
       const engagementName = linkedEngagement?.name;
+      const primaryDesignerId = getPrimaryDesignerIdForEngagement(linkedEngagement?.id) ?? monthData?.colleagueId ?? null;
+      const assignedColleague = primaryDesignerId
+        ? colleagues.find((colleague) => colleague.id === primaryDesignerId)
+        : null;
 
       const matchesSearch = search === '' ||
         s.clientName.toLowerCase().includes(search.toLowerCase()) ||
         s.brandName.toLowerCase().includes(search.toLowerCase()) ||
-        Boolean(engagementName && engagementName.toLowerCase().includes(search.toLowerCase()));
+        Boolean(engagementName && engagementName.toLowerCase().includes(search.toLowerCase())) ||
+        Boolean(assignedColleague && assignedColleague.full_name.toLowerCase().includes(search.toLowerCase()));
       const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesDesigner = designerFilter === 'all' || primaryDesignerId === designerFilter;
+      return matchesSearch && matchesStatus && matchesDesigner;
     });
-  }, [summaries, search, statusFilter, engagements, getPreferredClientMonth]);
+  }, [summaries, search, statusFilter, designerFilter, engagements, colleagues, getPreferredClientMonth, getPrimaryDesignerIdForEngagement]);
 
   const activeOutputTypes = useMemo(() => getActiveOutputTypes(), [getActiveOutputTypes]);
   
@@ -180,6 +214,14 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
   const designerColleagues = useMemo(() => {
     return colleagues.filter(c => c.status === 'active');
   }, [colleagues]);
+
+  const designerFilterOptions = useMemo(() => {
+    const preferredDesigners = designerColleagues.filter((colleague) => {
+      const lowerName = colleague.full_name.toLowerCase();
+      return lowerName.includes('alex') || lowerName.includes('ivana');
+    });
+    return preferredDesigners.length > 0 ? preferredDesigners : designerColleagues;
+  }, [designerColleagues]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('cs-CZ', {
@@ -347,6 +389,19 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
             <SelectItem value="inactive">Neaktivní</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={designerFilter} onValueChange={setDesignerFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Grafička" />
+          </SelectTrigger>
+          <SelectContent className="bg-popover">
+            <SelectItem value="all">Všechny grafičky</SelectItem>
+            {designerFilterOptions.map((colleague) => (
+              <SelectItem key={colleague.id} value={colleague.id}>
+                {colleague.full_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Compact Client Cards */}
@@ -359,11 +414,12 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
           const isOverMax = summary.usedCredits > summary.maxCredits;
           const clientOutputs = getClientOutputs(summary.clientId, year, month);
           const monthData = getPreferredClientMonth(summary.clientId);
-          const assignedColleague = monthData?.colleagueId 
-            ? designerColleagues.find(c => c.id === monthData.colleagueId)
-            : null;
           const linkedEngagement = monthData?.engagementId 
             ? engagements.find(e => e.id === monthData.engagementId)
+            : null;
+          const primaryDesignerId = getPrimaryDesignerIdForEngagement(linkedEngagement?.id) ?? monthData?.colleagueId ?? null;
+          const assignedColleague = primaryDesignerId
+            ? designerColleagues.find(c => c.id === primaryDesignerId)
             : null;
           return (
             <Collapsible key={summary.clientId} open={isExpanded} onOpenChange={() => toggleExpand(summary.clientId)}>
@@ -385,7 +441,12 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                               <span className="font-semibold text-sm truncate">{linkedEngagement.name}</span>
                               {assignedColleague && (
                                 <Badge variant="secondary" className="text-xs h-5 px-1.5">
-                                  {assignedColleague.full_name}
+                                  Grafička: {assignedColleague.full_name}
+                                </Badge>
+                              )}
+                              {!assignedColleague && (
+                                <Badge variant="outline" className="text-xs h-5 px-1.5 text-muted-foreground">
+                                  Bez grafičky
                                 </Badge>
                               )}
                             </div>
@@ -432,7 +493,12 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
                               </span>
                               {assignedColleague && (
                                 <Badge variant="secondary" className="text-xs h-5 px-1.5">
-                                  {assignedColleague.full_name}
+                                  Grafička: {assignedColleague.full_name}
+                                </Badge>
+                              )}
+                              {!assignedColleague && (
+                                <Badge variant="outline" className="text-xs h-5 px-1.5 text-muted-foreground">
+                                  Bez grafičky
                                 </Badge>
                               )}
                             </div>

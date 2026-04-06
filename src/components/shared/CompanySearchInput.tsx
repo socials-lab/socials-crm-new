@@ -11,6 +11,7 @@ interface CompanySearchInputProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  selectValueField?: 'name' | 'ico';
 }
 
 export function CompanySearchInput({
@@ -20,6 +21,7 @@ export function CompanySearchInput({
   placeholder = 'Zadejte název firmy...',
   disabled = false,
   className,
+  selectValueField = 'name',
 }: CompanySearchInputProps) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
@@ -56,8 +58,9 @@ export function CompanySearchInput({
       name: company.name,
     });
 
-    setInputValue(company.name);
-    onChange(company.name);
+    const selectedValue = selectValueField === 'ico' ? company.ico : company.name;
+    setInputValue(selectedValue);
+    onChange(selectedValue);
     setOpen(false);
     setIsPending(false);
     clearResults();

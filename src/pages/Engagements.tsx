@@ -150,7 +150,8 @@ function EngagementsContent() {
     return trimmed ? normalizeUrlProtocol(trimmed) : null;
   };
   const highlightedRef = useRef<HTMLDivElement>(null);
-  const { isSuperAdmin, canSeeFinancials } = useUserRole();
+  const { isSuperAdmin, canSeeFinancials, role } = useUserRole();
+  const canDeleteEngagement = isSuperAdmin || role === 'admin';
   const canViewFinancials = isSuperAdmin || canSeeFinancials;
 
   const {
@@ -195,6 +196,8 @@ function EngagementsContent() {
   // State for service deletion confirmation
   const [serviceToDelete, setServiceToDelete] = useState<{ id: string; name: string } | null>(null);
   const [engagementToDelete, setEngagementToDelete] = useState<Engagement | null>(null);
+  const [isDeletingEngagement, setIsDeletingEngagement] = useState(false);
+  const [deleteEngagementConfirmText, setDeleteEngagementConfirmText] = useState('');
 
   const { 
     getClientMonthSummaryByEngagementServiceId, 
@@ -325,6 +328,14 @@ function EngagementsContent() {
       return matchesSearch && matchesStatus && matchesType && matchesMonth;
     });
   }, [engagements, searchQuery, statusFilter, typeFilter, filterYear, filterMonth, getClientById, isEngagementActiveInMonth]);
+
+  const engagementsInSelectedStatusCount = useMemo(() => {
+    return engagements.filter((engagement) => {
+      const matchesStatus = statusFilter === 'all' || engagement.status === statusFilter;
+      const matchesMonth = isEngagementActiveInMonth(engagement, filterYear, filterMonth);
+      return matchesStatus && matchesMonth;
+    }).length;
+  }, [engagements, statusFilter, filterYear, filterMonth, isEngagementActiveInMonth]);
 
   // Apply pagination to filtered engagements
   const paginatedEngagements = useMemo(() => {
@@ -481,6 +492,7 @@ function EngagementsContent() {
   const handleDeleteEngagement = async () => {
     if (!engagementToDelete) return;
     try {
+      setIsDeletingEngagement(true);
       await deleteEngagement(engagementToDelete.id);
       toast.success('Zakázka byla odstraněna');
       if (expandedEngagementId === engagementToDelete.id) {
@@ -489,8 +501,11 @@ function EngagementsContent() {
     } catch (error) {
       console.error('Failed to delete engagement:', error);
       toast.error(getErrorMessage(error, 'Nepodařilo se odstranit zakázku'));
+    } finally {
+      setIsDeletingEngagement(false);
     }
     setEngagementToDelete(null);
+    setDeleteEngagementConfirmText('');
   };
 
   // Safe inline update helpers with error handling
@@ -604,6 +619,12 @@ function EngagementsContent() {
             <SelectItem value="internal">Interní</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="flex items-center">
+        <Badge variant="secondary" className="text-xs">
+          Zakázky ve zvoleném statusu: {engagementsInSelectedStatusCount}
+        </Badge>
       </div>
 
       <div className="space-y-3">
@@ -768,13 +789,6 @@ function EngagementsContent() {
                         }}>
                           <Clock className="h-4 w-4 mr-2" />
                           Historie změn
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => setEngagementToDelete(engagement)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Smazat zakázku
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -1464,6 +1478,23 @@ function EngagementsContent() {
                       )}
                     </div>
                   </div>
+
+                  {canDeleteEngagement && (
+                    <div className="mt-6 pt-4 border-t">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 text-xs text-destructive/70 hover:text-destructive transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEngagementToDelete(engagement);
+                          setDeleteEngagementConfirmText('');
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Smazat zakázku
+                      </button>
+                    </div>
+                  )}
                 </CardContent>
               )}
             </Card>
@@ -1789,22 +1820,39 @@ function EngagementsContent() {
       )}
 
       {/* Engagement Deletion Confirmation Dialog */}
-      <AlertDialog open={!!engagementToDelete} onOpenChange={(open) => !open && setEngagementToDelete(null)}>
+      <AlertDialog
+        open={!!engagementToDelete}
+        onOpenChange={(open) => {
+          if (!open && !isDeletingEngagement) {
+            setEngagementToDelete(null);
+            setDeleteEngagementConfirmText('');
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Smazat zakázku?</AlertDialogTitle>
             <AlertDialogDescription>
               Opravdu chcete odstranit zakázku <span className="font-medium">{engagementToDelete?.name}</span>?
-              Tato akce je nevratná.
+              Tato akce je nevratná. Pro potvrzení napište <strong>smazat</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-2">
+            <Input
+              value={deleteEngagementConfirmText}
+              onChange={(e) => setDeleteEngagementConfirmText(e.target.value)}
+              placeholder="Napište: smazat"
+              disabled={isDeletingEngagement}
+            />
+          </div>
           <AlertDialogFooter>
-            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeletingEngagement}>Zrušit</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleDeleteEngagement}
+              disabled={isDeletingEngagement || deleteEngagementConfirmText.trim().toLowerCase() !== 'smazat'}
             >
-              Smazat
+              {isDeletingEngagement ? 'Odstraňuji...' : 'Smazat'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

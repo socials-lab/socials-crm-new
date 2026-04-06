@@ -275,12 +275,24 @@ export function useGoogleCalendar() {
     
     try {
       requireNoImpersonation();
-      const { data, error } = await invokeWithTimeout<{ error?: string }>('calendar-create-event', {
+      const { data, error } = await invokeWithTimeout<{ error?: string; reauthRequired?: boolean }>('calendar-create-event', {
         body: { meeting_id: meetingId },
       });
       
       if (error) throw error;
       
+      if (data?.reauthRequired) {
+        setIsConnected(false);
+        setHasGmailScope(false);
+        toast.error(data.error || 'Google Calendar vyžaduje nové propojení.', {
+          action: {
+            label: 'Propojit',
+            onClick: () => connectGoogleCalendar(),
+          },
+        });
+        return null;
+      }
+
       if (data?.error) {
         throw new Error(data.error);
       }
@@ -372,6 +384,7 @@ export function useGoogleCalendar() {
 
       const { data, error } = await invokeWithTimeout<{
         tokenRevoked?: boolean;
+        reauthRequired?: boolean;
         error?: string;
         events?: GoogleCalendarEvent[];
       }>('calendar-fetch-events', {
@@ -398,6 +411,16 @@ export function useGoogleCalendar() {
         setIsConnected(false);
         setHasGmailScope(false);
         toast.error('Google přístup vypršel. Prosím znovu propojte svůj účet.', {
+          action: {
+            label: 'Propojit',
+            onClick: () => connectGoogleCalendar(),
+          },
+        });
+        return [];
+      }
+
+      if (data?.reauthRequired) {
+        toast.error(data.error || 'Google Calendar vyžaduje znovu udělit oprávnění.', {
           action: {
             label: 'Propojit',
             onClick: () => connectGoogleCalendar(),

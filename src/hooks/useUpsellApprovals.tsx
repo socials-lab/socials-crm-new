@@ -13,9 +13,20 @@ interface UpsellApproval {
   approved_by: string;
 }
 
+interface ManualUpsellCommission {
+  id: string;
+  engagement_id: string;
+  colleague_id: string;
+  amount: number;
+  currency: string;
+  note: string | null;
+  commission_date: string;
+  created_at: string;
+}
+
 export interface UpsellItem {
   id: string;
-  type: 'extra_work' | 'service';
+  type: 'extra_work' | 'service' | 'manual_commission';
   clientId: string;
   clientName: string;
   brandName: string;
@@ -68,6 +79,19 @@ export function useUpsellApprovals() {
     staleTime: 0,
   });
 
+  const { data: manualCommissions = [] } = useQuery({
+    queryKey: ['manual_upsell_commissions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('manual_upsell_commissions' as never)
+        .select('*')
+        .is('deleted_at', null);
+      if (error) throw error;
+      return (data || []) as unknown as ManualUpsellCommission[];
+    },
+    staleTime: 0,
+  });
+
   // Create a map for fast lookups
   const approvalsMap = useMemo(() => {
     const map = new Map<string, UpsellApproval>();
@@ -116,6 +140,40 @@ export function useUpsellApprovals() {
     onError: (error) => {
       console.error('Failed to revoke approval:', error);
       toast.error('Nepodařilo se zrušit schválení');
+    },
+  });
+
+  const addManualCommissionMutation = useMutation({
+    mutationFn: async (params: {
+      engagementId: string;
+      colleagueId: string;
+      amount: number;
+      note?: string | null;
+      commissionDate: string;
+    }) => {
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData.user?.id || null;
+      const payload = {
+        engagement_id: params.engagementId,
+        colleague_id: params.colleagueId,
+        amount: params.amount,
+        currency: 'CZK',
+        note: params.note?.trim() || null,
+        commission_date: params.commissionDate,
+        created_by: userId,
+      };
+      const { error } = await supabase
+        .from('manual_upsell_commissions' as never)
+        .insert(payload as never);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['manual_upsell_commissions'] });
+      toast.success('Manuální provize byla přidána');
+    },
+    onError: (error) => {
+      console.error('Failed to add manual commission:', error);
+      toast.error('Nepodařilo se přidat manuální provizi');
     },
   });
 
@@ -250,8 +308,42 @@ export function useUpsellApprovals() {
       });
     });
 
+    // Manual commissions
+    manualCommissions.forEach((manual) => {
+      const commissionDate = parseISO(manual.commission_date);
+      if (!isWithinInterval(commissionDate, { start: monthStart, end: monthEnd })) return;
+
+      const engagement = getEngagementById(manual.engagement_id);
+      if (!engagement) return;
+
+      const client = getClientById(engagement.client_id);
+      const seller = getColleagueById(manual.colleague_id);
+      if (!client || !seller) return;
+
+      results.push({
+        id: manual.id,
+        type: 'manual_commission',
+        clientId: client.id,
+        clientName: client.name,
+        brandName: client.brand_name || client.name,
+        engagementId: engagement.id,
+        engagementName: engagement.name,
+        itemName: manual.note?.trim() || 'Manuální provize',
+        amount: manual.amount,
+        currency: requireCurrency(manual.currency, `manual commission ${manual.id}`),
+        upsoldById: manual.colleague_id,
+        upsoldByName: seller.full_name,
+        commissionPercent: 100,
+        commissionAmount: manual.amount,
+        isApproved: true,
+        approvedAt: manual.created_at,
+        approvedBy: null,
+        createdAt: manual.created_at,
+      });
+    });
+
     return results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [extraWorks, engagementServices, getClientById, getEngagementById, getColleagueById, getApprovalStatus]);
+  }, [extraWorks, engagementServices, manualCommissions, getClientById, getEngagementById, getColleagueById, getApprovalStatus]);
 
   // Get approved commissions for a specific colleague
   const getApprovedCommissionsForColleague = useCallback((colleagueId: string, year?: number, month?: number): UpsellItem[] => {
@@ -368,13 +460,75 @@ export function useUpsellApprovals() {
       });
     });
 
+    manualCommissions.forEach((manual) => {
+      if (manual.colleague_id !== colleagueId) return;
+
+      const commissionDate = parseISO(manual.commission_date);
+      if (year && month) {
+        const monthStart = startOfMonth(new Date(year, month - 1));
+        const monthEnd = endOfMonth(new Date(year, month - 1));
+        if (!isWithinInterval(commissionDate, { start: monthStart, end: monthEnd })) return;
+      }
+
+      const engagement = getEngagementById(manual.engagement_id);
+      if (!engagement) return;
+
+      const client = getClientById(engagement.client_id);
+      const seller = getColleagueById(manual.colleague_id);
+      if (!client || !seller) return;
+
+      allUpsells.push({
+        id: manual.id,
+        type: 'manual_commission',
+        clientId: client.id,
+        clientName: client.name,
+        brandName: client.brand_name || client.name,
+        engagementId: engagement.id,
+        engagementName: engagement.name,
+        itemName: manual.note?.trim() || 'Manuální provize',
+        amount: manual.amount,
+        currency: requireCurrency(manual.currency, `manual commission ${manual.id}`),
+        upsoldById: manual.colleague_id,
+        upsoldByName: seller.full_name,
+        commissionPercent: 100,
+        commissionAmount: manual.amount,
+        isApproved: true,
+        approvedAt: manual.created_at,
+        approvedBy: null,
+        createdAt: manual.created_at,
+      });
+    });
+
     return allUpsells.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [extraWorks, engagementServices, getClientById, getEngagementById, getColleagueById, getApprovalStatus]);
+  }, [extraWorks, engagementServices, manualCommissions, getClientById, getEngagementById, getColleagueById, getApprovalStatus]);
+
+  const addManualCommission = useCallback((params: {
+    engagementId: string;
+    colleagueId: string;
+    amount: number;
+    note?: string | null;
+    year: number;
+    month: number;
+  }) => {
+    const normalizedAmount = Number(params.amount);
+    if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+      throw new Error('Výše odměny musí být kladné číslo');
+    }
+    const commissionDate = new Date(params.year, params.month - 1, 1).toISOString().slice(0, 10);
+    return addManualCommissionMutation.mutateAsync({
+      engagementId: params.engagementId,
+      colleagueId: params.colleagueId,
+      amount: normalizedAmount,
+      note: params.note,
+      commissionDate,
+    });
+  }, [addManualCommissionMutation]);
 
   return {
     getApprovalStatus,
     approveCommission,
     revokeApproval,
+    addManualCommission,
     getUpsellsForMonth,
     getApprovedCommissionsForColleague,
   };

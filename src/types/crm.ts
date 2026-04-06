@@ -836,6 +836,8 @@ export interface IssuedInvoice {
   // Timestamps
   issued_at: string;
   issued_by: string | null;
+  paid_at?: string | null;
+  status?: string | null;
   
   created_at: string;
 }

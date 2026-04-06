@@ -130,6 +130,7 @@ export default function Contacts() {
   const { role, isSuperAdmin } = useUserRole();
   // Allow editing for super admin or roles: admin, management, project_manager, specialist
   const canModify = isSuperAdmin || ['admin', 'management', 'project_manager', 'specialist'].includes(role || '');
+  const canDeleteContactAction = isSuperAdmin || role === 'admin';
 
   // State
   const [searchQuery, setSearchQuery] = useState('');
@@ -149,6 +150,7 @@ export default function Contacts() {
   const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
   // Issue #25: Add loading state for delete
   const [isDeletingContact, setIsDeletingContact] = useState(false);
+  const [deleteContactConfirmText, setDeleteContactConfirmText] = useState('');
 
   // Get contact to delete for showing name in dialog
   const contactToDelete = useMemo(() => {
@@ -284,6 +286,10 @@ export default function Contacts() {
   // Issue #25: Add loading state on delete button
   const handleDeleteContact = async () => {
     if (!deleteContactId) return;
+    if (!canDeleteContactAction) {
+      toast.error('Kontakt může smazat pouze administrátor');
+      return;
+    }
 
     setIsDeletingContact(true);
     const { allowed, reason } = await canDeleteContact(deleteContactId);
@@ -298,6 +304,7 @@ export default function Contacts() {
       await deleteContact(deleteContactId);
       await queryClient.invalidateQueries({ queryKey: ['contacts-page-all-contacts'] });
       setDeleteContactId(null);
+      setDeleteContactConfirmText('');
     } catch (error) {
       console.error('Failed to delete contact:', error);
       setDeleteContactId(null);
@@ -546,14 +553,19 @@ export default function Contacts() {
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => setDeleteContactId(contact.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </Button>
+                      {canDeleteContactAction && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => {
+                            setDeleteContactId(contact.id);
+                            setDeleteContactConfirmText('');
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -657,15 +669,20 @@ export default function Contacts() {
                       >
                         <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => setDeleteContactId(contact.id)}
-                        aria-label={`Smazat kontakt ${contact.name}`}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
-                      </Button>
+                      {canDeleteContactAction && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => {
+                            setDeleteContactId(contact.id);
+                            setDeleteContactConfirmText('');
+                          }}
+                          aria-label={`Smazat kontakt ${contact.name}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
+                        </Button>
+                      )}
                     </>
                   )}
                 </div>
@@ -731,21 +748,38 @@ export default function Contacts() {
       )}
 
       {/* Delete Confirmation - Issue #17: Consistent delete message */}
-      <AlertDialog open={!!deleteContactId} onOpenChange={(open) => !open && setDeleteContactId(null)}>
+      <AlertDialog
+        open={!!deleteContactId}
+        onOpenChange={(open) => {
+          if (!open && !isDeletingContact) {
+            setDeleteContactId(null);
+            setDeleteContactConfirmText('');
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Smazat kontakt</AlertDialogTitle>
             <AlertDialogDescription>
               Opravdu chcete smazat kontakt <strong>"{contactToDelete?.name}"</strong>? Kontakt bude archivován a lze ho později obnovit.
+              Pro potvrzení napište <strong>smazat</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-2">
+            <Input
+              value={deleteContactConfirmText}
+              onChange={(e) => setDeleteContactConfirmText(e.target.value)}
+              placeholder="Napište: smazat"
+              disabled={isDeletingContact}
+            />
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeletingContact}>Zrušit</AlertDialogCancel>
             {/* Issue #25: Add loading state on delete button */}
             <AlertDialogAction
               onClick={handleDeleteContact}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isDeletingContact}
+              disabled={isDeletingContact || deleteContactConfirmText.trim().toLowerCase() !== 'smazat'}
             >
               {isDeletingContact ? (
                 <>

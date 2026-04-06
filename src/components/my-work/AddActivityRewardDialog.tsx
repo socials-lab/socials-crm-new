@@ -30,6 +30,7 @@ interface AddActivityRewardDialogProps {
   onAdd: (reward: Omit<ActivityReward, 'id' | 'created_at' | 'invoice_item_name'>) => Promise<void> | void;
   colleagueId: string;
   clientNames?: string[];
+  clientOptions?: Array<{ id: string; label: string; legalName: string }>;
   defaultDate?: string;
 }
 
@@ -39,6 +40,7 @@ export function AddActivityRewardDialog({
   onAdd,
   colleagueId,
   clientNames = [],
+  clientOptions = [],
   defaultDate,
 }: AddActivityRewardDialogProps) {
   const [category, setCategory] = useState<ActivityCategory>('marketing');
@@ -52,6 +54,7 @@ export function AddActivityRewardDialog({
   const [isAmountManual, setIsAmountManual] = useState(false);
   const [isRecurring, setIsRecurring] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedClientOptionId, setSelectedClientOptionId] = useState('');
 
   // Auto-calculate amount when hours and hourly rate change
   useEffect(() => {
@@ -95,10 +98,22 @@ export function AddActivityRewardDialog({
 
   const handleSubmit = async () => {
     if (!description || !amount || Number(amount) <= 0) return;
-    if (category === 'client_work' && !clientName) return;
+    if (category === 'client_work') {
+      if (clientOptions.length > 0) {
+        const selectedClientOption = clientOptions.find((option) => option.id === selectedClientOptionId);
+        if (!selectedClientOption) return;
+      } else if (!clientName) {
+        return;
+      }
+    }
 
     setIsSubmitting(true);
     try {
+      const selectedClientOption = clientOptions.find((option) => option.id === selectedClientOptionId);
+      const resolvedClientName =
+        category === 'client_work'
+          ? (selectedClientOption?.legalName || clientName)
+          : null;
       await onAdd({
         colleague_id: colleagueId,
         category,
@@ -109,7 +124,7 @@ export function AddActivityRewardDialog({
         hourly_rate: billingType === 'hourly' && hourlyRate ? Number(hourlyRate) : null,
         activity_date: activityDate,
         is_recurring: isRecurring,
-        client_name: category === 'client_work' ? clientName : null,
+        client_name: resolvedClientName,
       });
       handleClose();
     } catch {
@@ -130,6 +145,7 @@ export function AddActivityRewardDialog({
     setActivityDate(format(new Date(), 'yyyy-MM-dd'));
     setIsAmountManual(false);
     setIsRecurring(false);
+    setSelectedClientOptionId('');
     onOpenChange(false);
   };
 
@@ -191,7 +207,27 @@ export function AddActivityRewardDialog({
           {category === 'client_work' && (
             <div className="space-y-2">
               <Label htmlFor="clientName">Klient</Label>
-              {clientNames.length > 0 ? (
+              {clientOptions.length > 0 ? (
+                <Select
+                  value={selectedClientOptionId}
+                  onValueChange={(value) => {
+                    setSelectedClientOptionId(value);
+                    const selected = clientOptions.find((option) => option.id === value);
+                    setClientName(selected?.legalName || '');
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Vyberte zakázku..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clientOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : clientNames.length > 0 ? (
                 <Select value={clientName} onValueChange={setClientName}>
                   <SelectTrigger>
                     <SelectValue placeholder="Vyberte klienta..." />
@@ -212,12 +248,17 @@ export function AddActivityRewardDialog({
                   placeholder="Název klienta..."
                 />
               )}
+              {clientOptions.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Vybíráte podle zakázky, do fakturace se uloží firma (s.r.o.).
+                </p>
+              )}
             </div>
           )}
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">Popis činnosti</Label>
+            <Label htmlFor="description">Popis činnosti <span className="text-destructive">*</span></Label>
             <Textarea
               id="description"
               value={description}
@@ -341,7 +382,19 @@ export function AddActivityRewardDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!description || !amount || Number(amount) <= 0 || isSubmitting || (category === 'client_work' && !clientName)}
+            disabled={
+              !description ||
+              !amount ||
+              Number(amount) <= 0 ||
+              isSubmitting ||
+              (
+                category === 'client_work' &&
+                (
+                  (clientOptions.length > 0 && !selectedClientOptionId) ||
+                  (clientOptions.length === 0 && !clientName)
+                )
+              )
+            }
           >
             {isSubmitting ? 'Ukládám…' : 'Přidat položku'}
           </Button>

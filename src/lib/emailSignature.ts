@@ -38,32 +38,20 @@ export function getDefaultEmailSignature(
   colleague: SignatureColleague | null | undefined,
   options: EmailSignatureOptions = {}
 ): string {
-  const customSignature = colleague?.email_signature?.trim();
-  if (customSignature) {
-    return customSignature;
-  }
-
   const fullName = colleague?.full_name?.trim() || '';
   const position = colleague?.position?.trim() || '';
+  const fallbackName = options.fallbackName?.trim() || 'Tým Socials';
+  const resolvedName = fullName || fallbackName;
+  const resolvedRole = position || 'Tým Socials';
   const lines: string[] = [
-    fullName,
-    position,
+    resolvedName,
+    `${resolvedRole} @socials.cz`,
     '',
-    'Socials.cz',
-    '',
-    '🌐 www.socials.cz',
-    '🎙️ Poslechněte si [Socials Podcast](https://www.youtube.com/@socials_cz/videos)',
+    '🌐 [www.socials.cz](https://www.socials.cz)',
+    '[🎙️ Poslechněte si Social Podcast](https://www.youtube.com/@socials_cz/videos)',
     '',
     '💡 Pomáháme firmám získávat zákazníky díky výkonnostní reklamě.',
   ];
-
-  if (options.includeEmail && colleague?.email?.trim()) {
-    lines.splice(2, 0, colleague.email.trim());
-  }
-
-  if (options.includePhone && colleague?.phone?.trim()) {
-    lines.splice(2, 0, colleague.phone.trim());
-  }
 
   return lines.join('\n').trim();
 }
@@ -146,4 +134,89 @@ export function formatEmailTextToHtml(content: string): string {
   }
 
   return htmlParts.join('');
+}
+
+export function signatureTextToEditableHtml(signatureText: string | null | undefined): string {
+  const source = (signatureText || '').trim();
+  if (!source) return '<p></p>';
+
+  const lines = source.split('\n');
+  const htmlParts: string[] = [];
+  let currentParagraph: string[] = [];
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    if (trimmed === '') {
+      if (currentParagraph.length > 0) {
+        htmlParts.push(`<p>${currentParagraph.join('<br>')}</p>`);
+        currentParagraph = [];
+      }
+      return;
+    }
+    currentParagraph.push(renderInlineWithLinks(trimmed));
+  });
+
+  if (currentParagraph.length > 0) {
+    htmlParts.push(`<p>${currentParagraph.join('<br>')}</p>`);
+  }
+
+  return htmlParts.join('') || '<p></p>';
+}
+
+export function signatureHtmlToStoredText(signatureHtml: string | null | undefined): string {
+  const source = (signatureHtml || '').trim();
+  if (!source) return '';
+
+  if (typeof window === 'undefined' || !window.document) {
+    return source
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .trim();
+  }
+
+  const container = document.createElement('div');
+  container.innerHTML = source;
+
+  const blockTags = new Set(['P', 'DIV', 'LI', 'UL', 'OL']);
+
+  const toText = (node: Node): string => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.textContent || '';
+    }
+
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return '';
+    }
+
+    const element = node as HTMLElement;
+    const tag = element.tagName;
+
+    if (tag === 'BR') {
+      return '\n';
+    }
+
+    if (tag === 'A') {
+      const label = Array.from(element.childNodes).map(toText).join('').trim() || element.textContent?.trim() || '';
+      const href = element.getAttribute('href') || '';
+      if (!href) return label;
+      return `[${label}](${href})`;
+    }
+
+    const content = Array.from(element.childNodes).map(toText).join('');
+    if (tag === 'LI') {
+      return `• ${content.trim()}\n`;
+    }
+    if (blockTags.has(tag)) {
+      return `${content}\n`;
+    }
+    return content;
+  };
+
+  const rawText = Array.from(container.childNodes).map(toText).join('');
+  return rawText
+    .replace(/\n{3,}/g, '\n\n')
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .join('\n')
+    .trim();
 }

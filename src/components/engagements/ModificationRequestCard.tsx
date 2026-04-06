@@ -261,8 +261,8 @@ export function ModificationRequestCard({
   // Show edit button for pending or approved (waiting for client) requests
   const canEdit = onEdit && ['draft', 'pending', 'approved'].includes(request.status) && !isApplied;
   
-  // Show delete button for pending, approved (waiting), or rejected requests
-  const canDelete = onDelete && ['draft', 'pending', 'approved', 'rejected'].includes(request.status) && !isApplied && !isClientApproved;
+  // Show delete button for all non-applied requests where deletion is allowed
+  const canDelete = onDelete && ['draft', 'pending', 'approved', 'client_approved', 'rejected'].includes(request.status) && !isApplied;
 
   // Helper to update proposed_changes inline
   const updateMainChanges = (patch: Record<string, any>) => {
@@ -976,15 +976,28 @@ export function ModificationRequestCard({
 
                 {/* Apply button for client-approved requests */}
                 {showApplyButton && (
-                  <Button
-                    size="sm"
-                    className="h-8"
-                    onClick={handleApply}
-                    disabled={isApplying}
-                  >
-                    <Check className="h-3.5 w-3.5 mr-1" />
-                    {isApplying ? 'Aktivuji...' : 'Aktivovat do zakázky'}
-                  </Button>
+                  <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                    {canDelete && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-destructive hover:text-destructive"
+                        onClick={() => setIsDeleteDialogOpen(true)}
+                        disabled={isDeleting}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      className="h-8"
+                      onClick={handleApply}
+                      disabled={isApplying}
+                    >
+                      <Check className="h-3.5 w-3.5 mr-1" />
+                      {isApplying ? 'Aktivuji...' : 'Aktivovat do zakázky'}
+                    </Button>
+                  </div>
                 )}
                 
                 {/* Actions for pending requests */}

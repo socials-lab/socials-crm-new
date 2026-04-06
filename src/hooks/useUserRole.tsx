@@ -216,6 +216,11 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
   };
 
   const canAccessPage = (page: string): boolean => {
+    // Finance invoices page is explicitly permission-based for all roles.
+    if (page === 'finance-invoices') {
+      return allowedPages.includes(page);
+    }
+
     // Super admin has access to everything
     if (isSuperAdmin) return true;
     // Admin and management roles have access to everything

@@ -29,6 +29,7 @@ interface EditActivityRewardDialogProps {
   onUpdate: (rewardId: string, updates: Partial<Omit<ActivityReward, 'id' | 'created_at'>>) => Promise<void> | void;
   onDelete: (rewardId: string) => Promise<void> | void;
   clientNames?: string[];
+  clientOptions?: Array<{ id: string; label: string; legalName: string }>;
 }
 
 export function EditActivityRewardDialog({
@@ -38,6 +39,7 @@ export function EditActivityRewardDialog({
   onUpdate,
   onDelete,
   clientNames = [],
+  clientOptions = [],
 }: EditActivityRewardDialogProps) {
   const [category, setCategory] = useState<ActivityCategory>('marketing');
   const [description, setDescription] = useState('');
@@ -50,6 +52,7 @@ export function EditActivityRewardDialog({
   const [isAmountManual, setIsAmountManual] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedClientOptionId, setSelectedClientOptionId] = useState('');
 
   // Populate form when reward changes
   useEffect(() => {
@@ -63,8 +66,10 @@ export function EditActivityRewardDialog({
       setHourlyRate(reward.hourly_rate?.toString() || '');
       setActivityDate(reward.activity_date);
       setIsAmountManual(false);
+      const matchedOption = clientOptions.find((option) => option.legalName === (reward.client_name || ''));
+      setSelectedClientOptionId(matchedOption?.id || '');
     }
-  }, [reward]);
+  }, [reward, clientOptions]);
 
   // Auto-calculate amount when hours and hourly rate change
   useEffect(() => {
@@ -103,10 +108,22 @@ export function EditActivityRewardDialog({
 
   const handleSubmit = async () => {
     if (!reward || !description || !amount || Number(amount) <= 0) return;
-    if (category === 'client_work' && !clientName) return;
+    if (category === 'client_work') {
+      if (clientOptions.length > 0) {
+        const selectedClientOption = clientOptions.find((option) => option.id === selectedClientOptionId);
+        if (!selectedClientOption) return;
+      } else if (!clientName) {
+        return;
+      }
+    }
 
     setIsSubmitting(true);
     try {
+      const selectedClientOption = clientOptions.find((option) => option.id === selectedClientOptionId);
+      const resolvedClientName =
+        category === 'client_work'
+          ? (selectedClientOption?.legalName || clientName)
+          : null;
       await onUpdate(reward.id, {
         category,
         description,
@@ -115,7 +132,7 @@ export function EditActivityRewardDialog({
         hours: billingType === 'hourly' && hours ? Number(hours) : null,
         hourly_rate: billingType === 'hourly' && hourlyRate ? Number(hourlyRate) : null,
         activity_date: activityDate,
-        client_name: category === 'client_work' ? clientName : null,
+        client_name: resolvedClientName,
       });
       onOpenChange(false);
     } catch {
@@ -199,7 +216,36 @@ export function EditActivityRewardDialog({
           {category === 'client_work' && (
             <div className="space-y-2">
               <Label htmlFor="edit-clientName">Klient</Label>
-              {clientNames.length > 0 ? (
+              {clientOptions.length > 0 ? (
+                <Select
+                  value={selectedClientOptionId}
+                  onValueChange={(value) => {
+                    setSelectedClientOptionId(value);
+                    if (value.startsWith('legacy-')) {
+                      setClientName(value.replace('legacy-', ''));
+                      return;
+                    }
+                    const selected = clientOptions.find((option) => option.id === value);
+                    setClientName(selected?.legalName || '');
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Vyberte zakázku..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clientOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                    {clientName && !clientOptions.some((option) => option.legalName === clientName) && (
+                      <SelectItem value={`legacy-${clientName}`}>
+                        {clientName} (historická položka)
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              ) : clientNames.length > 0 ? (
                 <Select value={clientName} onValueChange={setClientName}>
                   <SelectTrigger>
                     <SelectValue placeholder="Vyberte klienta..." />
@@ -220,12 +266,17 @@ export function EditActivityRewardDialog({
                   placeholder="Název klienta..."
                 />
               )}
+              {clientOptions.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Vybíráte podle zakázky, do fakturace se uloží firma (s.r.o.).
+                </p>
+              )}
             </div>
           )}
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="edit-description">Popis činnosti</Label>
+            <Label htmlFor="edit-description">Popis činnosti <span className="text-destructive">*</span></Label>
             <Textarea
               id="edit-description"
               value={description}
@@ -340,7 +391,20 @@ export function EditActivityRewardDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!description || !amount || Number(amount) <= 0 || isSubmitting || isDeleting || (category === 'client_work' && !clientName)}
+            disabled={
+              !description ||
+              !amount ||
+              Number(amount) <= 0 ||
+              isSubmitting ||
+              isDeleting ||
+              (
+                category === 'client_work' &&
+                (
+                  (clientOptions.length > 0 && !selectedClientOptionId && !clientName) ||
+                  (clientOptions.length === 0 && !clientName)
+                )
+              )
+            }
           >
             {isSubmitting ? 'Ukládám…' : 'Uložit změny'}
           </Button>

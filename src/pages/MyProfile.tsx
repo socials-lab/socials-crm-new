@@ -14,13 +14,11 @@ import {
   Loader2,
   Save,
   Briefcase,
-  Search,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -44,11 +42,12 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { useAresLookup } from '@/hooks/useAresLookup';
 import { CompanySearchInput } from '@/components/shared/CompanySearchInput';
+import { EmailSignatureRichEditor } from '@/components/shared/EmailSignatureRichEditor';
 import type { CompanySearchResult } from '@/hooks/useAresSearch';
 import { toast } from 'sonner';
 import { optionalIco, czechDic } from '@/lib/validation';
+import { getDefaultEmailSignature, signatureHtmlToStoredText, signatureTextToEditableHtml } from '@/lib/emailSignature';
 
 const profileSchema = z.object({
   phone: z.string().nullable(),
@@ -70,10 +69,10 @@ export default function MyProfile() {
   const { user } = useAuth();
   const { colleagueId } = useUserRole();
   const { updateColleague, getColleagueById } = useCRMData();
-  const { lookupCompany, isLoading: isLoadingAres } = useAresLookup();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
+  const [emailSignatureHtml, setEmailSignatureHtml] = useState('<p></p>');
 
   const currentColleague = useMemo(() => {
     if (!colleagueId) return null;
@@ -93,13 +92,17 @@ export default function MyProfile() {
       billing_city: currentColleague?.billing_city || null,
       billing_zip: currentColleague?.billing_zip || null,
       bank_account: currentColleague?.bank_account || null,
-      email_signature: currentColleague?.email_signature || null,
+      email_signature: getDefaultEmailSignature(currentColleague, { fallbackName: 'Tým Socials' }),
     },
   });
 
   // Reset form when colleague data loads
   useMemo(() => {
     if (currentColleague) {
+      const resolvedSignature = currentColleague.email_signature?.trim()
+        ? currentColleague.email_signature
+        : getDefaultEmailSignature(currentColleague, { fallbackName: 'Tým Socials' });
+      setEmailSignatureHtml(signatureTextToEditableHtml(resolvedSignature));
       form.reset({
         phone: currentColleague.phone || null,
         birthday: currentColleague.birthday ? new Date(currentColleague.birthday) : null,
@@ -111,7 +114,7 @@ export default function MyProfile() {
         billing_city: currentColleague.billing_city || null,
         billing_zip: currentColleague.billing_zip || null,
         bank_account: currentColleague.bank_account || null,
-        email_signature: currentColleague.email_signature || null,
+        email_signature: resolvedSignature,
       });
     }
   }, [currentColleague?.id]);
@@ -168,37 +171,6 @@ export default function MyProfile() {
     }
   };
 
-  const handleAresLookup = async () => {
-    const ico = form.getValues('ico');
-    if (!ico || ico.length < 8) {
-      toast.error('Zadejte platné IČO (8 číslic)');
-      return;
-    }
-
-    const result = await lookupCompany(ico);
-    if (result) {
-      form.setValue('company_name', result.name || '');
-      form.setValue('dic', result.dic || '');
-      if (result.address) {
-        // Try to parse address (format may vary)
-        const addressParts = result.address.split(',');
-        if (addressParts.length >= 2) {
-          form.setValue('billing_street', addressParts[0].trim());
-          const cityZip = addressParts[addressParts.length - 1].trim().split(' ');
-          if (cityZip.length >= 2) {
-            form.setValue('billing_zip', cityZip[0]);
-            form.setValue('billing_city', cityZip.slice(1).join(' '));
-          } else {
-            form.setValue('billing_city', cityZip[0]);
-          }
-        } else {
-          form.setValue('billing_street', result.address);
-        }
-      }
-      toast.success('Údaje načteny z ARES');
-    }
-  };
-
   const handleSubmit = async (data: ProfileFormData) => {
     if (!currentColleague) return;
 
@@ -215,7 +187,7 @@ export default function MyProfile() {
       billing_city: data.billing_city || null,
       billing_zip: data.billing_zip || null,
       bank_account: data.bank_account || null,
-      email_signature: data.email_signature || null,
+      email_signature: signatureHtmlToStoredText(emailSignatureHtml) || null,
     };
 
     try {
@@ -256,7 +228,7 @@ export default function MyProfile() {
 
   if (!colleagueId) {
     return (
-      <div className="p-4 md:p-6">
+      <div className="max-w-5xl p-4 md:p-6">
         <PageHeader
           title="Můj"
           titleAccent="profil"
@@ -273,7 +245,7 @@ export default function MyProfile() {
 
   if (!currentColleague) {
     return (
-      <div className="p-4 md:p-6">
+      <div className="max-w-5xl p-4 md:p-6">
         <PageHeader
           title="Můj"
           titleAccent="profil"
@@ -294,7 +266,7 @@ export default function MyProfile() {
   };
 
   return (
-    <div className="space-y-4 animate-fade-in p-4 md:space-y-6 md:p-6">
+    <div className="max-w-5xl space-y-4 animate-fade-in p-4 md:p-6">
       <PageHeader
         title="Můj"
         titleAccent="profil"
@@ -304,7 +276,7 @@ export default function MyProfile() {
       {/* Profile Header Card */}
       <Card>
         <CardContent className="p-4 md:p-6">
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
+          <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
             <AvatarUpload
               value={avatarUrl}
               onChange={handleAvatarChange}
@@ -312,8 +284,8 @@ export default function MyProfile() {
               disabled={isSavingAvatar}
               className="shrink-0"
             />
-            <div className="flex-1 space-y-2 text-center sm:text-left min-w-0 w-full">
-              <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+            <div className="flex-1 space-y-2 text-left min-w-0 w-full">
+              <div className="flex items-center justify-start gap-2 flex-wrap">
                 <h2 className="text-xl md:text-2xl font-bold">{currentColleague.full_name}</h2>
                 <Badge variant={currentColleague.is_freelancer ? 'secondary' : 'outline'}>
                   {currentColleague.is_freelancer ? 'Freelancer' : 'Interní'}
@@ -322,11 +294,11 @@ export default function MyProfile() {
                   {seniorityLabels[currentColleague.seniority] || currentColleague.seniority}
                 </Badge>
               </div>
-              <div className="flex items-center justify-center sm:justify-start gap-2 text-muted-foreground">
+              <div className="flex items-center justify-start gap-2 text-muted-foreground">
                 <Briefcase className="h-4 w-4 shrink-0" />
                 <span className="truncate">{currentColleague.position}</span>
               </div>
-              <div className="flex items-center justify-center sm:justify-start gap-2 text-muted-foreground text-sm">
+              <div className="flex items-center justify-start gap-2 text-muted-foreground text-sm">
                 <Mail className="h-4 w-4 shrink-0" />
                 <span className="truncate">{currentColleague.email}</span>
                 <span className="text-xs shrink-0">(pracovní)</span>
@@ -337,7 +309,7 @@ export default function MyProfile() {
       </Card>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
           {/* Personal Info */}
           <Card>
             <CardHeader>
@@ -487,54 +459,59 @@ export default function MyProfile() {
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="personal_email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
-                      Osobní email
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="jan.novak@gmail.com"
-                        {...field}
-                        value={field.value || ''}
-                        onChange={(e) => field.onChange(e.target.value || null)}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Pro fakturační a smluvní účely (jiný než pracovní email)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="max-w-2xl">
+                <FormField
+                  control={form.control}
+                  name="personal_email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Mail className="h-4 w-4" />
+                        Osobní email
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="jan.novak@gmail.com"
+                          {...field}
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value || null)}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Pro fakturační a smluvní účely (jiný než pracovní email)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-              <FormField
-                control={form.control}
-                name="email_signature"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email podpis</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder={`Jan Novak\nSocials`}
-                        rows={5}
-                        {...field}
-                        value={field.value || ''}
-                        onChange={(e) => field.onChange(e.target.value || null)}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Tento text se používá jako výchozí podpis v odchozích emailech.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="max-w-2xl">
+                <FormField
+                  control={form.control}
+                  name="email_signature"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email podpis</FormLabel>
+                      <FormControl>
+                        <EmailSignatureRichEditor
+                          value={emailSignatureHtml}
+                          onChange={(html) => {
+                            setEmailSignatureHtml(html);
+                            field.onChange(signatureHtmlToStoredText(html) || null);
+                          }}
+                          placeholder="Napište podpis emailu..."
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Podpis je plně editovatelný (tučně, kurzíva, seznamy, odkazy). Odkaz lze nastavit i na celý text.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -552,24 +529,26 @@ export default function MyProfile() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-4 md:p-6 space-y-4">
-              <FormField
-                control={form.control}
-                name="company_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Název firmy / Jméno OSVČ</FormLabel>
-                    <FormControl>
-                      <CompanySearchInput
-                        value={field.value || ''}
-                        onChange={(value) => field.onChange(value || null)}
-                        onSelect={handleCompanySelect}
-                        placeholder="Zadejte název firmy (min. 3 znaky)..."
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="max-w-2xl">
+                <FormField
+                  control={form.control}
+                  name="company_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Název firmy / Jméno OSVČ</FormLabel>
+                      <FormControl>
+                        <CompanySearchInput
+                          value={field.value || ''}
+                          onChange={(value) => field.onChange(value || null)}
+                          onSelect={handleCompanySelect}
+                          placeholder="Zadejte název firmy (min. 3 znaky)..."
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
@@ -578,31 +557,18 @@ export default function MyProfile() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>IČO</FormLabel>
-                      <div className="flex gap-2">
-                        <FormControl>
-                          <Input
-                            placeholder="12345678"
-                            {...field}
-                            value={field.value || ''}
-                            onChange={(e) => field.onChange(e.target.value || null)}
-                          />
-                        </FormControl>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          onClick={handleAresLookup}
-                          disabled={isLoadingAres}
-                          title="Načíst údaje z ARES"
-                          className="shrink-0"
-                        >
-                          {isLoadingAres ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Search className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
+                      <FormControl>
+                        <CompanySearchInput
+                          value={field.value || ''}
+                          onChange={(value) => field.onChange(value || null)}
+                          onSelect={handleCompanySelect}
+                          placeholder="Zadejte IČO nebo název firmy..."
+                          selectValueField="ico"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Našeptávání běží přes ARES a po výběru doplní firmu i adresu.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -710,27 +676,29 @@ export default function MyProfile() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-4 md:p-6">
-              <FormField
-                control={form.control}
-                name="bank_account"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Číslo bankovního účtu</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="123456789/0100"
-                        {...field}
-                        value={field.value || ''}
-                        onChange={(e) => field.onChange(e.target.value || null)}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Formát: číslo účtu / kód banky
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="max-w-2xl">
+                <FormField
+                  control={form.control}
+                  name="bank_account"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Číslo bankovního účtu</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="123456789/0100"
+                          {...field}
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value || null)}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Formát: číslo účtu / kód banky
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </CardContent>
           </Card>
 

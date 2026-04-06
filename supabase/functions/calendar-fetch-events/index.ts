@@ -18,6 +18,29 @@ interface RefreshResult {
   error?: string;
 }
 
+interface GoogleApiErrorPayload {
+  error?: {
+    code?: number;
+    message?: string;
+    status?: string;
+    errors?: Array<{ reason?: string; message?: string }>;
+  };
+}
+
+function parseGoogleApiError(raw: string): GoogleApiErrorPayload | null {
+  try {
+    return JSON.parse(raw) as GoogleApiErrorPayload;
+  } catch {
+    return null;
+  }
+}
+
+function isInsufficientScopeError(payload: GoogleApiErrorPayload | null): boolean {
+  if (!payload?.error) return false;
+  if (payload.error.status === "PERMISSION_DENIED") return true;
+  return (payload.error.errors || []).some((err) => err.reason === "insufficientPermissions");
+}
+
 async function refreshAccessToken(
   supabaseAdmin: ReturnType<typeof createClient>,
   userId: string,
@@ -182,6 +205,8 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Google Calendar fetch error:", errorText);
+      const googleError = parseGoogleApiError(errorText);
+      const googleMessage = googleError?.error?.message || errorText;
 
       // If 401, token might be invalid - try refresh once more
       if (response.status === 401) {
@@ -213,8 +238,19 @@ serve(async (req) => {
         }
       }
 
+      if (response.status === 403 && isInsufficientScopeError(googleError)) {
+        return new Response(
+          JSON.stringify({
+            error: "Google Calendar nemá potřebná oprávnění. Prosím znovu propojte Google účet.",
+            events: [],
+            reauthRequired: true,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       return new Response(
-        JSON.stringify({ error: `Google Calendar chyba: ${response.status}`, events: [] }),
+        JSON.stringify({ error: `Google Calendar chyba (${response.status}): ${googleMessage}`, events: [] }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

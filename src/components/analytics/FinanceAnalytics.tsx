@@ -38,6 +38,7 @@ interface EngagementMargin {
   name: string;
   client: string;
   revenue: number;
+  revenueEurOriginal?: number;
   cost: number;
   marginAbsolute: number;
   marginPercent: number;
@@ -57,6 +58,8 @@ interface FinanceAnalyticsProps {
   marginTrend: { month: string; percent: number; absolute: number }[];
   marginDistribution: { range: string; count: number }[];
   extraWorkTrend: { month: string; count: number; amount: number }[];
+  eurConversionRate: number | null;
+  eurConversionDate: string | null;
   creativeBoostStats: {
     totalCredits: number;
     creditsByType: { type: string; credits: number }[];
@@ -79,6 +82,8 @@ export function FinanceAnalytics({
   marginTrend,
   marginDistribution,
   extraWorkTrend,
+  eurConversionRate,
+  eurConversionDate,
   creativeBoostStats,
 }: FinanceAnalyticsProps) {
   const formatCurrency = (value: number) => `${(value / 1000).toFixed(0)}K`;
@@ -121,7 +126,7 @@ export function FinanceAnalytics({
       ? <ArrowUp className="h-3 w-3 text-foreground" />
       : <ArrowDown className="h-3 w-3 text-foreground" />;
   };
-  
+
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
@@ -131,13 +136,20 @@ export function FinanceAnalytics({
           value={`${formatCurrency(totalInvoicing)} Kč`}
           icon={DollarSign}
           subtitle={
-            <span className={cn(
-              "flex items-center gap-1 text-xs",
-              invoicingChange >= 0 ? "text-status-active" : "text-status-lost"
-            )}>
-              {invoicingChange >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-              {Math.abs(invoicingChange).toFixed(1)}% vs předchozí období
-            </span>
+            <div className="space-y-0.5">
+              <span className={cn(
+                "flex items-center gap-1 text-xs",
+                invoicingChange >= 0 ? "text-status-active" : "text-status-lost"
+              )}>
+                {invoicingChange >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                {Math.abs(invoicingChange).toFixed(1)}% vs předchozí období
+              </span>
+              {eurConversionRate && (
+                <span className="text-[11px] text-muted-foreground">
+                  EUR přepočet kurzem {eurConversionRate.toFixed(3)}{eurConversionDate ? ` (${eurConversionDate})` : ''}
+                </span>
+              )}
+            </div>
           }
         />
         <KPICard
@@ -167,6 +179,9 @@ export function FinanceAnalytics({
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-medium">Marže na zakázkách</CardTitle>
+          <p className="text-xs text-muted-foreground pt-1">
+            Jen klienti s alespoň 3 vystavenými fakturami v CRM (all-time); jednorázové subjekty jsou vynechané.
+          </p>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -229,7 +244,16 @@ export function FinanceAnalytics({
                     <TableRow key={engagement.id}>
                       <TableCell className="font-medium">{engagement.name}</TableCell>
                       <TableCell className="text-muted-foreground">{engagement.client}</TableCell>
-                      <TableCell className="text-right">{engagement.revenue.toLocaleString()} Kč</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex flex-col items-end">
+                          <span>{engagement.revenue.toLocaleString()} Kč</span>
+                          {(engagement.revenueEurOriginal || 0) > 0 && (
+                            <span className="text-[11px] text-muted-foreground">
+                              z {(engagement.revenueEurOriginal || 0).toLocaleString()} EUR
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-right">{engagement.cost.toLocaleString()} Kč</TableCell>
                       <TableCell className="text-right">{engagement.marginAbsolute.toLocaleString()} Kč</TableCell>
                       <TableCell className="text-right">

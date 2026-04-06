@@ -29,10 +29,30 @@ export interface FakturoidInvoice {
   public_html_url?: string;
 }
 
+export interface FakturoidInvoiceListItem extends FakturoidInvoice {
+  status?: string;
+  currency?: string;
+  issued_on?: string;
+  due_on?: string;
+  paid_at?: string;
+  paid_on?: string;
+  subject_id?: number;
+  total?: number | string;
+  total_with_vat?: number | string;
+  native_total?: number | string;
+}
+
 // Token cache (persists for the lifetime of the edge function instance)
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
 const USER_AGENT = "SocialsCRM (hello@socials.cz)";
+
+/** Fakturoid index default page size (see API docs). Used so `length < perPage` matches real last page. */
+export const FAKTUROID_INVOICES_PER_PAGE = 40;
+
+/** Optional `since` lower bound for imports (Fakturoid filters by record *creation* time). */
+export const FAKTUROID_FULL_HISTORY_SINCE = "2000-01-01T00:00:00.000Z";
+
 const MAX_RETRIES = 3;
 const DEFAULT_RATE_LIMIT_WAIT_MS = 60000;
 
@@ -285,6 +305,109 @@ export async function getInvoiceById(
   }
 
   return await response.json();
+}
+
+export async function listInvoicesBySubject(
+  accessToken: string,
+  accountSlug: string,
+  subjectId: number,
+  options?: {
+    perPage?: number;
+    maxPages?: number;
+    since?: string;
+  }
+): Promise<FakturoidInvoiceListItem[]> {
+  const perPage = options?.perPage ?? FAKTUROID_INVOICES_PER_PAGE;
+  const maxPages = options?.maxPages ?? 200;
+  const allInvoices: FakturoidInvoiceListItem[] = [];
+
+  for (let page = 1; page <= maxPages; page += 1) {
+    const url = new URL(`https://app.fakturoid.cz/api/v3/accounts/${accountSlug}/invoices.json`);
+    url.searchParams.set("subject_id", String(subjectId));
+    url.searchParams.set("per_page", String(perPage));
+    url.searchParams.set("page", String(page));
+    if (options?.since) {
+      url.searchParams.set("since", options.since);
+    }
+
+    const response = await fakturoidFetch(url.toString(), {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Accept": "application/json",
+        "User-Agent": USER_AGENT,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Fakturoid list invoices failed: ${errorText}`);
+    }
+
+    const pageInvoices = await response.json() as FakturoidInvoiceListItem[];
+    if (pageInvoices.length === 0) {
+      break;
+    }
+    allInvoices.push(...pageInvoices);
+    if (pageInvoices.length < perPage) {
+      break;
+    }
+  }
+
+  return allInvoices;
+}
+
+export async function listAllInvoices(
+  accessToken: string,
+  accountSlug: string,
+  options?: {
+    perPage?: number;
+    maxPages?: number;
+    /** If set, adds `since` (Fakturoid: invoices *created* after this — omit for full index). */
+    since?: string;
+    until?: string;
+  }
+): Promise<FakturoidInvoiceListItem[]> {
+  const perPage = options?.perPage ?? FAKTUROID_INVOICES_PER_PAGE;
+  const maxPages = options?.maxPages ?? 5000;
+  const allInvoices: FakturoidInvoiceListItem[] = [];
+
+  for (let page = 1; page <= maxPages; page += 1) {
+    const url = new URL(`https://app.fakturoid.cz/api/v3/accounts/${accountSlug}/invoices.json`);
+    url.searchParams.set("per_page", String(perPage));
+    url.searchParams.set("page", String(page));
+    if (options?.since) {
+      url.searchParams.set("since", options.since);
+    }
+    if (options?.until) {
+      url.searchParams.set("until", options.until);
+    }
+
+    const response = await fakturoidFetch(url.toString(), {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Accept": "application/json",
+        "User-Agent": USER_AGENT,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Fakturoid list all invoices failed: ${errorText}`);
+    }
+
+    const pageInvoices = await response.json() as FakturoidInvoiceListItem[];
+    if (pageInvoices.length === 0) {
+      break;
+    }
+    allInvoices.push(...pageInvoices);
+    if (pageInvoices.length < perPage) {
+      break;
+    }
+  }
+
+  return allInvoices;
 }
 
 // Country name to ISO code mapping

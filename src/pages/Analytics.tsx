@@ -10,6 +10,7 @@ import { CreativeBoostAnalytics } from '@/components/analytics/CreativeBoostAnal
 import { TeamCapacityAnalytics } from '@/components/analytics/TeamCapacityAnalytics';
 import { RevenuePlanForecast } from '@/components/analytics/RevenuePlanForecast';
 import { TeamCapacityForecast } from '@/components/analytics/TeamCapacityForecast';
+import { LongTermAnalytics } from '@/components/analytics/LongTermAnalytics';
 import { ExtraWorkMarginSection } from '@/components/analytics/ExtraWorkMarginSection';
 import { UpsellCommissionsAnalytics } from '@/components/analytics/UpsellCommissionsAnalytics';
 import { PeriodSelector, type PeriodMode } from '@/components/analytics/PeriodSelector';
@@ -18,7 +19,7 @@ import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { getEngagementMonthlyRevenue } from '@/utils/engagementRevenueUtils';
-import { getExchangeRateForDate } from '@/lib/currency';
+import { getExchangeRate, getExchangeRateForDate } from '@/lib/currency';
 
 import { format, subMonths, startOfMonth, endOfMonth, differenceInDays } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -180,6 +181,38 @@ export default function Analytics() {
     queryFn: async () => {
       const entries = await Promise.all(
         financeRateMonthKeys.map(async (key) => {
+          const monthEnd = endOfMonth(new Date(key.year, key.month - 1, 1));
+          const dateLabel = format(monthEnd, 'yyyy-MM-dd');
+          const rate = await getExchangeRateForDate('EUR', 'CZK', dateLabel);
+          return [toYearMonthKey(key.year, key.month), rate.rate] as const;
+        }),
+      );
+      return Object.fromEntries(entries) as Record<string, number>;
+    },
+    staleTime: 1000 * 60 * 60 * 12,
+  });
+
+  const { data: eurToCzkCurrent } = useQuery({
+    queryKey: ['analytics', 'eur-to-czk-current'],
+    queryFn: () => getExchangeRate('EUR', 'CZK'),
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const allTimeRateMonthKeys = useMemo(() => {
+    const unique = new Map<string, YearMonthKey>();
+    issuedInvoices.forEach((invoice) => {
+      if ((invoice.currency || '').toUpperCase() !== 'EUR') return;
+      unique.set(toYearMonthKey(invoice.year, invoice.month), { year: invoice.year, month: invoice.month });
+    });
+    return Array.from(unique.values());
+  }, [issuedInvoices]);
+
+  const { data: eurToCzkAllTimeRatesByMonth = {} } = useQuery({
+    queryKey: ['analytics', 'eur-to-czk-all-time-by-month', allTimeRateMonthKeys],
+    enabled: allTimeRateMonthKeys.length > 0,
+    queryFn: async () => {
+      const entries = await Promise.all(
+        allTimeRateMonthKeys.map(async (key) => {
           const monthEnd = endOfMonth(new Date(key.year, key.month - 1, 1));
           const dateLabel = format(monthEnd, 'yyyy-MM-dd');
           const rate = await getExchangeRateForDate('EUR', 'CZK', dateLabel);
@@ -702,7 +735,10 @@ export default function Analytics() {
       const normalizedCurrency = (currency || 'CZK').toUpperCase();
       if (normalizedCurrency === 'CZK') return amount;
       if (normalizedCurrency === 'EUR') {
-        const rate = eurToCzkRatesByMonth[toYearMonthKey(year, month)] ?? 0;
+        const rate =
+          eurToCzkCurrent?.rate ??
+          eurToCzkRatesByMonth[toYearMonthKey(year, month)] ??
+          1;
         return amount * rate;
       }
       return amount;
@@ -725,12 +761,48 @@ export default function Analytics() {
 
     const canonicalIssuedInvoices = Array.from(latestInvoicesByGeneratedId.values());
 
-    const periodInvoices = canonicalIssuedInvoices.filter((invoice) =>
-      currentPeriodMonthKeySet.has(toYearMonthKey(invoice.year, invoice.month)),
+    const MIN_INVOICES_FOR_FINANCE_STATS = 3;
+    const normalizeEntityKeyFinance = (value: string) => value.toLowerCase().replace(/\s+/g, ' ').trim();
+
+    const latestInvoicesByExternalKeyFinance = new Map<string, (typeof issuedInvoices)[number]>();
+    issuedInvoices.forEach((invoice) => {
+      const externalKey = invoice.fakturoid_id
+        ? `f-${invoice.fakturoid_id}`
+        : `n-${invoice.invoice_number}`;
+      const existing = latestInvoicesByExternalKeyFinance.get(externalKey);
+      if (!existing) {
+        latestInvoicesByExternalKeyFinance.set(externalKey, invoice);
+        return;
+      }
+      const existingTime = new Date(existing.created_at || existing.issued_at).getTime();
+      const invoiceTime = new Date(invoice.created_at || invoice.issued_at).getTime();
+      if (!Number.isFinite(existingTime) || (Number.isFinite(invoiceTime) && invoiceTime > existingTime)) {
+        latestInvoicesByExternalKeyFinance.set(externalKey, invoice);
+      }
+    });
+    const allFakturoidInvoicesForFinanceCount = Array.from(latestInvoicesByExternalKeyFinance.values()).filter(
+      (invoice) => Boolean(invoice.fakturoid_id || invoice.fakturoid_url),
     );
-    const prevPeriodInvoices = canonicalIssuedInvoices.filter((invoice) =>
-      comparisonPeriodMonthKeySet.has(toYearMonthKey(invoice.year, invoice.month)),
-    );
+    const invoiceCountByClientKeyFinance = new Map<string, number>();
+    allFakturoidInvoicesForFinanceCount.forEach((invoice) => {
+      const legalClientName = invoice.client_id ? (getClientById(invoice.client_id)?.name || null) : null;
+      const clientName = (invoice.client_name || legalClientName || 'Neznámý klient').trim();
+      const clientKey = normalizeEntityKeyFinance(clientName);
+      invoiceCountByClientKeyFinance.set(clientKey, (invoiceCountByClientKeyFinance.get(clientKey) || 0) + 1);
+    });
+    const isInvoiceFromFinanceEligibleClient = (invoice: (typeof issuedInvoices)[number]) => {
+      const legalClientName = invoice.client_id ? (getClientById(invoice.client_id)?.name || null) : null;
+      const clientName = (invoice.client_name || legalClientName || 'Neznámý klient').trim();
+      const clientKey = normalizeEntityKeyFinance(clientName);
+      return (invoiceCountByClientKeyFinance.get(clientKey) || 0) >= MIN_INVOICES_FOR_FINANCE_STATS;
+    };
+
+    const periodInvoices = canonicalIssuedInvoices
+      .filter((invoice) => currentPeriodMonthKeySet.has(toYearMonthKey(invoice.year, invoice.month)))
+      .filter(isInvoiceFromFinanceEligibleClient);
+    const prevPeriodInvoices = canonicalIssuedInvoices
+      .filter((invoice) => comparisonPeriodMonthKeySet.has(toYearMonthKey(invoice.year, invoice.month)))
+      .filter(isInvoiceFromFinanceEligibleClient);
 
     const totalInvoicing = periodInvoices.reduce(
       (sum, invoice) => sum + convertToCzk(invoice.total_amount, invoice.currency, invoice.year, invoice.month),
@@ -746,6 +818,7 @@ export default function Analytics() {
 
     const engagementRevenueByMonth = new Map<string, number>();
     const engagementRevenueTotals = new Map<string, number>();
+    const engagementEurRevenueTotals = new Map<string, number>();
     periodInvoices.forEach((invoice) => {
       const monthKey = toYearMonthKey(invoice.year, invoice.month);
       const engagementMonthKey = `${invoice.engagement_id}::${monthKey}`;
@@ -758,6 +831,12 @@ export default function Analytics() {
         invoice.engagement_id,
         (engagementRevenueTotals.get(invoice.engagement_id) || 0) + convertedAmount,
       );
+      if ((invoice.currency || '').toUpperCase() === 'EUR') {
+        engagementEurRevenueTotals.set(
+          invoice.engagement_id,
+          (engagementEurRevenueTotals.get(invoice.engagement_id) || 0) + invoice.total_amount,
+        );
+      }
     });
 
     const isAssignmentActiveInMonth = (assignmentStart: Date, assignmentEnd: Date | null, year: number, month: number) => {
@@ -879,6 +958,7 @@ export default function Analytics() {
         name: engagement?.name || 'Neznámá zakázka',
         client: client?.brand_name || '',
         revenue,
+        revenueEurOriginal: engagementEurRevenueTotals.get(engagementId) || 0,
         cost,
         marginAbsolute,
         marginPercent,
@@ -903,9 +983,9 @@ export default function Analytics() {
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
 
-      const monthInvoices = canonicalIssuedInvoices.filter(
-        (invoice) => invoice.year === year && invoice.month === month,
-      );
+      const monthInvoices = canonicalIssuedInvoices
+        .filter((invoice) => invoice.year === year && invoice.month === month)
+        .filter(isInvoiceFromFinanceEligibleClient);
       const monthRevenue = monthInvoices.reduce(
         (sum, invoice) => sum + convertToCzk(invoice.total_amount, invoice.currency, invoice.year, invoice.month),
         0,
@@ -1050,6 +1130,8 @@ export default function Analytics() {
         creditsByColleague,
         creditsTrend,
       },
+      eurConversionRate: eurToCzkCurrent?.rate ?? null,
+      eurConversionDate: eurToCzkCurrent?.providerDate ?? null,
     };
   }, [
     currentPeriodMonthKeys,
@@ -1069,7 +1151,194 @@ export default function Analytics() {
     outputTypes,
     outputs,
     calculateOutputCredits,
+    eurToCzkCurrent,
   ]);
+
+  const longTermData = useMemo(() => {
+    const MIN_INVOICES_FOR_LONG_TERM_STATS = 3;
+    const normalizeEntityKey = (value: string) => value.toLowerCase().replace(/\s+/g, ' ').trim();
+
+    const convertToCzkAllTime = (amount: number, currency: string, year: number, month: number) => {
+      const normalizedCurrency = (currency || 'CZK').toUpperCase();
+      if (normalizedCurrency === 'CZK') return amount;
+      if (normalizedCurrency === 'EUR') {
+        const rate =
+          eurToCzkAllTimeRatesByMonth[toYearMonthKey(year, month)] ??
+          eurToCzkCurrent?.rate ??
+          1;
+        return amount * rate;
+      }
+      return amount;
+    };
+
+    const latestInvoicesByExternalKey = new Map<string, (typeof issuedInvoices)[number]>();
+    issuedInvoices.forEach((invoice) => {
+      const externalKey = invoice.fakturoid_id
+        ? `f-${invoice.fakturoid_id}`
+        : `n-${invoice.invoice_number}`;
+      const existing = latestInvoicesByExternalKey.get(externalKey);
+      if (!existing) {
+        latestInvoicesByExternalKey.set(externalKey, invoice);
+        return;
+      }
+      const existingTime = new Date(existing.created_at || existing.issued_at).getTime();
+      const invoiceTime = new Date(invoice.created_at || invoice.issued_at).getTime();
+      if (!Number.isFinite(existingTime) || (Number.isFinite(invoiceTime) && invoiceTime > existingTime)) {
+        latestInvoicesByExternalKey.set(externalKey, invoice);
+      }
+    });
+
+    const canonicalInvoices = Array.from(latestInvoicesByExternalKey.values());
+    const allFakturoidInvoices = canonicalInvoices.filter((invoice) => Boolean(invoice.fakturoid_id || invoice.fakturoid_url));
+
+    const clientKeyForInvoice = (invoice: (typeof allFakturoidInvoices)[number]) => {
+      const legalClientName = invoice.client_id ? (getClientById(invoice.client_id)?.name || null) : null;
+      const clientName = (invoice.client_name || legalClientName || 'Neznámý klient').trim();
+      return normalizeEntityKey(clientName);
+    };
+
+    const invoiceCountByClientKey = new Map<string, number>();
+    allFakturoidInvoices.forEach((invoice) => {
+      const clientKey = clientKeyForInvoice(invoice);
+      invoiceCountByClientKey.set(clientKey, (invoiceCountByClientKey.get(clientKey) || 0) + 1);
+    });
+
+    const isLongTermEligibleClient = (clientKey: string) =>
+      (invoiceCountByClientKey.get(clientKey) || 0) >= MIN_INVOICES_FOR_LONG_TERM_STATS;
+
+    const paidInvoicesAllTime = allFakturoidInvoices.filter((invoice) => {
+      const normalizedStatus = String(invoice.status || '').toLowerCase();
+      return normalizedStatus === 'paid' || !!invoice.paid_at;
+    });
+
+    const paidClientMap = new Map<string, {
+      clientId: string;
+      clientName: string;
+      paidTotalCzk: number;
+      paidTotalEurOriginal: number;
+      paidInvoiceCount: number;
+      lastPaidAt: string | null;
+    }>();
+
+    paidInvoicesAllTime.forEach((invoice) => {
+      const clientKey = clientKeyForInvoice(invoice);
+      if (!isLongTermEligibleClient(clientKey)) return;
+
+      const legalClientName = invoice.client_id ? (getClientById(invoice.client_id)?.name || null) : null;
+      const clientName = (invoice.client_name || legalClientName || 'Neznámý klient').trim();
+      const converted = convertToCzkAllTime(invoice.total_amount, invoice.currency, invoice.year, invoice.month);
+      const existing = paidClientMap.get(clientKey) || {
+        clientId: clientKey,
+        clientName,
+        paidTotalCzk: 0,
+        paidTotalEurOriginal: 0,
+        paidInvoiceCount: 0,
+        lastPaidAt: null,
+      };
+
+      existing.paidTotalCzk += converted;
+      existing.paidInvoiceCount += 1;
+      if ((invoice.currency || '').toUpperCase() === 'EUR') {
+        existing.paidTotalEurOriginal += invoice.total_amount;
+      }
+      if (invoice.paid_at) {
+        if (!existing.lastPaidAt || new Date(invoice.paid_at).getTime() > new Date(existing.lastPaidAt).getTime()) {
+          existing.lastPaidAt = invoice.paid_at;
+        }
+      }
+      paidClientMap.set(clientKey, existing);
+    });
+
+    const longTermScopeInvoices = allFakturoidInvoices.filter((invoice) =>
+      isLongTermEligibleClient(clientKeyForInvoice(invoice))
+    );
+
+    const firstInvoiceDate = longTermScopeInvoices.reduce<string | null>((minDate, invoice) => {
+      if (!invoice.issued_at) return minDate;
+      if (!minDate) return invoice.issued_at;
+      return new Date(invoice.issued_at).getTime() < new Date(minDate).getTime() ? invoice.issued_at : minDate;
+    }, null);
+
+    const lastInvoiceDate = longTermScopeInvoices.reduce<string | null>((maxDate, invoice) => {
+      if (!invoice.issued_at) return maxDate;
+      if (!maxDate) return invoice.issued_at;
+      return new Date(invoice.issued_at).getTime() > new Date(maxDate).getTime() ? invoice.issued_at : maxDate;
+    }, null);
+
+    const LONG_TERM_ASSUMED_MARGIN = 0.63;
+
+    const clientTotalsFromAllInvoices = new Map<string, {
+      clientName: string;
+      totalCzk: number;
+      firstIssuedAt: string | null;
+      lastIssuedAt: string | null;
+    }>();
+
+    allFakturoidInvoices.forEach((invoice) => {
+      const clientKey = clientKeyForInvoice(invoice);
+      if (!isLongTermEligibleClient(clientKey)) return;
+
+      const legalClientName = invoice.client_id ? (getClientById(invoice.client_id)?.name || null) : null;
+      const clientName = (invoice.client_name || legalClientName || 'Neznámý klient').trim();
+      const converted = convertToCzkAllTime(invoice.total_amount, invoice.currency, invoice.year, invoice.month);
+      const existing = clientTotalsFromAllInvoices.get(clientKey) || {
+        clientName,
+        totalCzk: 0,
+        firstIssuedAt: null,
+        lastIssuedAt: null,
+      };
+      if (!existing.clientName && clientName) existing.clientName = clientName;
+      existing.totalCzk += converted;
+      if (invoice.issued_at) {
+        if (!existing.firstIssuedAt || new Date(invoice.issued_at).getTime() < new Date(existing.firstIssuedAt).getTime()) {
+          existing.firstIssuedAt = invoice.issued_at;
+        }
+        if (!existing.lastIssuedAt || new Date(invoice.issued_at).getTime() > new Date(existing.lastIssuedAt).getTime()) {
+          existing.lastIssuedAt = invoice.issued_at;
+        }
+      }
+      clientTotalsFromAllInvoices.set(clientKey, existing);
+    });
+
+    const clientTotalsArray = Array.from(clientTotalsFromAllInvoices.values()).map((item) => {
+      if (!item.firstIssuedAt || !item.lastIssuedAt) {
+        return { ...item, monthsActive: 1 };
+      }
+      const first = new Date(item.firstIssuedAt);
+      const last = new Date(item.lastIssuedAt);
+      const monthsActive = Math.max(1, differenceInDays(last, first) / 30.4375);
+      return { ...item, monthsActive };
+    });
+    const allFakturoidClientsCount = clientTotalsArray.length;
+
+    const totalRetentionMonths = clientTotalsArray.reduce((sum, item) => sum + item.monthsActive, 0);
+    const totalInvoicedCzk = clientTotalsArray.reduce((sum, item) => sum + item.totalCzk, 0);
+
+    const avgClientRetentionMonths = allFakturoidClientsCount > 0
+      ? totalRetentionMonths / allFakturoidClientsCount
+      : 0;
+    const avgClientLtvCzk = allFakturoidClientsCount > 0
+      ? totalInvoicedCzk / allFakturoidClientsCount
+      : 0;
+    const avgInvoicesPerClient = allFakturoidClientsCount > 0
+      ? longTermScopeInvoices.length / allFakturoidClientsCount
+      : 0;
+    const avgEstimatedProfitPerClientCzk = avgClientLtvCzk * LONG_TERM_ASSUMED_MARGIN;
+
+    return {
+      topPaidClientsAllTime: Array.from(paidClientMap.values())
+        .sort((a, b) => b.paidTotalCzk - a.paidTotalCzk),
+      avgClientRetentionMonths,
+      avgClientLtvCzk,
+      avgInvoicesPerClient,
+      clientsWithInvoicesCount: allFakturoidClientsCount,
+      firstInvoiceDate,
+      lastInvoiceDate,
+      totalInvoicesInScope: longTermScopeInvoices.length,
+      assumedMarginPercent: LONG_TERM_ASSUMED_MARGIN * 100,
+      avgEstimatedProfitPerClientCzk,
+    };
+  }, [issuedInvoices, eurToCzkAllTimeRatesByMonth, eurToCzkCurrent, getClientById]);
 
   const creativeBoostData = useMemo(() => {
     const allSummaries = currentPeriodMonthKeys.flatMap((key) =>
@@ -1341,6 +1610,7 @@ export default function Analytics() {
             <TabsTrigger value="upsells" className="text-xs sm:text-sm px-2 sm:px-3">Upselly</TabsTrigger>
             <TabsTrigger value="creative-boost" className="text-xs sm:text-sm px-2 sm:px-3">CB</TabsTrigger>
             <TabsTrigger value="team" className="text-xs sm:text-sm px-2 sm:px-3">Tým</TabsTrigger>
+            <TabsTrigger value="long-term" className="text-xs sm:text-sm px-2 sm:px-3">Dlouhodobě</TabsTrigger>
             <TabsTrigger value="plan-forecast" className="text-xs sm:text-sm px-2 sm:px-3">Forecast</TabsTrigger>
           </TabsList>
         </div>
@@ -1407,6 +1677,10 @@ export default function Analytics() {
 
         <TabsContent value="team" className="mt-6">
           <TeamCapacityAnalytics {...teamData} />
+        </TabsContent>
+
+        <TabsContent value="long-term" className="mt-6">
+          <LongTermAnalytics {...longTermData} />
         </TabsContent>
 
         <TabsContent value="plan-forecast" className="mt-6">

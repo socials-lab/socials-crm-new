@@ -177,6 +177,9 @@ export function useActivityRewards(colleagueId: string | null) {
   }, [rewards, colleagueId]);
 
   const addReward = (reward: Omit<ActivityReward, 'id' | 'created_at' | 'invoice_item_name'> & { invoice_item_name?: string }) => {
+    if (reward.category === 'client_work' && !reward.client_name?.trim()) {
+      throw new Error('U klientské položky je nutné vybrat klienta.');
+    }
     const invoiceItemName = reward.invoice_item_name || generateInvoiceItemName(
       reward.category,
       reward.description,
@@ -186,6 +189,9 @@ export function useActivityRewards(colleagueId: string | null) {
   };
 
   const updateReward = (rewardId: string, updates: Partial<Omit<ActivityReward, 'id' | 'created_at'>>) => {
+    if (updates.category === 'client_work' && updates.client_name !== undefined && !updates.client_name?.trim()) {
+      throw new Error('U klientské položky je nutné vybrat klienta.');
+    }
     if (updates.category || updates.description || updates.client_name !== undefined) {
       const existingReward = rewards.find(r => r.id === rewardId);
       if (existingReward) {

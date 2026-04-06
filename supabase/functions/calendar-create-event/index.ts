@@ -16,6 +16,29 @@ interface RefreshResult {
   error?: string;
 }
 
+interface GoogleApiErrorPayload {
+  error?: {
+    code?: number;
+    message?: string;
+    status?: string;
+    errors?: Array<{ reason?: string; message?: string }>;
+  };
+}
+
+function parseGoogleApiError(raw: string): GoogleApiErrorPayload | null {
+  try {
+    return JSON.parse(raw) as GoogleApiErrorPayload;
+  } catch {
+    return null;
+  }
+}
+
+function isInsufficientScopeError(payload: GoogleApiErrorPayload | null): boolean {
+  if (!payload?.error) return false;
+  if (payload.error.status === "PERMISSION_DENIED") return true;
+  return (payload.error.errors || []).some((err) => err.reason === "insufficientPermissions");
+}
+
 async function refreshAccessToken(
   supabaseAdmin: ReturnType<typeof createClient>,
   userId: string,
@@ -236,6 +259,8 @@ serve(async (req) => {
       const errorText = await response.text();
       const durationMs = Date.now() - startTime;
       console.error("Google Calendar error:", errorText);
+      const googleError = parseGoogleApiError(errorText);
+      const googleMessage = googleError?.error?.message || errorText;
       
       // Log failed API call
       await supabaseAdmin.from('integration_log').insert({
@@ -247,13 +272,23 @@ serve(async (req) => {
         response_status: response.status,
         response_payload: { error: errorText },
         is_success: false,
-        error_message: errorText,
+        error_message: googleMessage,
         triggered_by: userId,
         duration_ms: durationMs,
       });
+
+      if (response.status === 403 && isInsufficientScopeError(googleError)) {
+        return new Response(
+          JSON.stringify({
+            error: "Google Calendar nemá potřebná oprávnění. Prosím znovu propojte Google účet.",
+            reauthRequired: true,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       
       return new Response(
-        JSON.stringify({ error: `Google Calendar chyba: ${errorText}` }),
+        JSON.stringify({ error: `Google Calendar chyba: ${googleMessage}` }),
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

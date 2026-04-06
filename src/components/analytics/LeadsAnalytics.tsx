@@ -133,8 +133,8 @@ export function LeadsAnalytics({
       {/* KPI Cards - 2 rows for better readability */}
       <div className="grid gap-4 md:grid-cols-3">
         <KPICard
-          title="Celkem leadů"
-          value={totalLeads}
+          title="Leady v období"
+          value={newLeadsThisMonth}
           icon={Users}
           subtitle={
             <span className={cn(
@@ -147,10 +147,10 @@ export function LeadsAnalytics({
           }
         />
         <KPICard
-          title="Nové leady"
-          value={newLeadsThisMonth}
+          title="Celkem leadů v CRM"
+          value={totalLeads}
           icon={Users}
-          subtitle="v období"
+          subtitle="historicky"
         />
         <KPICard
           title="Win Rate"
@@ -176,7 +176,7 @@ export function LeadsAnalytics({
           title="Pipeline hodnota"
           value={`${formatCurrency(expectedValue)} Kč`}
           icon={DollarSign}
-          subtitle="leady s odeslanou nabídkou"
+          subtitle="všechny otevřené leady (váženě)"
         />
       </div>
 
