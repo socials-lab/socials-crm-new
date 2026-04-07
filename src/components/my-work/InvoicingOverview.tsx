@@ -19,6 +19,7 @@ export interface InvoiceLineItem {
   amount: number;
   note?: string; // e.g. "od 15." for prorated
   isEditable?: boolean;
+  isFromMarketingLog?: boolean; // synced from marketing_work_logs – read-only here
 }
 
 interface ClientRewardForInvoice {
@@ -133,6 +134,11 @@ function InvoiceLineItemRow({
         {item.note && (
           <Badge variant="secondary" className="text-xs shrink-0">
             {item.note}
+          </Badge>
+        )}
+        {item.isFromMarketingLog && (
+          <Badge variant="outline" className="text-xs shrink-0 text-muted-foreground">
+            Marketing zápis
           </Badge>
         )}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -266,12 +272,14 @@ export function InvoicingOverview({
     const categorized = getRewardsByCategory(selectedYear, selectedMonth);
     
     categorized.marketing.forEach((r) => {
+      const fromMarketingLog = !!r.marketing_work_log_id;
       items.push({
         id: r.id,
         category: 'marketing',
         invoiceName: withManualItemPrefix('marketing', r.invoice_item_name),
         amount: r.amount,
-        isEditable: true,
+        isEditable: !fromMarketingLog,
+        isFromMarketingLog: fromMarketingLog,
       });
     });
     
