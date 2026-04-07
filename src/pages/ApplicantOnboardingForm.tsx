@@ -102,6 +102,7 @@ export default function ApplicantOnboardingForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [loadErrorMessage, setLoadErrorMessage] = useState<string>('');
   const [alreadyCompleted, setAlreadyCompleted] = useState(false);
   const [aresValidated, setAresValidated] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -155,6 +156,7 @@ export default function ApplicantOnboardingForm() {
             setIsLoading(false);
             return;
           }
+          setLoadErrorMessage(error.message || 'Nepodařilo se načíst onboarding data.');
           setNotFound(true);
           setIsLoading(false);
           return;
@@ -164,6 +166,7 @@ export default function ApplicantOnboardingForm() {
           if (data.error === 'Onboarding already completed') {
             setAlreadyCompleted(true);
           } else {
+            setLoadErrorMessage(data.error || 'Nepodařilo se načíst onboarding data.');
             setNotFound(true);
           }
           setIsLoading(false);
@@ -200,6 +203,7 @@ export default function ApplicantOnboardingForm() {
         setIsLoading(false);
       } catch (err) {
         console.error('Error fetching applicant:', err);
+        setLoadErrorMessage(err instanceof Error ? err.message : 'Nepodařilo se načíst onboarding data.');
         setNotFound(true);
         setIsLoading(false);
       }
@@ -289,6 +293,11 @@ export default function ApplicantOnboardingForm() {
             <p className="text-muted-foreground">
               Tento onboarding odkaz není platný nebo již vypršel.
             </p>
+            {loadErrorMessage && (
+              <p className="text-xs text-destructive mt-2 break-words">
+                Detail: {loadErrorMessage}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

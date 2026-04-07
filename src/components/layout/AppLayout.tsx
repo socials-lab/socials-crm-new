@@ -174,7 +174,7 @@ export function AppLayout() {
           </header>
           
           {/* Main content - add bottom padding on mobile for bottom nav */}
-          <main className="relative min-w-0 flex-1 overflow-auto bg-background pb-32 md:pb-0">
+          <main className="min-w-0 flex-1 overflow-auto bg-background pb-32 md:pb-0">
             <Outlet />
             <BugReportFAB />
           </main>

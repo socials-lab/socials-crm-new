@@ -28,11 +28,25 @@ serve(async (req) => {
 
     const { data: applicant, error } = await supabaseAdmin
       .from("applicants")
-      .select("id, full_name, email, phone, position, onboarding_completed_at, onboarding_sent_at, birthday, avatar_url, personal_email, ico, company_name, dic, billing_country, billing_street, billing_city, billing_zip, hourly_rate, bank_account")
+      .select("*")
       .eq("id", applicantId)
       .single();
 
-    if (error || !applicant) {
+    if (error) {
+      console.error("Get applicant onboarding query error:", error);
+      if (error.code === "PGRST116") {
+        return new Response(
+          JSON.stringify({ error: "Applicant not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      return new Response(
+        JSON.stringify({ error: "Failed to load applicant onboarding", details: error.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!applicant) {
       return new Response(
         JSON.stringify({ error: "Applicant not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }

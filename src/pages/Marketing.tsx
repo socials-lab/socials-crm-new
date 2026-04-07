@@ -23,7 +23,62 @@ import { useUserRole } from '@/hooks/useUserRole';
 
 type MarketingRole = 'content_manager' | 'video_editor' | 'graphic_designer';
 type MarketingWorkType = 'reels_video' | 'complex_video' | 'podcast' | 'other_hourly';
-type MainMarketingActivity = 'content_management' | 'video_editing_production' | 'podcast_postproduction' | 'graphic_design';
+type MainMarketingActivity =
+  | 'content_management'
+  | 'video_editing_production'
+  | 'podcast_postproduction'
+  | 'graphic_design'
+  | 'other';
+type MonthlyTaskStatus = 'done' | 'partial' | 'not_done';
+
+interface MonthlyTask {
+  id: string;
+  text: string;
+  status: MonthlyTaskStatus | null;
+  feedback: string;
+}
+
+function parseMonthlyTasks(raw: unknown): MonthlyTask[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((item) => typeof item === 'object' && item !== null)
+    .map((item: Record<string, unknown>) => ({
+      id: typeof item.id === 'string' ? item.id : crypto.randomUUID(),
+      text: typeof item.text === 'string' ? item.text : '',
+      status: (['done', 'partial', 'not_done'] as string[]).includes(item.status as string)
+        ? (item.status as MonthlyTaskStatus)
+        : null,
+      feedback: typeof item.feedback === 'string' ? item.feedback : '',
+    }));
+}
+
+function parseLegacyMainTasks(raw: unknown): MonthlyTask[] {
+  if (typeof raw !== 'string' || raw.trim().length === 0) return [];
+  const parts = raw
+    .split(/\r?\n|•|;/g)
+    .map((line) => line.replace(/^[-*]\s*/, '').replace(/^\d+[.)]\s*/, '').trim())
+    .filter((line) => line.length > 0);
+  return parts.map((text) => ({
+    id: crypto.randomUUID(),
+    text,
+    status: null,
+    feedback: '',
+  }));
+}
+
+function getMutationErrorMessage(error: unknown): string {
+  if (error && typeof error === 'object') {
+    const e = error as Record<string, unknown>;
+    const message = typeof e.message === 'string' ? e.message : '';
+    const details = typeof e.details === 'string' ? e.details : '';
+    const hint = typeof e.hint === 'string' ? e.hint : '';
+    const code = typeof e.code === 'string' ? e.code : '';
+    const composed = [message, details, hint, code].filter((v) => v.length > 0).join(' | ');
+    if (composed.length > 0) return composed;
+  }
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
 
 interface MarketingMonthlyPlan {
   id: string;
@@ -43,14 +98,25 @@ interface MarketingMonthlyPlan {
   planned_leads: number;
   planned_new_clients: number;
   planned_main_tasks: string;
+  monthly_tasks: unknown;
+  monthly_review: string | null;
   notes: string;
 }
+
+type MarketingProject = 'socials' | 'danny' | 'otas';
+
+const MARKETING_PROJECT_LABELS: Record<MarketingProject, string> = {
+  socials: 'Socials',
+  danny: 'Danny',
+  otas: 'Oťas',
+};
 
 interface MarketingWorkLog {
   id: string;
   colleague_id: string;
   role: MarketingRole;
   main_activity: MainMarketingActivity | null;
+  project: MarketingProject | null;
   activity_date: string;
   title: string;
   description: string | null;
@@ -74,11 +140,11 @@ const ROLE_LABELS: Record<MarketingRole, string> = {
 };
 
 const DEFAULT_MARKETING_COLLEAGUES = [
-  { label: 'Kristýn Zborníková - Content Manager', tokens: ['kristyn', 'zbornikov'] },
-  { label: 'Jan Bečvář - Video editor', tokens: ['jan', 'becvar'], monthlyMinimum: 45000 },
-  { label: 'Michal Bartošek - Video editor', tokens: ['michal', 'bartosek'] },
-  { label: 'Alexandra - Graphic Designer', tokens: ['alexandra'] },
-  { label: 'Ivana - Graphic Designer', tokens: ['ivana'] },
+  { label: 'Kristýn Zborníková - Content Manager', tokens: ['kristyn', 'zbornikov'], primaryRole: 'content_manager' as MarketingRole },
+  { label: 'Jan Bečvář - Video editor', tokens: ['jan', 'becvar'], monthlyMinimum: 45000, primaryRole: 'video_editor' as MarketingRole },
+  { label: 'Michal Bartošek - Video editor', tokens: ['michal', 'bartosek'], primaryRole: 'video_editor' as MarketingRole },
+  { label: 'Alexandra - Graphic Designer', tokens: ['alexandra'], primaryRole: 'graphic_designer' as MarketingRole },
+  { label: 'Ivana - Graphic Designer', tokens: ['ivana'], primaryRole: 'graphic_designer' as MarketingRole },
 ] as const;
 
 const normalizeForMatch = (value: unknown) =>
@@ -99,6 +165,7 @@ const MAIN_ACTIVITY_LABELS: Record<MainMarketingActivity, string> = {
   video_editing_production: 'Video editing a produkce',
   podcast_postproduction: 'Podcast postprodukce',
   graphic_design: 'Graphic design',
+  other: 'Jiná',
 };
 
 const FIXED_WORK_REWARD: Record<Exclude<MarketingWorkType, 'other_hourly'>, number> = {
@@ -116,11 +183,9 @@ const getDefaultMainActivityForRole = (role: MarketingRole): MainMarketingActivi
 };
 
 const getDefaultMainActivityForWorkType = (
-  workType: MarketingWorkType,
+  _workType: MarketingWorkType,
   role: MarketingRole,
 ): MainMarketingActivity => {
-  if (workType === 'podcast') return 'podcast_postproduction';
-  if (workType === 'reels_video' || workType === 'complex_video') return 'video_editing_production';
   return getDefaultMainActivityForRole(role);
 };
 
@@ -198,7 +263,9 @@ function MarketingPageContent() {
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [isRoleBreakdownOpen, setIsRoleBreakdownOpen] = useState(false);
-  const [isMonthlyPlanOpen, setIsMonthlyPlanOpen] = useState(false);
+  const [isMainMonthlyPlanOpen, setIsMainMonthlyPlanOpen] = useState(false);
+  const [isDetailMonthlyPlanOpen, setIsDetailMonthlyPlanOpen] = useState(false);
+  const [isWorkLogFormOpen, setIsWorkLogFormOpen] = useState(true);
   const [isAnnualPlanOpen, setIsAnnualPlanOpen] = useState(false);
   const [isAnnualRoleBreakdownOpen, setIsAnnualRoleBreakdownOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'monthly' | 'annual'>('monthly');
@@ -206,18 +273,28 @@ function MarketingPageContent() {
   const crmData = useCRMData();
   const leadsData = useLeadsData();
   const prospectsData = useProspectsData();
-  const colleagues = Array.isArray(crmData?.colleagues)
-    ? crmData.colleagues.filter((item) => item && typeof item === 'object')
-    : [];
-  const clients = Array.isArray(crmData?.clients)
-    ? crmData.clients.filter((item) => item && typeof item === 'object')
-    : [];
-  const leads = Array.isArray(leadsData?.leads)
-    ? leadsData.leads.filter((item) => item && typeof item === 'object')
-    : [];
-  const prospects = Array.isArray(prospectsData?.prospects)
-    ? prospectsData.prospects.filter((item) => item && typeof item === 'object')
-    : [];
+
+  const rawColleagues = crmData?.colleagues;
+  const rawClients = crmData?.clients;
+  const rawLeads = leadsData?.leads;
+  const rawProspects = prospectsData?.prospects;
+
+  const colleagues = useMemo(
+    () => Array.isArray(rawColleagues) ? rawColleagues.filter((item) => item && typeof item === 'object') : [],
+    [rawColleagues],
+  );
+  const clients = useMemo(
+    () => Array.isArray(rawClients) ? rawClients.filter((item) => item && typeof item === 'object') : [],
+    [rawClients],
+  );
+  const leads = useMemo(
+    () => Array.isArray(rawLeads) ? rawLeads.filter((item) => item && typeof item === 'object') : [],
+    [rawLeads],
+  );
+  const prospects = useMemo(
+    () => Array.isArray(rawProspects) ? rawProspects.filter((item) => item && typeof item === 'object') : [],
+    [rawProspects],
+  );
   const { colleagueId, role, isSuperAdmin } = useUserRole();
 
   const canManageBudgets = isSuperAdmin || role === 'admin' || role === 'management';
@@ -355,6 +432,8 @@ function MarketingPageContent() {
     planned_leads: 0,
     planned_new_clients: 0,
     planned_main_tasks: '',
+    monthly_tasks: [] as MonthlyTask[],
+    monthly_review: '',
     notes: '',
   });
 
@@ -374,10 +453,14 @@ function MarketingPageContent() {
         planned_leads: 0,
         planned_new_clients: 0,
         planned_main_tasks: '',
+        monthly_tasks: [],
+        monthly_review: '',
         notes: '',
       });
       return;
     }
+    const parsedMonthlyTasks = parseMonthlyTasks(monthlyPlan.monthly_tasks);
+    const legacyMainTasks = parseLegacyMainTasks(monthlyPlan.planned_main_tasks);
     setPlanForm({
       planned_total_budget: Number(monthlyPlan.planned_total_budget || 0),
       planned_content_budget: Number(monthlyPlan.planned_content_budget || 0),
@@ -392,6 +475,8 @@ function MarketingPageContent() {
       planned_leads: Number(monthlyPlan.planned_leads || 0),
       planned_new_clients: Number(monthlyPlan.planned_new_clients || 0),
       planned_main_tasks: monthlyPlan.planned_main_tasks || '',
+      monthly_tasks: parsedMonthlyTasks.length > 0 ? parsedMonthlyTasks : legacyMainTasks,
+      monthly_review: monthlyPlan.monthly_review || '',
       notes: monthlyPlan.notes || '',
     });
   }, [monthlyPlan]);
@@ -400,7 +485,8 @@ function MarketingPageContent() {
     colleague_id: colleagueId || '',
     role: 'content_manager' as MarketingRole,
     work_type: 'reels_video' as MarketingWorkType,
-    main_activity: 'video_editing_production' as MainMarketingActivity,
+    main_activity: 'content_management' as MainMarketingActivity,
+    project: 'socials' as MarketingProject,
     activity_date: format(now, 'yyyy-MM-dd'),
     title: WORK_TYPE_LABELS.reels_video,
     description: '',
@@ -453,46 +539,73 @@ function MarketingPageContent() {
     },
   });
 
-  const saveMonthlyDetailPlanMutation = useMutation({
-    mutationFn: async () => {
+  const saveMonthlyPlanMutation = useMutation({
+    mutationFn: async (section: 'main' | 'detail') => {
       const plannedLaborBudget = Number(planForm.planned_content_budget || 0)
         + Number(planForm.planned_graphic_budget || 0)
         + Number(planForm.planned_video_budget || 0)
         + Number(planForm.planned_podcast_postproduction_budget || 0);
 
-      const payload = {
+      const basePayload = {
         year: selectedYear,
         month: selectedMonth,
+      };
+
+      if (section === 'detail') {
+        const detailPayload = {
+          ...basePayload,
+          planned_total_budget: Number(planForm.planned_total_budget || 0),
+          planned_labor_budget: plannedLaborBudget,
+          planned_content_budget: Number(planForm.planned_content_budget || 0),
+          planned_graphic_budget: Number(planForm.planned_graphic_budget || 0),
+          planned_video_budget: Number(planForm.planned_video_budget || 0),
+          planned_podcast_postproduction_budget: Number(planForm.planned_podcast_postproduction_budget || 0),
+          planned_podcast_studio_rent_budget: Number(planForm.planned_podcast_studio_rent_budget || 0),
+          planned_other_budget: Number(planForm.planned_other_budget || 0),
+          planned_meta_budget: Number(planForm.planned_meta_budget || 0),
+          planned_ppc_budget: Number(planForm.planned_ppc_budget || 0),
+          planned_prospects: Number(planForm.planned_prospects || 0),
+          planned_leads: Number(planForm.planned_leads || 0),
+          planned_new_clients: Number(planForm.planned_new_clients || 0),
+        };
+        const { error } = await supabase
+          .from('marketing_monthly_plans' as never)
+          .upsert(detailPayload as never, { onConflict: 'year,month' });
+        if (error) throw error;
+        return;
+      }
+
+      const mainPayload = {
+        ...basePayload,
         planned_total_budget: Number(planForm.planned_total_budget || 0),
         planned_labor_budget: plannedLaborBudget,
-        planned_content_budget: Number(planForm.planned_content_budget || 0),
-        planned_graphic_budget: Number(planForm.planned_graphic_budget || 0),
-        planned_video_budget: Number(planForm.planned_video_budget || 0),
-        planned_podcast_postproduction_budget: Number(planForm.planned_podcast_postproduction_budget || 0),
-        planned_podcast_studio_rent_budget: Number(planForm.planned_podcast_studio_rent_budget || 0),
-        planned_other_budget: Number(planForm.planned_other_budget || 0),
-        planned_meta_budget: Number(planForm.planned_meta_budget || 0),
-        planned_ppc_budget: Number(planForm.planned_ppc_budget || 0),
-        planned_prospects: Number(planForm.planned_prospects || 0),
-        planned_leads: Number(planForm.planned_leads || 0),
-        planned_new_clients: Number(planForm.planned_new_clients || 0),
-        planned_main_tasks: planForm.planned_main_tasks || '',
+        planned_main_tasks: (planForm.monthly_tasks
+          .map((task) => task.text.trim())
+          .filter((text) => text.length > 0)
+          .join('\n')) || planForm.planned_main_tasks || '',
+        monthly_tasks: planForm.monthly_tasks,
+        monthly_review: planForm.monthly_review || '',
         notes: planForm.notes || '',
       };
 
       const { error } = await supabase
         .from('marketing_monthly_plans' as never)
-        .upsert(payload as never, { onConflict: 'year,month' });
+        .upsert(mainPayload as never, { onConflict: 'year,month' });
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, section) => {
       queryClient.invalidateQueries({ queryKey: ['marketing_monthly_plan', selectedYear, selectedMonth] });
       queryClient.invalidateQueries({ queryKey: ['marketing_yearly_plans', selectedYear] });
-      toast.success('Detailní měsíční plán byl uložen.');
+      toast.success(
+        section === 'main'
+          ? 'Hlavní plán měsíce byl uložen.'
+          : 'Detailní plán měsíce (rozpočet) byl uložen.',
+      );
     },
     onError: (error) => {
       console.error(error);
-      toast.error('Nepodařilo se uložit detailní měsíční plán.');
+      const msg = getMutationErrorMessage(error);
+      toast.error(`Uložení se nezdařilo: ${msg}`);
     },
   });
 
@@ -527,6 +640,7 @@ function MarketingPageContent() {
         colleague_id: workLogForm.colleague_id,
         role: workLogForm.role,
         main_activity: workLogForm.main_activity,
+        project: workLogForm.project,
         activity_date: workLogForm.activity_date,
         title,
         description: workLogForm.description.trim() || null,
@@ -541,11 +655,11 @@ function MarketingPageContent() {
       setWorkLogForm((prev) => ({
         ...prev,
         work_type: 'reels_video',
-        main_activity: 'video_editing_production',
+        main_activity: getDefaultMainActivityForRole(prev.role),
         title: WORK_TYPE_LABELS.reels_video,
         description: '',
         hours: '',
-        hourly_rate: '500',
+        hourly_rate: String(colleagueHourlyRateById.get(prev.colleague_id) ?? 500),
       }));
       toast.success('Marketing práce byla zapsána.');
     },
@@ -611,8 +725,8 @@ function MarketingPageContent() {
   );
   const actualOtherCost = legacyLaborCost + actualOtherSpend;
   const actualTotalCost = actualLaborCost + legacyLaborCost + adSpendTotal;
-  const budgetDiff = plannedTotalBudget - actualTotalCost;
   const detailBudgetDiff = plannedDetailTotalBudget - actualTotalCost;
+  const summaryVsDetailPlanDiff = plannedTotalBudget - plannedDetailTotalBudget;
 
   const colleagueNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -637,51 +751,98 @@ function MarketingPageContent() {
     });
   }, [colleagues]);
 
-  const colleagueSummary = useMemo(() => {
-    const byColleague = new Map<string, { name: string; amount: number; hours: number; logs: number }>();
-    workLogs.forEach((item) => {
-      const colleagueId = item.colleague_id || '__unknown__';
-      const colleagueName = colleagueNameById.get(colleagueId) || 'Neznámý kolega';
-      const existing = byColleague.get(colleagueId) || {
-        name: colleagueName,
-        amount: 0,
-        hours: 0,
-        logs: 0,
-      };
-      existing.amount += item.amount || 0;
-      existing.hours += item.hours || 0;
-      existing.logs += 1;
-      byColleague.set(colleagueId, existing);
+  // Map colleague ID → monthly minimum (only for those who have one configured)
+  const colleagueMonthlyMinimumById = useMemo(() => {
+    const map = new Map<string, number>();
+    DEFAULT_MARKETING_COLLEAGUES.forEach((config) => {
+      if (!('monthlyMinimum' in config)) return;
+      const found = colleagues.find((colleague: any) => {
+        if (typeof colleague?.full_name !== 'string') return false;
+        const normalized = normalizeForMatch(colleague.full_name || '');
+        return config.tokens.every((token) => normalized.includes(token));
+      });
+      if (found?.id) map.set(found.id, (config as { monthlyMinimum: number }).monthlyMinimum);
     });
-    const defaults = defaultMarketingColleagues.map((entry, idx) => {
-      const summary = entry.id ? byColleague.get(entry.id) : null;
-      if (entry.id) {
-        byColleague.delete(entry.id);
+    return map;
+  }, [colleagues]);
+
+  const colleaguePrimaryRoleById = useMemo(() => {
+    const map = new Map<string, MarketingRole>();
+    DEFAULT_MARKETING_COLLEAGUES.forEach((config) => {
+      const found = colleagues.find((colleague: any) => {
+        if (typeof colleague?.full_name !== 'string') return false;
+        const normalized = normalizeForMatch(colleague.full_name || '');
+        return config.tokens.every((token) => normalized.includes(token));
+      });
+      if (found?.id) map.set(found.id, config.primaryRole);
+    });
+    return map;
+  }, [colleagues]);
+
+  const colleagueHourlyRateById = useMemo(() => {
+    const map = new Map<string, number>();
+    colleagues.forEach((colleague: any) => {
+      if (typeof colleague?.id !== 'string') return;
+      const rate = Number(colleague?.internal_hourly_cost);
+      if (Number.isFinite(rate) && rate > 0) {
+        map.set(colleague.id, rate);
       }
-      const amount = summary?.amount || 0;
-      const monthlyMinimum = typeof entry.monthlyMinimum === 'number' ? entry.monthlyMinimum : null;
-      return {
-        sortOrder: idx,
-        name: entry.label,
-        amount,
-        hours: summary?.hours || 0,
-        logs: summary?.logs || 0,
-        monthlyMinimum,
-        remainingToMinimum: monthlyMinimum !== null ? Math.max(0, monthlyMinimum - amount) : null,
-      };
+    });
+    return map;
+  }, [colleagues]);
+
+  const availableHourlyRateOptions = useMemo(() => {
+    const rates = new Set<number>(HOURLY_RATE_OPTIONS);
+    colleagueHourlyRateById.forEach((rate) => rates.add(rate));
+    return Array.from(rates).sort((a, b) => a - b);
+  }, [colleagueHourlyRateById]);
+
+  const colleagueSummary = useMemo(() => {
+    type ActivityEntry = { count: number; totalAmount: number };
+    const byColleague = new Map<string, {
+      name: string;
+      amount: number;
+      hours: number;
+      logs: number;
+      activityMap: Map<string, ActivityEntry>;
+    }>();
+
+    workLogs.forEach((item) => {
+      const cid = item.colleague_id || '__unknown__';
+      const name = colleagueNameById.get(cid) || 'Neznámý kolega';
+      if (!byColleague.has(cid)) {
+        byColleague.set(cid, { name, amount: 0, hours: 0, logs: 0, activityMap: new Map() });
+      }
+      const entry = byColleague.get(cid)!;
+      entry.amount += item.amount || 0;
+      entry.hours += item.hours || 0;
+      entry.logs += 1;
+      const title = item.title || '(bez názvu)';
+      const act = entry.activityMap.get(title) ?? { count: 0, totalAmount: 0 };
+      act.count += 1;
+      act.totalAmount += item.amount || 0;
+      entry.activityMap.set(title, act);
     });
 
-    const others = Array.from(byColleague.values())
-      .sort((a, b) => b.amount - a.amount)
-      .map((item, idx) => ({
-        sortOrder: 100 + idx,
-        ...item,
-        monthlyMinimum: null,
-        remainingToMinimum: null,
-      }));
-
-    return [...defaults, ...others].sort((a, b) => a.sortOrder - b.sortOrder);
-  }, [colleagueNameById, defaultMarketingColleagues, workLogs]);
+    return Array.from(byColleague.entries())
+      .map(([cid, entry]) => {
+        const monthlyMinimum = colleagueMonthlyMinimumById.get(cid) ?? null;
+        const activities = Array.from(entry.activityMap.entries())
+          .map(([title, { count, totalAmount }]) => ({ title, count, totalAmount }))
+          .sort((a, b) => b.count - a.count);
+        return {
+          id: cid,
+          name: entry.name,
+          amount: entry.amount,
+          hours: entry.hours,
+          logs: entry.logs,
+          activities,
+          monthlyMinimum,
+          remainingToMinimum: monthlyMinimum !== null ? Math.max(0, monthlyMinimum - entry.amount) : null,
+        };
+      })
+      .sort((a, b) => b.amount - a.amount);
+  }, [colleagueNameById, colleagueMonthlyMinimumById, workLogs]);
 
   const leadsInMonth = useMemo(() => {
     return leads.filter((lead) => {
@@ -724,13 +885,45 @@ function MarketingPageContent() {
   );
 
   useEffect(() => {
-    if (!workLogForm.colleague_id && selectableColleagues.length > 0) {
+    if (selectableColleagues.length === 0) return;
+    const hasLoggedInColleague = !!colleagueId && selectableColleagues.some((c) => c.id === colleagueId);
+    const fallbackId = selectableColleagues[0].id;
+    const preferredId = hasLoggedInColleague ? colleagueId! : fallbackId;
+    const preferredRole = colleaguePrimaryRoleById.get(preferredId);
+    const preferredHourlyRate = colleagueHourlyRateById.get(preferredId);
+
+    if (!workLogForm.colleague_id) {
       setWorkLogForm((prev) => ({
         ...prev,
-        colleague_id: selectableColleagues[0].id,
+        colleague_id: preferredId,
+        role: preferredRole ?? prev.role,
+        main_activity: preferredRole
+          ? getDefaultMainActivityForWorkType(prev.work_type, preferredRole)
+          : prev.main_activity,
+        hourly_rate: preferredHourlyRate ? String(preferredHourlyRate) : prev.hourly_rate,
+      }));
+      return;
+    }
+
+    // If colleagueId arrives later, replace the temporary fallback selection.
+    if (
+      hasLoggedInColleague
+      && workLogForm.colleague_id !== colleagueId
+      && workLogForm.colleague_id === fallbackId
+    ) {
+      setWorkLogForm((prev) => ({
+        ...prev,
+        colleague_id: colleagueId!,
+        role: colleaguePrimaryRoleById.get(colleagueId!) ?? prev.role,
+        main_activity: colleaguePrimaryRoleById.get(colleagueId!)
+          ? getDefaultMainActivityForWorkType(prev.work_type, colleaguePrimaryRoleById.get(colleagueId!)!)
+          : prev.main_activity,
+        hourly_rate: colleagueHourlyRateById.get(colleagueId!)
+          ? String(colleagueHourlyRateById.get(colleagueId!))
+          : prev.hourly_rate,
       }));
     }
-  }, [selectableColleagues, workLogForm.colleague_id]);
+  }, [colleagueHourlyRateById, colleagueId, colleaguePrimaryRoleById, selectableColleagues, workLogForm.colleague_id]);
 
   const annualRows = useMemo(() => {
     const plansByMonth = new Map<number, MarketingMonthlyPlan>();
@@ -869,513 +1062,608 @@ function MarketingPageContent() {
           <TabsTrigger value="annual">Roční plán</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="monthly" className="mt-3 space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Select value={String(selectedMonth)} onValueChange={(value) => setSelectedMonth(Number(value))}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Array.from({ length: 12 }, (_, idx) => idx + 1).map((month) => (
-              <SelectItem key={month} value={String(month)}>
-                {format(new Date(selectedYear, month - 1, 1), 'LLLL', { locale: cs })}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={String(selectedYear)} onValueChange={(value) => setSelectedYear(Number(value))}>
-          <SelectTrigger className="w-[120px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Array.from({ length: 4 }, (_, idx) => now.getFullYear() - idx).map((year) => (
-              <SelectItem key={year} value={String(year)}>
-                {year}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Badge variant={canManageBudgets ? 'default' : 'secondary'}>
-          Rozpočet upravuje: {canManageBudgets ? 'admin/management' : 'jen ke čtení'}
-        </Badge>
-      </div>
+        <TabsContent value="monthly" className="mt-3 space-y-3">
 
-      <Card className="border-amber-300/60 bg-amber-50/30 dark:bg-amber-950/10">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Hlavní plán měsíce</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 pt-0">
-          <div className="space-y-1">
-            <Label>Hlavní cíl / úkol měsíce</Label>
-            <Textarea
-              rows={3}
-              value={planForm.planned_main_tasks}
-              onChange={(e) => setPlanForm((prev) => ({ ...prev, planned_main_tasks: e.target.value }))}
-              placeholder="Např. Spustit webinář, publikovat novou case study..."
-              disabled={!canManageBudgets}
-            />
+          {/* ── Period selector ── */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={String(selectedMonth)} onValueChange={(value) => setSelectedMonth(Number(value))}>
+              <SelectTrigger className="h-8 w-[140px] text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 12 }, (_, idx) => idx + 1).map((month) => (
+                  <SelectItem key={month} value={String(month)}>
+                    {format(new Date(selectedYear, month - 1, 1), 'LLLL', { locale: cs })}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={String(selectedYear)} onValueChange={(value) => setSelectedYear(Number(value))}>
+              <SelectTrigger className="h-8 w-[90px] text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 4 }, (_, idx) => now.getFullYear() - idx).map((year) => (
+                  <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {canManageBudgets && (
+              <Badge variant="outline" className="text-xs h-7">admin / management</Badge>
+            )}
           </div>
-          <div className="flex justify-end">
-            <Button
-              size="sm"
-              onClick={() => saveMonthlyDetailPlanMutation.mutate()}
-              disabled={!canManageBudgets || saveMonthlyDetailPlanMutation.isPending}
-            >
-              Uložit hlavní plán měsíce
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <Card className="border-primary/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Plánovaný rozpočet</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-primary">{Math.round(plannedTotalBudget).toLocaleString('cs-CZ')} Kč</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Skutečné náklady</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{Math.round(actualTotalCost).toLocaleString('cs-CZ')} Kč</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              práce: {Math.round(actualLaborCost + legacyLaborCost).toLocaleString('cs-CZ')} Kč, spend: {Math.round(adSpendTotal).toLocaleString('cs-CZ')} Kč
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Rozdíl plán vs realita</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className={`text-2xl font-bold ${budgetDiff >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-              {budgetDiff >= 0 ? '+' : ''}
-              {Math.round(budgetDiff).toLocaleString('cs-CZ')} Kč
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Detailní plán měsíce (editace)</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <Collapsible open={isMonthlyPlanOpen} onOpenChange={setIsMonthlyPlanOpen}>
-            <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md border p-2.5 text-left hover:bg-muted/40 transition-colors">
-              <div>
-                <p className="text-sm font-semibold">Zobrazit detailní plán položek</p>
-                <p className="text-xs text-muted-foreground">Content, video, grafika, spend, ostatní + plán leadů/klientů</p>
+          {/* ── Hlavní plán – inline collapsible ── */}
+          <Collapsible open={isMainMonthlyPlanOpen} onOpenChange={setIsMainMonthlyPlanOpen}>
+            <CollapsibleTrigger className="group flex w-full flex-col gap-1.5 rounded-lg border border-amber-200/70 bg-amber-50/40 px-3 py-2 text-left transition-colors hover:bg-amber-50/70 dark:border-amber-800/40 dark:bg-amber-950/20">
+              <div className="flex w-full items-center gap-2">
+                <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 shrink-0">Hlavní plán měsíce</span>
+                <span className="min-w-0 flex-1 text-xs text-muted-foreground">
+                  {planForm.monthly_tasks.length === 0 ? (
+                    <em>Zatím nevyplněno — klikni pro editaci</em>
+                  ) : (
+                    <>
+                      <span className="font-medium text-foreground">{planForm.monthly_tasks.length}</span>
+                      {' '}bod{planForm.monthly_tasks.length === 1 ? '' : planForm.monthly_tasks.length < 5 ? 'y' : 'ů'}
+                      {planForm.monthly_tasks.filter((t) => t.status === 'done').length > 0 && (
+                        <span className="ml-2 text-emerald-600">✓ {planForm.monthly_tasks.filter((t) => t.status === 'done').length} splněno</span>
+                      )}
+                      {planForm.monthly_tasks.filter((t) => t.status === 'partial').length > 0 && (
+                        <span className="ml-2 text-amber-600">≈ {planForm.monthly_tasks.filter((t) => t.status === 'partial').length} částečně</span>
+                      )}
+                      {planForm.monthly_tasks.filter((t) => t.status === 'not_done').length > 0 && (
+                        <span className="ml-2 text-destructive">✕ {planForm.monthly_tasks.filter((t) => t.status === 'not_done').length} nesplněno</span>
+                      )}
+                    </>
+                  )}
+                </span>
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
               </div>
-              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
+              {/* Sbaleno: vždy vidět první 3 body — co se v měsíci řeší */}
+              {!isMainMonthlyPlanOpen && planForm.monthly_tasks.length > 0 && (
+                <ul className="mt-0.5 space-y-1 border-t border-amber-200/60 pt-2 dark:border-amber-800/40">
+                  {planForm.monthly_tasks.slice(0, 3).map((task, idx) => (
+                    <li key={task.id} className="flex gap-2 text-xs leading-snug text-foreground">
+                      <span className="w-4 shrink-0 font-semibold text-amber-600 tabular-nums">{idx + 1}.</span>
+                      <span className="min-w-0 flex-1">
+                        {task.text.trim() || <span className="italic text-muted-foreground">(bez názvu)</span>}
+                      </span>
+                      <span className="shrink-0 text-[10px]" aria-hidden>
+                        {task.status === 'done' && <span className="text-emerald-600">✓</span>}
+                        {task.status === 'partial' && <span className="text-amber-600">≈</span>}
+                        {task.status === 'not_done' && <span className="text-destructive">✕</span>}
+                      </span>
+                    </li>
+                  ))}
+                  {planForm.monthly_tasks.length > 3 && (
+                    <li className="pl-6 text-[11px] text-muted-foreground">
+                      +{planForm.monthly_tasks.length - 3} další…
+                    </li>
+                  )}
+                </ul>
+              )}
             </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-2 pt-2">
-              <div className="grid gap-2 md:grid-cols-3">
-                <div className="space-y-1">
-                  <Label>Plán content management</Label>
-                  <Input type="number" value={planForm.planned_content_budget} onChange={(e) => setPlanForm((prev) => ({ ...prev, planned_content_budget: Number(e.target.value) || 0 }))} />
+            <CollapsibleContent>
+              <div className="mt-1 rounded-lg border border-amber-200/70 bg-amber-50/20 p-3 space-y-2 dark:border-amber-800/40">
+
+                {/* Task list */}
+                {planForm.monthly_tasks.length === 0 && (
+                  <p className="text-xs text-muted-foreground py-1">Žádné body — přidej první cíl měsíce.</p>
+                )}
+                <div className="space-y-2">
+                  {planForm.monthly_tasks.map((task, idx) => (
+                    <div key={task.id} className="rounded-md border bg-background p-2 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        {/* Status select */}
+                        <Select
+                          value={task.status ?? '__none__'}
+                          onValueChange={(val) => {
+                            const status = val === '__none__' ? null : val as MonthlyTaskStatus;
+                            setPlanForm((prev) => ({
+                              ...prev,
+                              monthly_tasks: prev.monthly_tasks.map((t) =>
+                                t.id === task.id ? { ...t, status } : t
+                              ),
+                            }));
+                          }}
+                          disabled={!canManageBudgets}
+                        >
+                          <SelectTrigger className={`h-7 w-[130px] text-xs shrink-0 ${
+                            task.status === 'done' ? 'border-emerald-300 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30' :
+                            task.status === 'partial' ? 'border-amber-300 text-amber-700 bg-amber-50 dark:bg-amber-950/30' :
+                            task.status === 'not_done' ? 'border-red-300 text-red-700 bg-red-50 dark:bg-red-950/30' :
+                            ''
+                          }`}>
+                            <SelectValue placeholder="nevyhodnoceno" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">— nevyhodnoceno</SelectItem>
+                            <SelectItem value="done">✓ Splněno</SelectItem>
+                            <SelectItem value="partial">≈ Částečně</SelectItem>
+                            <SelectItem value="not_done">✕ Nesplněno</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {/* Task text */}
+                        <Input
+                          className="h-7 text-xs flex-1"
+                          value={task.text}
+                          onChange={(e) => setPlanForm((prev) => ({
+                            ...prev,
+                            monthly_tasks: prev.monthly_tasks.map((t) =>
+                              t.id === task.id ? { ...t, text: e.target.value } : t
+                            ),
+                          }))}
+                          placeholder={`Cíl ${idx + 1}…`}
+                          disabled={!canManageBudgets}
+                        />
+                        {/* Delete */}
+                        {canManageBudgets && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                            onClick={() => setPlanForm((prev) => ({
+                              ...prev,
+                              monthly_tasks: prev.monthly_tasks.filter((t) => t.id !== task.id),
+                            }))}
+                          >
+                            ✕
+                          </Button>
+                        )}
+                      </div>
+                      {/* Feedback / review on this task */}
+                      <Textarea
+                        rows={1}
+                        className="text-xs resize-none border-dashed bg-muted/20 placeholder:text-muted-foreground/60"
+                        value={task.feedback}
+                        onChange={(e) => setPlanForm((prev) => ({
+                          ...prev,
+                          monthly_tasks: prev.monthly_tasks.map((t) =>
+                            t.id === task.id ? { ...t, feedback: e.target.value } : t
+                          ),
+                        }))}
+                        placeholder="Komentář / feedback k tomuto bodu…"
+                        disabled={!canManageBudgets}
+                      />
+                    </div>
+                  ))}
                 </div>
-                <div className="space-y-1">
-                  <Label>Plán video</Label>
-                  <Input type="number" value={planForm.planned_video_budget} onChange={(e) => setPlanForm((prev) => ({ ...prev, planned_video_budget: Number(e.target.value) || 0 }))} />
-                </div>
-                <div className="space-y-1">
-                  <Label>Plán Podcast postprodukce</Label>
-                  <Input
-                    type="number"
-                    value={planForm.planned_podcast_postproduction_budget}
-                    onChange={(e) => setPlanForm((prev) => ({ ...prev, planned_podcast_postproduction_budget: Number(e.target.value) || 0 }))}
+
+                {/* Add task button */}
+                {canManageBudgets && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs w-full border-dashed border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400"
+                    onClick={() => setPlanForm((prev) => ({
+                      ...prev,
+                      monthly_tasks: [...prev.monthly_tasks, { id: crypto.randomUUID(), text: '', status: null, feedback: '' }],
+                    }))}
+                  >
+                    + Přidat bod
+                  </Button>
+                )}
+
+                {/* Overall monthly review */}
+                <div className="border-t border-amber-200/60 pt-2 space-y-1 dark:border-amber-800/40">
+                  <p className="text-xs font-medium text-amber-700 dark:text-amber-400">Celkové hodnocení měsíce</p>
+                  <Textarea
+                    rows={2}
+                    className="text-xs resize-none"
+                    value={planForm.monthly_review}
+                    onChange={(e) => setPlanForm((prev) => ({ ...prev, monthly_review: e.target.value }))}
+                    placeholder="Stručné shrnutí — co se povedlo, co ne, co z toho plyne…"
+                    disabled={!canManageBudgets}
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label>Plán grafika</Label>
-                  <Input type="number" value={planForm.planned_graphic_budget} onChange={(e) => setPlanForm((prev) => ({ ...prev, planned_graphic_budget: Number(e.target.value) || 0 }))} />
-                </div>
-                <div className="space-y-1">
-                  <Label>Plán Meta spend</Label>
-                  <Input type="number" value={planForm.planned_meta_budget} onChange={(e) => setPlanForm((prev) => ({ ...prev, planned_meta_budget: Number(e.target.value) || 0 }))} />
-                </div>
-                <div className="space-y-1">
-                  <Label>Plán PPC spend</Label>
-                  <Input type="number" value={planForm.planned_ppc_budget} onChange={(e) => setPlanForm((prev) => ({ ...prev, planned_ppc_budget: Number(e.target.value) || 0 }))} />
-                </div>
-                <div className="space-y-1">
-                  <Label>Plán ostatní náklady</Label>
-                  <Input type="number" value={planForm.planned_other_budget} onChange={(e) => setPlanForm((prev) => ({ ...prev, planned_other_budget: Number(e.target.value) || 0 }))} />
-                </div>
-                <div className="space-y-1">
-                  <Label>Plán pronájem podcastového studia</Label>
-                  <Input
-                    type="number"
-                    value={planForm.planned_podcast_studio_rent_budget}
-                    onChange={(e) => setPlanForm((prev) => ({ ...prev, planned_podcast_studio_rent_budget: Number(e.target.value) || 0 }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Plán zájemců</Label>
-                  <Input type="number" value={planForm.planned_prospects} onChange={(e) => setPlanForm((prev) => ({ ...prev, planned_prospects: Number(e.target.value) || 0 }))} />
-                </div>
-                <div className="space-y-1">
-                  <Label>Plán leadů</Label>
-                  <Input type="number" value={planForm.planned_leads} onChange={(e) => setPlanForm((prev) => ({ ...prev, planned_leads: Number(e.target.value) || 0 }))} />
-                </div>
-                <div className="space-y-1">
-                  <Label>Plán nových klientů</Label>
-                  <Input type="number" value={planForm.planned_new_clients} onChange={(e) => setPlanForm((prev) => ({ ...prev, planned_new_clients: Number(e.target.value) || 0 }))} />
+
+                <div className="flex justify-end pt-1">
+                  <Button
+                    size="sm"
+                    onClick={() => saveMonthlyPlanMutation.mutate('main')}
+                    disabled={!canManageBudgets || saveMonthlyPlanMutation.isPending}
+                  >
+                    {saveMonthlyPlanMutation.isPending ? 'Ukládám…' : 'Uložit'}
+                  </Button>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/20 p-2">
-                <p className="text-xs text-muted-foreground">
-                  Součet detailního plánu: <span className="font-semibold text-foreground">{Math.round(plannedDetailTotalBudget).toLocaleString('cs-CZ')} Kč</span>
-                </p>
-                <Button onClick={() => saveMonthlyDetailPlanMutation.mutate()} disabled={!canManageBudgets || saveMonthlyDetailPlanMutation.isPending} size="sm">
-                  Uložit detailní plán
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* ── KPI stats strip ── */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="rounded-lg border bg-card px-3 py-2.5">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Plánovaný rozpočet</p>
+              <p className="mt-0.5 text-xl font-bold text-primary leading-tight">{Math.round(plannedTotalBudget).toLocaleString('cs-CZ')} Kč</p>
+            </div>
+            <div className="rounded-lg border bg-card px-3 py-2.5">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Skutečné náklady</p>
+              <p className="mt-0.5 text-xl font-bold leading-tight">{Math.round(actualTotalCost).toLocaleString('cs-CZ')} Kč</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">práce {Math.round(actualLaborCost + legacyLaborCost).toLocaleString('cs-CZ')} · spend {Math.round(adSpendTotal).toLocaleString('cs-CZ')}</p>
+            </div>
+            <div className="rounded-lg border bg-card px-3 py-2.5">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Rozdíl plán / detail</p>
+              <p className={`mt-0.5 text-xl font-bold leading-tight ${summaryVsDetailPlanDiff >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                +{Math.round(Math.abs(summaryVsDetailPlanDiff)).toLocaleString('cs-CZ')} Kč
+              </p>
+            </div>
+            <div className="rounded-lg border border-emerald-200/60 bg-emerald-50/30 px-3 py-2.5 dark:border-emerald-800/40 dark:bg-emerald-950/20">
+              <p className="text-[11px] font-medium text-emerald-700 uppercase tracking-wide dark:text-emerald-400">Přínos marketingu</p>
+              <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5 text-xs">
+                <span className="text-muted-foreground">Zájemci <strong className="text-foreground">{prospectsInMonth}</strong></span>
+                <span className="text-muted-foreground">Poptávky <strong className="text-foreground">{leadsInMonth}</strong></span>
+                <span className="text-muted-foreground">Klienti <strong className="text-foreground">{newClientsInMonth}</strong></span>
+                <span className="text-muted-foreground">Konverze <strong className="text-foreground">{convertedLeadsInMonth}</strong></span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Detailní plán + Rozpad kolegů (side-by-side) ── */}
+          <div className="grid gap-2 xl:grid-cols-2">
+            <Collapsible open={isDetailMonthlyPlanOpen} onOpenChange={setIsDetailMonthlyPlanOpen}>
+              <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition-colors hover:bg-muted/40">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Detailní plán měsíce</span>
+                  <span className="text-xs text-muted-foreground">{Math.round(plannedDetailTotalBudget).toLocaleString('cs-CZ')} Kč</span>
+                </div>
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="mt-1 rounded-lg border p-3 space-y-3">
+                  <div className="grid gap-x-3 gap-y-2 grid-cols-2 sm:grid-cols-3">
+                    {[
+                      { label: 'Content management', key: 'planned_content_budget' as const },
+                      { label: 'Video editing', key: 'planned_video_budget' as const },
+                      { label: 'Podcast postprodukce', key: 'planned_podcast_postproduction_budget' as const },
+                      { label: 'Grafika', key: 'planned_graphic_budget' as const },
+                      { label: 'Meta spend', key: 'planned_meta_budget' as const },
+                      { label: 'PPC spend', key: 'planned_ppc_budget' as const },
+                      { label: 'Ostatní náklady', key: 'planned_other_budget' as const },
+                      { label: 'Pronájem studia', key: 'planned_podcast_studio_rent_budget' as const },
+                    ].map(({ label, key }) => (
+                      <div key={key} className="space-y-0.5">
+                        <Label className="text-xs text-muted-foreground">{label}</Label>
+                        <Input className="h-7 text-xs" type="number" value={planForm[key]} onChange={(e) => setPlanForm((prev) => ({ ...prev, [key]: Number(e.target.value) || 0 }))} disabled={!canManageBudgets} />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-t pt-2 grid gap-x-3 gap-y-2 grid-cols-3">
+                    {[
+                      { label: 'Plán zájemců', key: 'planned_prospects' as const },
+                      { label: 'Plán leadů', key: 'planned_leads' as const },
+                      { label: 'Plán klientů', key: 'planned_new_clients' as const },
+                    ].map(({ label, key }) => (
+                      <div key={key} className="space-y-0.5">
+                        <Label className="text-xs text-muted-foreground">{label}</Label>
+                        <Input className="h-7 text-xs" type="number" value={planForm[key]} onChange={(e) => setPlanForm((prev) => ({ ...prev, [key]: Number(e.target.value) || 0 }))} disabled={!canManageBudgets} />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/30 px-2.5 py-1.5 text-xs">
+                    <span className="text-muted-foreground">Součet: <span className="font-semibold text-foreground">{Math.round(plannedDetailTotalBudget).toLocaleString('cs-CZ')} Kč</span></span>
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => saveMonthlyPlanMutation.mutate('detail')}
+                      disabled={!canManageBudgets || saveMonthlyPlanMutation.isPending}
+                    >
+                      {saveMonthlyPlanMutation.isPending ? 'Ukládám…' : 'Uložit'}
+                    </Button>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible open={isRoleBreakdownOpen} onOpenChange={setIsRoleBreakdownOpen}>
+              <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition-colors hover:bg-muted/40">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Rozpad nákladů podle kolegů</span>
+                  {colleagueSummary.length > 0 && (
+                    <span className="text-xs text-muted-foreground">{colleagueSummary.length} kolegů</span>
+                  )}
+                </div>
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                {colleagueSummary.length === 0 ? (
+                  <p className="mt-1 rounded-lg border px-3 py-4 text-center text-xs text-muted-foreground">
+                    V tomto měsíci zatím nikdo nezalogoval aktivitu.
+                  </p>
+                ) : (
+                  <div className="mt-1 rounded-lg border divide-y overflow-hidden">
+                    {colleagueSummary.map((item) => (
+                      <div key={item.id} className="px-3 py-2.5">
+                        {/* Header row: name + total */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold truncate">{item.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.logs} {item.logs === 1 ? 'výstup' : item.logs < 5 ? 'výstupy' : 'výstupů'}
+                              {Number(item.hours) > 0 && ` · ${Number(item.hours).toFixed(1)} h`}
+                            </p>
+                          </div>
+                          <span className="text-sm font-bold tabular-nums shrink-0">{Math.round(item.amount).toLocaleString('cs-CZ')} Kč</span>
+                        </div>
+                        {/* Activity breakdown */}
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {item.activities.map((act) => (
+                            <span
+                              key={act.title}
+                              className="inline-flex items-center rounded-full border bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground"
+                            >
+                              <span className="font-semibold text-foreground mr-1">{act.count}×</span>
+                              {act.title}
+                              {act.totalAmount > 0 && (
+                                <span className="ml-1 text-muted-foreground/70">· {Math.round(act.totalAmount).toLocaleString('cs-CZ')} Kč</span>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                        {/* Monthly minimum bar */}
+                        {item.monthlyMinimum !== null && (
+                          <div className="mt-2 space-y-0.5">
+                            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                              <span>Min. {Math.round(item.monthlyMinimum).toLocaleString('cs-CZ')} Kč / měsíc</span>
+                              <span className={item.remainingToMinimum && item.remainingToMinimum > 0 ? 'text-amber-600 font-medium' : 'text-emerald-600 font-medium'}>
+                                {item.remainingToMinimum && item.remainingToMinimum > 0
+                                  ? `zbývá ${Math.round(item.remainingToMinimum).toLocaleString('cs-CZ')} Kč`
+                                  : '✓ splněno'}
+                              </span>
+                            </div>
+                            <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${item.remainingToMinimum && item.remainingToMinimum > 0 ? 'bg-amber-400' : 'bg-emerald-500'}`}
+                                style={{ width: `${Math.min(100, (item.amount / item.monthlyMinimum) * 100).toFixed(1)}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+
+          {/* ── KPI tabulka ── */}
+          <Collapsible>
+            <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-lg border border-sky-200/60 bg-sky-50/20 px-3 py-2 text-left transition-colors hover:bg-sky-50/40 dark:border-sky-800/40 dark:bg-sky-950/20">
+              <span className="text-sm font-medium">Marketing KPI: plán vs realita</span>
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-1 rounded-lg border overflow-x-auto">
+                <Table className="[&_td]:py-1.5 [&_th]:py-1.5 text-sm">
+                  <TableHeader>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="text-xs">Metrika</TableHead>
+                      <TableHead className="text-right text-xs">Plán</TableHead>
+                      <TableHead className="text-right text-xs">Realita</TableHead>
+                      <TableHead className="text-right text-xs">Odchylka</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[
+                      { label: 'Content management', plan: planForm.planned_content_budget, actual: contentWorkCost },
+                      { label: 'Video editing', plan: planForm.planned_video_budget, actual: pureVideoEditingCost },
+                      { label: 'Podcast postprodukce', plan: planForm.planned_podcast_postproduction_budget, actual: podcastPostproductionCost },
+                      { label: 'Pronájem studia', plan: planForm.planned_podcast_studio_rent_budget, actual: null },
+                      { label: 'Graphic design', plan: planForm.planned_graphic_budget, actual: creativeWorkCost },
+                      { label: 'Ad spend', plan: plannedAdSpendBudget, actual: actualMetaSpend + actualPpcSpend },
+                      { label: 'Ostatní / fix', plan: planForm.planned_other_budget, actual: actualOtherCost },
+                    ].map(({ label, plan, actual }) => (
+                      <TableRow key={label}>
+                        <TableCell className="text-xs">{label}</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums">{Math.round(plan).toLocaleString('cs-CZ')} Kč</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums">{actual !== null ? `${Math.round(actual).toLocaleString('cs-CZ')} Kč` : '—'}</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums">{actual !== null ? `${Math.round(plan - actual).toLocaleString('cs-CZ')} Kč` : '—'}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-muted/40 font-semibold">
+                      <TableCell className="text-xs">Celkem</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{Math.round(plannedDetailTotalBudget).toLocaleString('cs-CZ')} Kč</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{Math.round(actualTotalCost).toLocaleString('cs-CZ')} Kč</TableCell>
+                      <TableCell className={`text-right text-xs tabular-nums ${detailBudgetDiff >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>{Math.round(detailBudgetDiff).toLocaleString('cs-CZ')} Kč</TableCell>
+                    </TableRow>
+                    <TableRow className="border-t-2">
+                      <TableCell className="text-xs text-muted-foreground">Počet leadů</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{planForm.planned_leads}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{leadsInMonth}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{planForm.planned_leads - leadsInMonth}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="text-xs text-muted-foreground">CPL (cena za lead)</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{plannedCpl !== null ? `${Math.round(plannedCpl).toLocaleString('cs-CZ')} Kč` : '—'}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{actualCpl !== null ? `${Math.round(actualCpl).toLocaleString('cs-CZ')} Kč` : '—'}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{plannedCpl !== null && actualCpl !== null ? `${Math.round(plannedCpl - actualCpl).toLocaleString('cs-CZ')} Kč` : '—'}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="text-xs text-muted-foreground">Počet nových klientů</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{planForm.planned_new_clients}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{newClientsInMonth}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{planForm.planned_new_clients - newClientsInMonth}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="text-xs text-muted-foreground">CAC (cena za klienta)</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{plannedCac !== null ? `${Math.round(plannedCac).toLocaleString('cs-CZ')} Kč` : '—'}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{actualCac !== null ? `${Math.round(actualCac).toLocaleString('cs-CZ')} Kč` : '—'}</TableCell>
+                      <TableCell className="text-right text-xs tabular-nums">{plannedCac !== null && actualCac !== null ? `${Math.round(plannedCac - actualCac).toLocaleString('cs-CZ')} Kč` : '—'}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* ── Zapsat práci ── */}
+          <Collapsible open={isWorkLogFormOpen} onOpenChange={setIsWorkLogFormOpen}>
+            <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-lg border border-emerald-200/70 bg-emerald-50/40 px-3 py-2.5 text-left transition-colors hover:bg-emerald-50/70 dark:border-emerald-800/40 dark:bg-emerald-950/20">
+              <div className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Zapsat interní marketing práci</span>
+              </div>
+              <ChevronDown className="h-3.5 w-3.5 text-emerald-500 transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-1 rounded-lg border border-emerald-200/50 p-3 space-y-2 dark:border-emerald-800/30">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                  <div className="space-y-0.5">
+                    <Label className="text-xs">Projekt</Label>
+                    <Select value={workLogForm.project} onValueChange={(value) => setWorkLogForm((prev) => ({ ...prev, project: value as MarketingProject }))}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(MARKETING_PROJECT_LABELS).map(([k, v]) => (
+                          <SelectItem key={k} value={k}>{v}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-0.5">
+                    <Label className="text-xs">Kolega</Label>
+                    <Select
+                      value={workLogForm.colleague_id}
+                      onValueChange={(value) => setWorkLogForm((prev) => {
+                        const nextRole = colleaguePrimaryRoleById.get(value);
+                        const nextHourlyRate = colleagueHourlyRateById.get(value);
+                        if (!nextRole) {
+                          return {
+                            ...prev,
+                            colleague_id: value,
+                            hourly_rate: nextHourlyRate ? String(nextHourlyRate) : prev.hourly_rate,
+                          };
+                        }
+                        return {
+                          ...prev,
+                          colleague_id: value,
+                          role: nextRole,
+                          main_activity: getDefaultMainActivityForWorkType(prev.work_type, nextRole),
+                          hourly_rate: nextHourlyRate ? String(nextHourlyRate) : prev.hourly_rate,
+                        };
+                      })}
+                      disabled={!canCreateLogsForOthers && !!colleagueId}
+                    >
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>{selectableColleagues.map((c) => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-0.5">
+                    <Label className="text-xs">Role</Label>
+                    <Select value={workLogForm.role} onValueChange={(value) => { const nextRole = value as MarketingRole; setWorkLogForm((prev) => ({ ...prev, role: nextRole, main_activity: getDefaultMainActivityForWorkType(prev.work_type, nextRole) })); }}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>{Object.entries(ROLE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-0.5">
+                    <Label className="text-xs">Hlavní činnost</Label>
+                    <Select value={workLogForm.main_activity} onValueChange={(value) => setWorkLogForm((prev) => ({ ...prev, main_activity: value as MainMarketingActivity }))}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>{Object.entries(MAIN_ACTIVITY_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-0.5">
+                    <Label className="text-xs">Činnost</Label>
+                    <Select value={workLogForm.work_type} onValueChange={(value) => { const wt = value as MarketingWorkType; setWorkLogForm((prev) => ({ ...prev, work_type: wt, main_activity: getDefaultMainActivityForWorkType(wt, prev.role), title: wt === 'other_hourly' ? prev.title : WORK_TYPE_LABELS[wt], hours: wt === 'other_hourly' ? prev.hours : '' })); }}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>{Object.entries(WORK_TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex gap-2 items-end">
+                  <div className="space-y-0.5">
+                    <Label className="text-xs">Datum</Label>
+                    <Input className="h-8 text-xs w-36" type="date" value={workLogForm.activity_date} onChange={(e) => setWorkLogForm((prev) => ({ ...prev, activity_date: e.target.value }))} />
+                  </div>
+                  {workLogForm.work_type === 'other_hourly' ? (
+                    <>
+                      <div className="space-y-0.5 flex-1">
+                        <Label className="text-xs">Název činnosti</Label>
+                        <Input className="h-8 text-xs" value={workLogForm.title} onChange={(e) => setWorkLogForm((prev) => ({ ...prev, title: e.target.value }))} placeholder="Strategická příprava…" />
+                      </div>
+                      <div className="space-y-0.5 w-20">
+                        <Label className="text-xs">Hodiny</Label>
+                        <Input className="h-8 text-xs" type="number" value={workLogForm.hours} onChange={(e) => setWorkLogForm((prev) => ({ ...prev, hours: e.target.value }))} placeholder="3.5" />
+                      </div>
+                      <div className="space-y-0.5 w-32">
+                        <Label className="text-xs">Sazba Kč/h</Label>
+                        <Select value={workLogForm.hourly_rate} onValueChange={(value) => setWorkLogForm((prev) => ({ ...prev, hourly_rate: value }))}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>{availableHourlyRateOptions.map((r) => <SelectItem key={r} value={String(r)}>{r.toLocaleString('cs-CZ')} Kč/h</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex-1 rounded-md border bg-muted/30 px-2.5 py-1.5">
+                      <p className="text-xs font-medium">Fixní odměna: {FIXED_WORK_REWARD[workLogForm.work_type].toLocaleString('cs-CZ')} Kč</p>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-0.5">
+                  <Label className="text-xs">Popis (volitelné)</Label>
+                  <Textarea className="text-xs resize-none" rows={1} value={workLogForm.description} onChange={(e) => setWorkLogForm((prev) => ({ ...prev, description: e.target.value }))} />
+                </div>
+                <Button size="sm" onClick={() => addWorkLogMutation.mutate()} disabled={addWorkLogMutation.isPending}>
+                  Přidat aktivitu
                 </Button>
               </div>
             </CollapsibleContent>
           </Collapsible>
-        </CardContent>
-      </Card>
 
-      <div className="grid gap-3 xl:grid-cols-2">
-        <Card className="border-dashed">
-          <CardHeader className="pb-2">
-            <CardTitle>Rozpad nákladů podle kolegů (sbalené)</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <Collapsible open={isRoleBreakdownOpen} onOpenChange={setIsRoleBreakdownOpen}>
-              <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md border p-2.5 text-left hover:bg-muted/40 transition-colors">
-                <div>
-                  <p className="text-sm font-semibold">Zobrazit detail rozpadu podle kolegů</p>
-                  <p className="text-xs text-muted-foreground">Podle toho, kdo aktivitu zalogoval.</p>
-                </div>
-                <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-2 pt-2">
-                {colleagueSummary.map((item) => (
-                  <div key={item.name} className="flex items-center justify-between rounded-md border p-2.5">
-                    <div>
-                      <p className="font-medium">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">{item.logs} záznamů, {Number(item.hours || 0).toFixed(1)} h</p>
-                      {item.monthlyMinimum !== null && (
-                        <p className="text-xs text-muted-foreground">
-                          Minimum: {Math.round(item.monthlyMinimum).toLocaleString('cs-CZ')} Kč / měsíc, zbývá:{' '}
-                          <span className={item.remainingToMinimum && item.remainingToMinimum > 0 ? 'text-amber-600 font-semibold' : 'text-emerald-600 font-semibold'}>
-                            {Math.round(item.remainingToMinimum || 0).toLocaleString('cs-CZ')} Kč
-                          </span>
-                        </p>
-                      )}
-                    </div>
-                    <p className="font-semibold">{Math.round(item.amount).toLocaleString('cs-CZ')} Kč</p>
-                  </div>
-                ))}
-                <p className="text-xs text-muted-foreground">Rozpad je počítaný z konkrétních marketing work logů podle kolegy.</p>
-              </CollapsibleContent>
-            </Collapsible>
-          </CardContent>
-        </Card>
-
-        <Card className="border-emerald-300/40 bg-emerald-50/20 dark:bg-emerald-950/10">
-          <CardHeader className="pb-2">
-            <CardTitle>Přínos marketingu (aktuální měsíc)</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1 pt-0 text-sm">
-            <p>Noví zájemci (lead magnet): <span className="font-semibold">{prospectsInMonth}</span></p>
-            <p>Poptávky: <span className="font-semibold">{leadsInMonth}</span></p>
-            <p>Noví klienti: <span className="font-semibold">{newClientsInMonth}</span></p>
-            <p>Konverze leadů: <span className="font-semibold">{convertedLeadsInMonth}</span></p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="border-sky-300/40 bg-sky-50/20 dark:bg-sky-950/10">
-        <CardHeader className="pb-2">
-          <CardTitle>Marketing KPI: plán vs realita</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto pt-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Metrika</TableHead>
-                <TableHead className="text-right">Plán</TableHead>
-                <TableHead className="text-right">Realita</TableHead>
-                <TableHead className="text-right">Odchylka</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow>
-                <TableCell>Content manager (salary)</TableCell>
-                <TableCell className="text-right">{Math.round(planForm.planned_content_budget).toLocaleString('cs-CZ')} Kč</TableCell>
-                <TableCell className="text-right">{Math.round(contentWorkCost).toLocaleString('cs-CZ')} Kč</TableCell>
-                <TableCell className="text-right">{Math.round(planForm.planned_content_budget - contentWorkCost).toLocaleString('cs-CZ')} Kč</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Video editing a produkce</TableCell>
-                <TableCell className="text-right">{Math.round(planForm.planned_video_budget).toLocaleString('cs-CZ')} Kč</TableCell>
-                <TableCell className="text-right">{Math.round(pureVideoEditingCost).toLocaleString('cs-CZ')} Kč</TableCell>
-                <TableCell className="text-right">{Math.round(planForm.planned_video_budget - pureVideoEditingCost).toLocaleString('cs-CZ')} Kč</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Podcast postprodukce</TableCell>
-                <TableCell className="text-right">{Math.round(planForm.planned_podcast_postproduction_budget).toLocaleString('cs-CZ')} Kč</TableCell>
-                <TableCell className="text-right">{Math.round(podcastPostproductionCost).toLocaleString('cs-CZ')} Kč</TableCell>
-                <TableCell className="text-right">{Math.round(planForm.planned_podcast_postproduction_budget - podcastPostproductionCost).toLocaleString('cs-CZ')} Kč</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Pronájem podcastového studia</TableCell>
-                <TableCell className="text-right">{Math.round(planForm.planned_podcast_studio_rent_budget).toLocaleString('cs-CZ')} Kč</TableCell>
-                <TableCell className="text-right">—</TableCell>
-                <TableCell className="text-right">—</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Graphic design</TableCell>
-                <TableCell className="text-right">{Math.round(planForm.planned_graphic_budget).toLocaleString('cs-CZ')} Kč</TableCell>
-                <TableCell className="text-right">{Math.round(creativeWorkCost).toLocaleString('cs-CZ')} Kč</TableCell>
-                <TableCell className="text-right">{Math.round(planForm.planned_graphic_budget - creativeWorkCost).toLocaleString('cs-CZ')} Kč</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Ad spend</TableCell>
-                <TableCell className="text-right">{Math.round(plannedAdSpendBudget).toLocaleString('cs-CZ')} Kč</TableCell>
-                <TableCell className="text-right">{Math.round(actualMetaSpend + actualPpcSpend).toLocaleString('cs-CZ')} Kč</TableCell>
-                <TableCell className="text-right">{Math.round(plannedAdSpendBudget - (actualMetaSpend + actualPpcSpend)).toLocaleString('cs-CZ')} Kč</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Nástroje / ostatní fix</TableCell>
-                <TableCell className="text-right">{Math.round(planForm.planned_other_budget).toLocaleString('cs-CZ')} Kč</TableCell>
-                <TableCell className="text-right">{Math.round(actualOtherCost).toLocaleString('cs-CZ')} Kč</TableCell>
-                <TableCell className="text-right">{Math.round(planForm.planned_other_budget - actualOtherCost).toLocaleString('cs-CZ')} Kč</TableCell>
-              </TableRow>
-              <TableRow className="bg-muted/30">
-                <TableCell className="font-semibold">Celkem marketing</TableCell>
-                <TableCell className="text-right font-semibold">{Math.round(plannedDetailTotalBudget).toLocaleString('cs-CZ')} Kč</TableCell>
-                <TableCell className="text-right font-semibold">{Math.round(actualTotalCost).toLocaleString('cs-CZ')} Kč</TableCell>
-                <TableCell className="text-right font-semibold">{Math.round(detailBudgetDiff).toLocaleString('cs-CZ')} Kč</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Počet leadů</TableCell>
-                <TableCell className="text-right">{planForm.planned_leads}</TableCell>
-                <TableCell className="text-right">{leadsInMonth}</TableCell>
-                <TableCell className="text-right">{planForm.planned_leads - leadsInMonth}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Cena za lead</TableCell>
-                <TableCell className="text-right">{plannedCpl !== null ? `${Math.round(plannedCpl).toLocaleString('cs-CZ')} Kč` : '—'}</TableCell>
-                <TableCell className="text-right">{actualCpl !== null ? `${Math.round(actualCpl).toLocaleString('cs-CZ')} Kč` : '—'}</TableCell>
-                <TableCell className="text-right">{plannedCpl !== null && actualCpl !== null ? `${Math.round(plannedCpl - actualCpl).toLocaleString('cs-CZ')} Kč` : '—'}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Počet nových klientů</TableCell>
-                <TableCell className="text-right">{planForm.planned_new_clients}</TableCell>
-                <TableCell className="text-right">{newClientsInMonth}</TableCell>
-                <TableCell className="text-right">{planForm.planned_new_clients - newClientsInMonth}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Cena za nového klienta</TableCell>
-                <TableCell className="text-right">{plannedCac !== null ? `${Math.round(plannedCac).toLocaleString('cs-CZ')} Kč` : '—'}</TableCell>
-                <TableCell className="text-right">{actualCac !== null ? `${Math.round(actualCac).toLocaleString('cs-CZ')} Kč` : '—'}</TableCell>
-                <TableCell className="text-right">{plannedCac !== null && actualCac !== null ? `${Math.round(plannedCac - actualCac).toLocaleString('cs-CZ')} Kč` : '—'}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Zapsat interní marketing práci</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 pt-0">
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
-            <div className="space-y-1">
-              <Label>Role</Label>
-              <Select
-                value={workLogForm.role}
-                onValueChange={(value) => {
-                  const nextRole = value as MarketingRole;
-                  setWorkLogForm((prev) => ({
-                    ...prev,
-                    role: nextRole,
-                    main_activity: getDefaultMainActivityForWorkType(prev.work_type, nextRole),
-                  }));
-                }}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(ROLE_LABELS).map(([key, value]) => (
-                    <SelectItem key={key} value={key}>{value}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* ── Work log tabulka ── */}
+          <div className="rounded-lg border overflow-hidden">
+            <div className="flex items-center justify-between border-b bg-muted/30 px-3 py-1.5">
+              <p className="text-sm font-medium">Zalogované aktivity</p>
+              {isLoading && <p className="text-xs text-muted-foreground">Načítám…</p>}
             </div>
-            <div className="space-y-1">
-              <Label>Činnost</Label>
-              <Select
-                value={workLogForm.work_type}
-                onValueChange={(value) => {
-                  const workType = value as MarketingWorkType;
-                  setWorkLogForm((prev) => ({
-                    ...prev,
-                    work_type: workType,
-                    main_activity: getDefaultMainActivityForWorkType(workType, prev.role),
-                    title: workType === 'other_hourly' ? prev.title : WORK_TYPE_LABELS[workType],
-                    hours: workType === 'other_hourly' ? prev.hours : '',
-                  }));
-                }}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(WORK_TYPE_LABELS).map(([key, value]) => (
-                    <SelectItem key={key} value={key}>{value}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label>Hlavní činnost (povinné)</Label>
-              <Select
-                value={workLogForm.main_activity}
-                onValueChange={(value) => setWorkLogForm((prev) => ({ ...prev, main_activity: value as MainMarketingActivity }))}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(MAIN_ACTIVITY_LABELS).map(([key, value]) => (
-                    <SelectItem key={key} value={key}>{value}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label>Kolega</Label>
-              <Select
-                value={workLogForm.colleague_id}
-                onValueChange={(value) => setWorkLogForm((prev) => ({ ...prev, colleague_id: value }))}
-                disabled={!canCreateLogsForOthers && !!colleagueId}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {selectableColleagues.map((colleague) => (
-                    <SelectItem key={colleague.id} value={colleague.id}>
-                      {colleague.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-            <div className="space-y-1">
-              <Label>Datum</Label>
-              <Input type="date" value={workLogForm.activity_date} onChange={(e) => setWorkLogForm((prev) => ({ ...prev, activity_date: e.target.value }))} />
-            </div>
-          </div>
-          {workLogForm.work_type === 'other_hourly' ? (
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-              <div className="space-y-1">
-                <Label>Název činnosti</Label>
-                <Input
-                  value={workLogForm.title}
-                  onChange={(e) => setWorkLogForm((prev) => ({ ...prev, title: e.target.value }))}
-                  placeholder="Např. strategická příprava"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Hodiny</Label>
-                <Input
-                  type="number"
-                  value={workLogForm.hours}
-                  onChange={(e) => setWorkLogForm((prev) => ({ ...prev, hours: e.target.value }))}
-                  placeholder="např. 3.5"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Hodinová sazba (Kč)</Label>
-                <Select
-                  value={workLogForm.hourly_rate}
-                  onValueChange={(value) => setWorkLogForm((prev) => ({ ...prev, hourly_rate: value }))}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {HOURLY_RATE_OPTIONS.map((hourlyRate) => (
-                      <SelectItem key={hourlyRate} value={String(hourlyRate)}>
-                        {hourlyRate.toLocaleString('cs-CZ')} Kč / h
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-md border bg-muted/30 p-2.5">
-              <p className="text-sm font-medium">
-                Fixní odměna: {FIXED_WORK_REWARD[workLogForm.work_type].toLocaleString('cs-CZ')} Kč
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Pro tuto činnost se částka doplní automaticky.
-              </p>
-            </div>
-          )}
-          <div className="space-y-1">
-            <Label>Popis (volitelné)</Label>
-            <Textarea rows={2} value={workLogForm.description} onChange={(e) => setWorkLogForm((prev) => ({ ...prev, description: e.target.value }))} />
-          </div>
-          <Button onClick={() => addWorkLogMutation.mutate()} disabled={addWorkLogMutation.isPending}>
-            Přidat aktivitu
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Detail interní marketing práce</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 pt-0">
-          {isLoading ? (
-            <p className="text-sm text-muted-foreground">Načítám data marketingu…</p>
-          ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="[&_td]:py-1.5 [&_th]:py-1.5">
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Datum</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Kolega</TableHead>
-                    <TableHead>Hlavní činnost</TableHead>
-                    <TableHead>Aktivita</TableHead>
-                    <TableHead className="text-right">Náklad</TableHead>
+                  <TableRow className="bg-muted/20">
+                    <TableHead className="text-xs w-[70px]">Datum</TableHead>
+                    <TableHead className="text-xs">Kolega</TableHead>
+                    <TableHead className="text-xs w-[80px]">Projekt</TableHead>
+                    <TableHead className="text-xs">Činnost</TableHead>
+                    <TableHead className="text-xs">Aktivita</TableHead>
+                    <TableHead className="text-right text-xs w-[100px]">Kč</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {workLogs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-4">
-                        Zatím bez marketing aktivit v tomto měsíci.
+                      <TableCell colSpan={6} className="text-center text-xs text-muted-foreground py-6">
+                        Žádné aktivity v tomto měsíci.
                       </TableCell>
                     </TableRow>
                   ) : (
                     workLogs.map((log) => (
                       <TableRow key={log.id}>
-                        <TableCell>{new Date(log.activity_date).toLocaleDateString('cs-CZ')}</TableCell>
-                        <TableCell>{ROLE_LABELS[log.role]}</TableCell>
-                        <TableCell>{colleagueNameById.get(log.colleague_id) || '—'}</TableCell>
-                        <TableCell>{MAIN_ACTIVITY_LABELS[resolveMainActivityFromLog(log)]}</TableCell>
-                        <TableCell>
-                          <p className="font-medium">{log.title}</p>
-                          {log.description && <p className="text-xs text-muted-foreground">{log.description}</p>}
+                        <TableCell className="text-xs tabular-nums text-muted-foreground">{new Date(log.activity_date).toLocaleDateString('cs-CZ', { day: '2-digit', month: '2-digit' })}</TableCell>
+                        <TableCell className="text-xs">{colleagueNameById.get(log.colleague_id) || '—'}</TableCell>
+                        <TableCell className="text-xs">
+                          {log.project ? (
+                            <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                              log.project === 'socials' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' :
+                              log.project === 'danny' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' :
+                              'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                            }`}>
+                              {MARKETING_PROJECT_LABELS[log.project]}
+                            </span>
+                          ) : '—'}
                         </TableCell>
-                        <TableCell className="text-right">{Math.round(log.amount).toLocaleString('cs-CZ')} Kč</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{MAIN_ACTIVITY_LABELS[resolveMainActivityFromLog(log)]}</TableCell>
+                        <TableCell className="text-xs">
+                          <span className="font-medium">{log.title}</span>
+                          {log.description && <span className="text-muted-foreground"> · {log.description}</span>}
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-medium tabular-nums">{Math.round(log.amount).toLocaleString('cs-CZ')} Kč</TableCell>
                       </TableRow>
                     ))
                   )}
                 </TableBody>
               </Table>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+
         </TabsContent>
 
         <TabsContent value="annual" className="mt-3 space-y-4">
