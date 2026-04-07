@@ -12,7 +12,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AuditEditor } from './AuditEditor';
 import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Copy, ExternalLink, Check, TrendingUp, Plus, X, History, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCRMData } from '@/hooks/useCRMData';
@@ -657,7 +656,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[95vh] p-0">
+      <DialogContent className="sm:max-w-[700px] max-h-[95vh] p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>
             {createdOfferUrl 
@@ -701,7 +700,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
         ) : (
           // Form state
           <>
-            <ScrollArea className="max-h-[calc(95vh-180px)]">
+            <div className="flex-1 min-h-0 overflow-y-auto">
               <div className="space-y-4 px-6 pb-4">
 
                 {/* Audit summary - Co jsme zjistili */}
@@ -1304,7 +1303,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                 )}
 
               </div>
-            </ScrollArea>
+            </div>
 
             <DialogFooter className="px-6 py-4 border-t">
               <Button variant="outline" onClick={handleClose}>
