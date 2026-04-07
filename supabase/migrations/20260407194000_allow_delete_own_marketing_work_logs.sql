@@ -4,7 +4,6 @@ SET ROLE postgres;
 -- Keep admin/management/super-admin access unchanged.
 
 DROP POLICY IF EXISTS "marketing_work_logs_update" ON public.marketing_work_logs;
-
 CREATE POLICY "marketing_work_logs_update"
   ON public.marketing_work_logs
   FOR UPDATE
@@ -24,7 +23,6 @@ CREATE POLICY "marketing_work_logs_update"
   );
 
 DROP POLICY IF EXISTS "marketing_work_logs_delete" ON public.marketing_work_logs;
-
 CREATE POLICY "marketing_work_logs_delete"
   ON public.marketing_work_logs
   FOR DELETE
