@@ -118,3 +118,6 @@ verify_jwt = false
 
 [functions.send-notification-email]
 verify_jwt = false
+
+[functions.sync-meta-ad-spend]
+verify_jwt = false

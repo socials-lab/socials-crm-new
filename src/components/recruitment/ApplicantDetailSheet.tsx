@@ -58,6 +58,8 @@ import { SendInterviewInviteDialog } from './SendInterviewInviteDialog';
 import { SendRejectionEmailDialog } from './SendRejectionEmailDialog';
 import { ApplicantCommunicationTimeline } from './ApplicantCommunicationTimeline';
 import { InlineEditField } from '@/components/leads/InlineEditField';
+import { invokeWithTimeout } from '@/lib/supabaseUtils';
+import { toast } from 'sonner';
 
 interface ApplicantDetailSheetProps {
   applicant: Applicant | null;
@@ -78,6 +80,7 @@ export function ApplicantDetailSheet({
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [isInterviewInviteDialogOpen, setIsInterviewInviteDialogOpen] = useState(false);
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
+  const [isInvitingToCRM, setIsInvitingToCRM] = useState(false);
 
   if (!applicant) return null;
 
@@ -133,6 +136,46 @@ export function ApplicantDetailSheet({
       await updateApplicant(applicant.id, updates);
     } catch (error) {
       console.error('Failed to update applicant:', error);
+    }
+  };
+
+  const handleInviteToCRM = async () => {
+    if (!applicant.email) {
+      toast.error('Kandidát nemá vyplněný email.');
+      return;
+    }
+    const nameParts = (applicant.full_name || '').trim().split(/\s+/).filter(Boolean);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ');
+    if (!firstName) {
+      toast.error('Kandidát nemá vyplněné jméno.');
+      return;
+    }
+
+    setIsInvitingToCRM(true);
+    try {
+      const { data, error } = await invokeWithTimeout<{ error?: string }>('invite-user', {
+        body: {
+          email: applicant.email,
+          firstName,
+          lastName,
+          role: 'specialist',
+          position: applicant.position || undefined,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      toast.success(`Pozvánka do CRM byla odeslána na ${applicant.email}.`);
+    } catch (error) {
+      console.error('Failed to invite applicant to CRM:', error);
+      toast.error(error instanceof Error ? error.message : 'Nepodařilo se odeslat CRM pozvánku.');
+    } finally {
+      setIsInvitingToCRM(false);
     }
   };
 
@@ -368,6 +411,33 @@ export function ApplicantDetailSheet({
                             Převést ručně
                           </Button>
                         )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* CRM invitation */}
+                  <Card className="border-border/50">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${onboardingCompleted ? 'bg-green-100 text-green-600' : 'bg-muted'}`}>
+                            <UserPlus className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">Pozvat do CRM</p>
+                            <p className="text-xs text-muted-foreground">
+                              Odešle přístupový email na {applicant.email || 'vyplněný email kandidáta'}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={handleInviteToCRM}
+                          disabled={!onboardingCompleted || !applicant.email || isInvitingToCRM}
+                        >
+                          <Send className="h-4 w-4 mr-1" />
+                          {isInvitingToCRM ? 'Odesílám…' : 'Pozvat do CRM'}
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>

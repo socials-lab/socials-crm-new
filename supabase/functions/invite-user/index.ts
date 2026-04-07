@@ -70,7 +70,7 @@ serve(async (req) => {
       );
     }
 
-    // Check if caller is admin
+    // Check if caller is admin/management
     const { data: callerRole } = await supabaseAdmin
       .from("user_roles")
       .select("is_super_admin, role")
@@ -78,7 +78,12 @@ serve(async (req) => {
       .eq("is_active", true)
       .single();
 
-    if (!callerRole?.is_super_admin && callerRole?.role !== "admin") {
+    const hasInvitePermission =
+      callerRole?.is_super_admin === true
+      || callerRole?.role === "admin"
+      || callerRole?.role === "management";
+
+    if (!hasInvitePermission) {
       return new Response(
         JSON.stringify({ error: "Nemáte oprávnění přidávat uživatele" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }

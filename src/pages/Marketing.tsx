@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { endOfMonth, format, startOfMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { ChevronDown } from 'lucide-react';
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -111,6 +112,8 @@ const MARKETING_PROJECT_LABELS: Record<MarketingProject, string> = {
   otas: 'Oťas',
 };
 
+const ALLOCATION_COLORS = ['#3b82f6', '#f59e0b', '#8b5cf6', '#14b8a6', '#ef4444', '#ec4899', '#64748b'];
+
 interface MarketingWorkLog {
   id: string;
   colleague_id: string;
@@ -131,6 +134,7 @@ interface MarketingAdSpendEntry {
   spend_date: string;
   channel: 'meta' | 'ppc' | 'other';
   amount: number;
+  note: string | null;
 }
 
 const ROLE_LABELS: Record<MarketingRole, string> = {
@@ -154,24 +158,62 @@ const normalizeForMatch = (value: unknown) =>
     .toLowerCase();
 
 const WORK_TYPE_LABELS: Record<MarketingWorkType, string> = {
-  reels_video: 'Reels video z podcastu',
-  complex_video: 'Standardní reels video',
-  podcast: 'Podcast',
-  other_hourly: 'Nestandardní položka (časově náročnější)',
+  reels_video: 'Reels z podcastu',
+  complex_video: 'Reklamní reels',
+  podcast: 'Podcast postprodukce',
+  other_hourly: 'Jiné',
 };
 
 const MAIN_ACTIVITY_LABELS: Record<MainMarketingActivity, string> = {
   content_management: 'Content management',
-  video_editing_production: 'Video editing a produkce',
+  video_editing_production: 'Video editing',
   podcast_postproduction: 'Podcast postprodukce',
-  graphic_design: 'Graphic design',
+  graphic_design: 'Grafika',
   other: 'Jiná',
 };
 
-const FIXED_WORK_REWARD: Record<Exclude<MarketingWorkType, 'other_hourly'>, number> = {
-  reels_video: 500,
-  complex_video: 1000,
-  podcast: 2500,
+interface ActivityWorkOption {
+  value: MarketingWorkType;
+  label: string;
+  fixedReward?: number;
+}
+
+const ACTIVITY_WORK_OPTIONS: Record<MainMarketingActivity, ActivityWorkOption[]> = {
+  content_management: [
+    { value: 'other_hourly', label: 'Content management' },
+  ],
+  video_editing_production: [
+    { value: 'reels_video', label: 'Reels z podcastu', fixedReward: 500 },
+    { value: 'complex_video', label: 'Reklamní reels', fixedReward: 1000 },
+    { value: 'other_hourly', label: 'Jiné' },
+  ],
+  podcast_postproduction: [
+    { value: 'podcast', label: 'Podcast postprodukce', fixedReward: 2500 },
+    { value: 'other_hourly', label: 'Jiné' },
+  ],
+  graphic_design: [
+    { value: 'other_hourly', label: 'Grafika' },
+  ],
+  other: [
+    { value: 'other_hourly', label: 'Jiné' },
+  ],
+};
+
+const getWorkOptionForForm = (mainActivity: MainMarketingActivity, workType: MarketingWorkType): ActivityWorkOption | undefined => {
+  return ACTIVITY_WORK_OPTIONS[mainActivity]?.find((o) => o.value === workType);
+};
+
+const isHourlyWork = (mainActivity: MainMarketingActivity, workType: MarketingWorkType): boolean => {
+  const opt = getWorkOptionForForm(mainActivity, workType);
+  return !opt?.fixedReward;
+};
+
+const getFixedReward = (mainActivity: MainMarketingActivity, workType: MarketingWorkType): number => {
+  return getWorkOptionForForm(mainActivity, workType)?.fixedReward ?? 0;
+};
+
+const supportsQuantity = (mainActivity: MainMarketingActivity, workType: MarketingWorkType): boolean => {
+  return mainActivity === 'video_editing_production' && (workType === 'reels_video' || workType === 'complex_video');
 };
 
 const HOURLY_RATE_OPTIONS = [300, 400, 500, 600, 800, 1000];
@@ -182,11 +224,8 @@ const getDefaultMainActivityForRole = (role: MarketingRole): MainMarketingActivi
   return 'video_editing_production';
 };
 
-const getDefaultMainActivityForWorkType = (
-  _workType: MarketingWorkType,
-  role: MarketingRole,
-): MainMarketingActivity => {
-  return getDefaultMainActivityForRole(role);
+const getDefaultWorkTypeForActivity = (activity: MainMarketingActivity): MarketingWorkType => {
+  return ACTIVITY_WORK_OPTIONS[activity][0].value;
 };
 
 const resolveMainActivityFromLog = (log: MarketingWorkLog): MainMarketingActivity => {
@@ -197,6 +236,25 @@ const resolveMainActivityFromLog = (log: MarketingWorkLog): MainMarketingActivit
     return 'podcast_postproduction';
   }
   return getDefaultMainActivityForRole(log.role);
+};
+
+const resolveWorkTypeFromLog = (log: MarketingWorkLog): MarketingWorkType => {
+  const title = (log.title || '').trim().toLowerCase();
+  if (log.hours && log.hours > 0) return 'other_hourly';
+  if (title === 'reels video z podcastu' || title === 'reels z podcastu') return 'reels_video';
+  if (title === 'reklamní reels' || title === 'standardní reels video') return 'complex_video';
+  if (title === 'podcast postprodukce') return 'podcast';
+  return 'other_hourly';
+};
+
+const getOutputUnitsFromLog = (log: MarketingWorkLog): number => {
+  const mainActivity = resolveMainActivityFromLog(log);
+  const workType = resolveWorkTypeFromLog(log);
+  const fixedReward = getFixedReward(mainActivity, workType);
+  if (supportsQuantity(mainActivity, workType) && fixedReward > 0 && !log.hours) {
+    return Math.max(1, Math.round((log.amount || 0) / fixedReward));
+  }
+  return 1;
 };
 
 export default function Marketing() {
@@ -266,7 +324,14 @@ function MarketingPageContent() {
   const [isMainMonthlyPlanOpen, setIsMainMonthlyPlanOpen] = useState(false);
   const [isDetailMonthlyPlanOpen, setIsDetailMonthlyPlanOpen] = useState(false);
   const [isWorkLogFormOpen, setIsWorkLogFormOpen] = useState(true);
-  const [isAnnualPlanOpen, setIsAnnualPlanOpen] = useState(false);
+  const [editingWorkLogId, setEditingWorkLogId] = useState<string | null>(null);
+  const [activityFilterColleagueId, setActivityFilterColleagueId] = useState<string>('all');
+  const [editingManualCostId, setEditingManualCostId] = useState<string | null>(null);
+  const [manualCostForm, setManualCostForm] = useState({
+    spend_date: format(now, 'yyyy-MM-dd'),
+    amount: '',
+    note: '',
+  });
   const [isAnnualRoleBreakdownOpen, setIsAnnualRoleBreakdownOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'monthly' | 'annual'>('monthly');
 
@@ -298,6 +363,7 @@ function MarketingPageContent() {
   const { colleagueId, role, isSuperAdmin } = useUserRole();
 
   const canManageBudgets = isSuperAdmin || role === 'admin' || role === 'management';
+  const canAccessAdminMarketingSections = isSuperAdmin || role === 'admin';
   const canCreateLogsForOthers = canManageBudgets;
 
   const monthStart = startOfMonth(new Date(selectedYear, selectedMonth - 1, 1));
@@ -388,36 +454,6 @@ function MarketingPageContent() {
     },
   });
 
-  const { data: legacyMarketingRewards = [] } = useQuery({
-    queryKey: ['marketing_legacy_rewards', selectedYear, selectedMonth],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('activity_rewards' as never)
-        .select('id, amount, client_name')
-        .eq('category', 'marketing')
-        .gte('activity_date', monthStartIso)
-        .lte('activity_date', monthEndIso)
-        .or('client_name.is.null,client_name.neq.__marketing_work_log__');
-      if (error) throw error;
-      return (data || []) as Array<{ id: string; amount: number; client_name: string | null }>;
-    },
-  });
-
-  const { data: yearlyLegacyMarketingRewards = [] } = useQuery({
-    queryKey: ['marketing_legacy_rewards_year', selectedYear],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('activity_rewards' as never)
-        .select('id, amount, client_name, activity_date')
-        .eq('category', 'marketing')
-        .gte('activity_date', yearStartIso)
-        .lte('activity_date', yearEndIso)
-        .or('client_name.is.null,client_name.neq.__marketing_work_log__');
-      if (error) throw error;
-      return (data || []) as Array<{ id: string; amount: number; client_name: string | null; activity_date: string }>;
-    },
-  });
-
   const [planForm, setPlanForm] = useState({
     planned_total_budget: 0,
     planned_content_budget: 0,
@@ -484,59 +520,15 @@ function MarketingPageContent() {
   const [workLogForm, setWorkLogForm] = useState({
     colleague_id: colleagueId || '',
     role: 'content_manager' as MarketingRole,
-    work_type: 'reels_video' as MarketingWorkType,
     main_activity: 'content_management' as MainMarketingActivity,
+    work_type: 'other_hourly' as MarketingWorkType,
     project: 'socials' as MarketingProject,
     activity_date: format(now, 'yyyy-MM-dd'),
-    title: WORK_TYPE_LABELS.reels_video,
+    title: '',
     description: '',
+    quantity: '1',
     hours: '',
     hourly_rate: '500',
-  });
-
-  type MarketingPlanDraft = {
-    planned_total_budget: number;
-  };
-
-  const [annualPlanDrafts, setAnnualPlanDrafts] = useState<Record<number, MarketingPlanDraft>>({});
-
-  useEffect(() => {
-    const plansByMonth = new Map<number, MarketingMonthlyPlan>();
-    yearlyPlans.forEach((plan) => plansByMonth.set(plan.month, plan));
-    const nextDrafts: Record<number, MarketingPlanDraft> = {};
-    for (let month = 1; month <= 12; month += 1) {
-      const plan = plansByMonth.get(month);
-      nextDrafts[month] = {
-        planned_total_budget: Number(plan?.planned_total_budget || 0),
-      };
-    }
-    setAnnualPlanDrafts(nextDrafts);
-  }, [yearlyPlans]);
-
-  const saveAnnualMonthPlanMutation = useMutation({
-    mutationFn: async (month: number) => {
-      const draft = annualPlanDrafts[month];
-      if (!draft) throw new Error('Draft plánu není připraven.');
-      const payload = {
-        year: selectedYear,
-        month,
-        planned_total_budget: Number(draft.planned_total_budget || 0),
-      };
-
-      const { error } = await supabase
-        .from('marketing_monthly_plans' as never)
-        .upsert(payload as never, { onConflict: 'year,month' });
-      if (error) throw error;
-    },
-    onSuccess: (_, month) => {
-      queryClient.invalidateQueries({ queryKey: ['marketing_monthly_plan', selectedYear, selectedMonth] });
-      queryClient.invalidateQueries({ queryKey: ['marketing_yearly_plans', selectedYear] });
-      toast.success(`Plán pro ${format(new Date(selectedYear, month - 1, 1), 'LLLL', { locale: cs })} byl uložen.`);
-    },
-    onError: (error) => {
-      console.error(error);
-      toast.error('Nepodařilo se uložit roční plán.');
-    },
   });
 
   const saveMonthlyPlanMutation = useMutation({
@@ -552,9 +544,15 @@ function MarketingPageContent() {
       };
 
       if (section === 'detail') {
+        const detailTotal = plannedLaborBudget
+          + Number(planForm.planned_podcast_studio_rent_budget || 0)
+          + Number(planForm.planned_other_budget || 0)
+          + Number(planForm.planned_meta_budget || 0)
+          + Number(planForm.planned_ppc_budget || 0);
+
         const detailPayload = {
           ...basePayload,
-          planned_total_budget: Number(planForm.planned_total_budget || 0),
+          planned_total_budget: detailTotal,
           planned_labor_budget: plannedLaborBudget,
           planned_content_budget: Number(planForm.planned_content_budget || 0),
           planned_graphic_budget: Number(planForm.planned_graphic_budget || 0),
@@ -577,7 +575,6 @@ function MarketingPageContent() {
 
       const mainPayload = {
         ...basePayload,
-        planned_total_budget: Number(planForm.planned_total_budget || 0),
         planned_labor_budget: plannedLaborBudget,
         planned_main_tasks: (planForm.monthly_tasks
           .map((task) => task.text.trim())
@@ -609,67 +606,247 @@ function MarketingPageContent() {
     },
   });
 
+  const syncMetaSpendMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('sync-meta-ad-spend', {
+        body: {
+          year: selectedYear,
+          month: selectedMonth,
+        },
+      });
+      if (error) {
+        let detail = '';
+        try {
+          const ctx = (error as unknown as { context?: Response }).context;
+          if (ctx instanceof Response) {
+            const body = await ctx.json() as { error?: string; details?: string };
+            detail = body?.details || body?.error || '';
+          }
+        } catch { /* ignore parse errors */ }
+        throw new Error(detail || error.message || 'Edge Function returned a non-2xx status code');
+      }
+      if (data?.error) {
+        throw new Error(String(data.details || data.error));
+      }
+      return data as { synced_days?: number; total_spend?: number };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['marketing_ad_spend_entries', selectedYear, selectedMonth] });
+      queryClient.invalidateQueries({ queryKey: ['marketing_ad_spend_entries_year', selectedYear] });
+      const total = Number(data?.total_spend || 0);
+      toast.success(`Meta spend synchronizován (${Math.round(total).toLocaleString('cs-CZ')} Kč).`);
+    },
+    onError: (error) => {
+      console.error(error);
+      toast.error(`Sync Meta Ads selhal: ${getMutationErrorMessage(error)}`);
+    },
+  });
+
+  const buildWorkLogPayload = () => {
+    if (!workLogForm.colleague_id) throw new Error('Vyberte kolegu.');
+    if (!workLogForm.main_activity) throw new Error('Vyberte hlavní činnost.');
+    if (!workLogForm.description.trim()) throw new Error('Vyplňte popis (např. název reelska, epizoda podcastu, případová studie…).');
+    const ma = workLogForm.main_activity as MainMarketingActivity;
+    const hourly = isHourlyWork(ma, workLogForm.work_type);
+    let amount = 0;
+    let title = workLogForm.title.trim();
+    let hours: number | null = null;
+
+    if (hourly) {
+      const parsedHours = Number(workLogForm.hours);
+      const parsedHourlyRate = Number(workLogForm.hourly_rate);
+      if (!Number.isFinite(parsedHours) || parsedHours <= 0) {
+        throw new Error('Vyplňte počet hodin.');
+      }
+      if (!Number.isFinite(parsedHourlyRate) || parsedHourlyRate <= 0) {
+        throw new Error('Vyberte hodinovou sazbu.');
+      }
+      if (!title) {
+        throw new Error('Vyplňte název činnosti.');
+      }
+      hours = parsedHours;
+      amount = parsedHours * parsedHourlyRate;
+    } else {
+      const opt = getWorkOptionForForm(ma, workLogForm.work_type);
+      title = opt?.label || WORK_TYPE_LABELS[workLogForm.work_type];
+      const fixedReward = getFixedReward(ma, workLogForm.work_type);
+      const parsedQuantity = Number(workLogForm.quantity);
+      const quantity = supportsQuantity(ma, workLogForm.work_type) ? parsedQuantity : 1;
+      if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isInteger(quantity)) {
+        throw new Error('Vyplňte počet kusů jako celé číslo (1, 2, 3…).');
+      }
+      amount = fixedReward * quantity;
+    }
+
+    return {
+      colleague_id: workLogForm.colleague_id,
+      role: workLogForm.role,
+      main_activity: workLogForm.main_activity,
+      project: workLogForm.project,
+      activity_date: workLogForm.activity_date,
+      title,
+      description: workLogForm.description.trim(),
+      hours,
+      amount,
+    };
+  };
+
+  const resetWorkLogForm = () => {
+    setWorkLogForm((prev) => ({
+      ...prev,
+      main_activity: getDefaultMainActivityForRole(prev.role),
+      work_type: getDefaultWorkTypeForActivity(getDefaultMainActivityForRole(prev.role)),
+      title: '',
+      description: '',
+      quantity: '1',
+      hours: '',
+      hourly_rate: String(colleagueHourlyRateById.get(prev.colleague_id) ?? 500),
+    }));
+    setEditingWorkLogId(null);
+  };
+
   const addWorkLogMutation = useMutation({
     mutationFn: async () => {
-      if (!workLogForm.colleague_id) throw new Error('Vyberte kolegu.');
-      if (!workLogForm.main_activity) throw new Error('Vyberte hlavní činnost.');
-      let amount = 0;
-      let title = workLogForm.title.trim();
-      let hours: number | null = null;
-
-      if (workLogForm.work_type === 'other_hourly') {
-        const parsedHours = Number(workLogForm.hours);
-        const parsedHourlyRate = Number(workLogForm.hourly_rate);
-        if (!Number.isFinite(parsedHours) || parsedHours <= 0) {
-          throw new Error('U hodinové práce vyplňte počet hodin.');
-        }
-        if (!Number.isFinite(parsedHourlyRate) || parsedHourlyRate <= 0) {
-          throw new Error('U hodinové práce vyberte hodinovou sazbu.');
-        }
-        if (!title) {
-          throw new Error('U hodinové práce vyplňte název činnosti.');
-        }
-        hours = parsedHours;
-        amount = parsedHours * parsedHourlyRate;
-      } else {
-        title = WORK_TYPE_LABELS[workLogForm.work_type];
-        amount = FIXED_WORK_REWARD[workLogForm.work_type];
-      }
-
-      const payload = {
-        colleague_id: workLogForm.colleague_id,
-        role: workLogForm.role,
-        main_activity: workLogForm.main_activity,
-        project: workLogForm.project,
-        activity_date: workLogForm.activity_date,
-        title,
-        description: workLogForm.description.trim() || null,
-        hours,
-        amount,
-      };
+      const payload = buildWorkLogPayload();
       const { error } = await supabase.from('marketing_work_logs' as never).insert(payload as never);
-      if (error) throw error;
+      if (error) throw new Error(getMutationErrorMessage(error));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['marketing_work_logs', selectedYear, selectedMonth] });
-      setWorkLogForm((prev) => ({
-        ...prev,
-        work_type: 'reels_video',
-        main_activity: getDefaultMainActivityForRole(prev.role),
-        title: WORK_TYPE_LABELS.reels_video,
-        description: '',
-        hours: '',
-        hourly_rate: String(colleagueHourlyRateById.get(prev.colleague_id) ?? 500),
-      }));
+      resetWorkLogForm();
       toast.success('Marketing práce byla zapsána.');
     },
     onError: (error) => {
       console.error(error);
-      toast.error(error instanceof Error ? error.message : 'Nepodařilo se zapsat marketing práci.');
+      toast.error(`Nepodařilo se zapsat marketing práci: ${getMutationErrorMessage(error)}`);
     },
   });
 
-  const plannedTotalBudget = Number(planForm.planned_total_budget || 0);
+  const updateWorkLogMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingWorkLogId) throw new Error('Není vybraná aktivita k úpravě.');
+      const payload = buildWorkLogPayload();
+      const { error } = await supabase
+        .from('marketing_work_logs' as never)
+        .update(payload as never)
+        .eq('id', editingWorkLogId);
+      if (error) throw new Error(getMutationErrorMessage(error));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['marketing_work_logs', selectedYear, selectedMonth] });
+      resetWorkLogForm();
+      toast.success('Aktivita byla upravena.');
+    },
+    onError: (error) => {
+      console.error(error);
+      toast.error(`Nepodařilo se upravit aktivitu: ${getMutationErrorMessage(error)}`);
+    },
+  });
+
+  const deleteWorkLogMutation = useMutation({
+    mutationFn: async (logId: string) => {
+      const { error } = await supabase
+        .from('marketing_work_logs' as never)
+        .delete()
+        .eq('id', logId);
+      if (error) throw new Error(getMutationErrorMessage(error));
+    },
+    onSuccess: (_, logId) => {
+      queryClient.invalidateQueries({ queryKey: ['marketing_work_logs', selectedYear, selectedMonth] });
+      if (editingWorkLogId === logId) {
+        resetWorkLogForm();
+      }
+      toast.success('Aktivita byla smazána.');
+    },
+    onError: (error) => {
+      console.error(error);
+      toast.error(`Nepodařilo se smazat aktivitu: ${getMutationErrorMessage(error)}`);
+    },
+  });
+
+  const resetManualCostForm = () => {
+    setManualCostForm({
+      spend_date: format(now, 'yyyy-MM-dd'),
+      amount: '',
+      note: '',
+    });
+    setEditingManualCostId(null);
+  };
+
+  const saveManualCostMutation = useMutation({
+    mutationFn: async () => {
+      const parsedAmount = Number(manualCostForm.amount);
+      if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+        throw new Error('Vyplňte částku větší než 0 Kč.');
+      }
+      if (!manualCostForm.spend_date) {
+        throw new Error('Vyplňte datum nákladu.');
+      }
+      if (!manualCostForm.note.trim()) {
+        throw new Error('Vyplňte poznámku k nákladu (např. event, pronájem, produkce).');
+      }
+      const spendDate = new Date(manualCostForm.spend_date);
+      if (!Number.isFinite(spendDate.getTime())) {
+        throw new Error('Datum nákladu je neplatné.');
+      }
+
+      const payload = {
+        year: spendDate.getFullYear(),
+        month: spendDate.getMonth() + 1,
+        spend_date: manualCostForm.spend_date,
+        channel: 'other' as const,
+        amount: parsedAmount,
+        note: manualCostForm.note.trim(),
+      };
+
+      if (editingManualCostId) {
+        const { error } = await supabase
+          .from('marketing_ad_spend_entries' as never)
+          .update(payload as never)
+          .eq('id', editingManualCostId)
+          .eq('channel', 'other');
+        if (error) throw new Error(getMutationErrorMessage(error));
+        return;
+      }
+
+      const { error } = await supabase
+        .from('marketing_ad_spend_entries' as never)
+        .insert(payload as never);
+      if (error) throw new Error(getMutationErrorMessage(error));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['marketing_ad_spend_entries', selectedYear, selectedMonth] });
+      queryClient.invalidateQueries({ queryKey: ['marketing_ad_spend_entries_year', selectedYear] });
+      resetManualCostForm();
+      toast.success(editingManualCostId ? 'Manuální náklad byl upraven.' : 'Manuální náklad byl přidán.');
+    },
+    onError: (error) => {
+      console.error(error);
+      toast.error(`Nepodařilo se uložit manuální náklad: ${getMutationErrorMessage(error)}`);
+    },
+  });
+
+  const deleteManualCostMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('marketing_ad_spend_entries' as never)
+        .delete()
+        .eq('id', id)
+        .eq('channel', 'other');
+      if (error) throw new Error(getMutationErrorMessage(error));
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['marketing_ad_spend_entries', selectedYear, selectedMonth] });
+      queryClient.invalidateQueries({ queryKey: ['marketing_ad_spend_entries_year', selectedYear] });
+      if (editingManualCostId === id) resetManualCostForm();
+      toast.success('Manuální náklad byl smazán.');
+    },
+    onError: (error) => {
+      console.error(error);
+      toast.error(`Nepodařilo se smazat manuální náklad: ${getMutationErrorMessage(error)}`);
+    },
+  });
+
   const plannedAdSpendBudget = Number(planForm.planned_meta_budget || 0) + Number(planForm.planned_ppc_budget || 0);
   const plannedLaborBudget = Number(planForm.planned_content_budget || 0)
     + Number(planForm.planned_graphic_budget || 0)
@@ -681,10 +858,6 @@ function MarketingPageContent() {
     + Number(planForm.planned_other_budget || 0);
 
   const actualLaborCost = useMemo(() => workLogs.reduce((sum, item) => sum + (item.amount || 0), 0), [workLogs]);
-  const legacyLaborCost = useMemo(
-    () => legacyMarketingRewards.reduce((sum, item) => sum + (item.amount || 0), 0),
-    [legacyMarketingRewards]
-  );
   const adSpendTotal = useMemo(() => adSpendEntries.reduce((sum, item) => sum + (item.amount || 0), 0), [adSpendEntries]);
   const actualMetaSpend = useMemo(
     () => adSpendEntries.filter((entry) => entry.channel === 'meta').reduce((sum, entry) => sum + (entry.amount || 0), 0),
@@ -723,10 +896,9 @@ function MarketingPageContent() {
     () => adSpendEntries.filter((entry) => entry.channel === 'other').reduce((sum, entry) => sum + (entry.amount || 0), 0),
     [adSpendEntries]
   );
-  const actualOtherCost = legacyLaborCost + actualOtherSpend;
-  const actualTotalCost = actualLaborCost + legacyLaborCost + adSpendTotal;
+  const actualOtherCost = actualOtherSpend;
+  const actualTotalCost = actualLaborCost + adSpendTotal;
   const detailBudgetDiff = plannedDetailTotalBudget - actualTotalCost;
-  const summaryVsDetailPlanDiff = plannedTotalBudget - plannedDetailTotalBudget;
 
   const colleagueNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -810,16 +982,17 @@ function MarketingPageContent() {
     workLogs.forEach((item) => {
       const cid = item.colleague_id || '__unknown__';
       const name = colleagueNameById.get(cid) || 'Neznámý kolega';
+      const outputUnits = getOutputUnitsFromLog(item);
       if (!byColleague.has(cid)) {
         byColleague.set(cid, { name, amount: 0, hours: 0, logs: 0, activityMap: new Map() });
       }
       const entry = byColleague.get(cid)!;
       entry.amount += item.amount || 0;
       entry.hours += item.hours || 0;
-      entry.logs += 1;
+      entry.logs += outputUnits;
       const title = item.title || '(bez názvu)';
       const act = entry.activityMap.get(title) ?? { count: 0, totalAmount: 0 };
-      act.count += 1;
+      act.count += outputUnits;
       act.totalAmount += item.amount || 0;
       entry.activityMap.set(title, act);
     });
@@ -884,6 +1057,30 @@ function MarketingPageContent() {
     [colleagues]
   );
 
+  const activityFilterOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    workLogs.forEach((log) => {
+      if (!log.colleague_id) return;
+      const name = colleagueNameById.get(log.colleague_id) || 'Neznámý kolega';
+      byId.set(log.colleague_id, name);
+    });
+    return Array.from(byId.entries())
+      .map(([id, full_name]) => ({ id, full_name }))
+      .sort((a, b) => a.full_name.localeCompare(b.full_name, 'cs'));
+  }, [colleagueNameById, workLogs]);
+
+  const filteredWorkLogs = useMemo(() => {
+    if (activityFilterColleagueId === 'all') return workLogs;
+    return workLogs.filter((log) => log.colleague_id === activityFilterColleagueId);
+  }, [activityFilterColleagueId, workLogs]);
+
+  const manualOtherCosts = useMemo(
+    () => adSpendEntries
+      .filter((entry) => entry.channel === 'other')
+      .sort((a, b) => new Date(b.spend_date).getTime() - new Date(a.spend_date).getTime()),
+    [adSpendEntries]
+  );
+
   useEffect(() => {
     if (selectableColleagues.length === 0) return;
     const hasLoggedInColleague = !!colleagueId && selectableColleagues.some((c) => c.id === colleagueId);
@@ -898,8 +1095,12 @@ function MarketingPageContent() {
         colleague_id: preferredId,
         role: preferredRole ?? prev.role,
         main_activity: preferredRole
-          ? getDefaultMainActivityForWorkType(prev.work_type, preferredRole)
+          ? getDefaultMainActivityForRole(preferredRole)
           : prev.main_activity,
+        work_type: preferredRole
+          ? getDefaultWorkTypeForActivity(getDefaultMainActivityForRole(preferredRole))
+          : prev.work_type,
+        title: preferredRole ? '' : prev.title,
         hourly_rate: preferredHourlyRate ? String(preferredHourlyRate) : prev.hourly_rate,
       }));
       return;
@@ -916,8 +1117,11 @@ function MarketingPageContent() {
         colleague_id: colleagueId!,
         role: colleaguePrimaryRoleById.get(colleagueId!) ?? prev.role,
         main_activity: colleaguePrimaryRoleById.get(colleagueId!)
-          ? getDefaultMainActivityForWorkType(prev.work_type, colleaguePrimaryRoleById.get(colleagueId!)!)
+          ? getDefaultMainActivityForRole(colleaguePrimaryRoleById.get(colleagueId!)!)
           : prev.main_activity,
+        work_type: colleaguePrimaryRoleById.get(colleagueId!)
+          ? getDefaultWorkTypeForActivity(getDefaultMainActivityForRole(colleaguePrimaryRoleById.get(colleagueId!)!))
+          : prev.work_type,
         hourly_rate: colleagueHourlyRateById.get(colleagueId!)
           ? String(colleagueHourlyRateById.get(colleagueId!))
           : prev.hourly_rate,
@@ -937,14 +1141,6 @@ function MarketingPageContent() {
       actualWorkByMonth.set(month, (actualWorkByMonth.get(month) || 0) + (log.amount || 0));
     });
 
-    const actualLegacyByMonth = new Map<number, number>();
-    yearlyLegacyMarketingRewards.forEach((reward) => {
-      const date = new Date(reward.activity_date);
-      if (!Number.isFinite(date.getTime())) return;
-      const month = date.getMonth() + 1;
-      actualLegacyByMonth.set(month, (actualLegacyByMonth.get(month) || 0) + (reward.amount || 0));
-    });
-
     const spendByMonth = new Map<number, { meta: number; ppc: number; other: number }>();
     yearlyAdSpendEntries.forEach((entry) => {
       const month = entry.month;
@@ -959,39 +1155,131 @@ function MarketingPageContent() {
       const month = idx + 1;
       const plan = plansByMonth.get(month);
       const spend = spendByMonth.get(month) || { meta: 0, ppc: 0, other: 0 };
-      const actualLabor = (actualWorkByMonth.get(month) || 0) + (actualLegacyByMonth.get(month) || 0);
+      const actualLabor = actualWorkByMonth.get(month) || 0;
       const actualTotal = actualLabor + spend.meta + spend.ppc + spend.other;
       const plannedTotal = plan ? (
-        (plan.planned_total_budget || 0)
-        || ((plan.planned_meta_budget || 0)
-          + (plan.planned_ppc_budget || 0)
-          + (plan.planned_content_budget || 0)
-          + (plan.planned_graphic_budget || 0)
-          + (plan.planned_video_budget || 0)
-          + (plan.planned_podcast_postproduction_budget || 0)
-          + (plan.planned_podcast_studio_rent_budget || 0)
-          + (plan.planned_other_budget || 0))
+        (plan.planned_meta_budget || 0)
+        + (plan.planned_ppc_budget || 0)
+        + (plan.planned_content_budget || 0)
+        + (plan.planned_graphic_budget || 0)
+        + (plan.planned_video_budget || 0)
+        + (plan.planned_podcast_postproduction_budget || 0)
+        + (plan.planned_podcast_studio_rent_budget || 0)
+        + (plan.planned_other_budget || 0)
       ) : 0;
+      const actualSpend = spend.meta + spend.ppc + spend.other;
       return {
         month,
         monthLabel: format(new Date(selectedYear, idx, 1), 'LLLL', { locale: cs }),
         plan,
         plannedTotal,
+        actualLabor,
+        actualSpend,
         actualTotal,
         diff: plannedTotal - actualTotal,
       };
     });
-  }, [selectedYear, yearlyAdSpendEntries, yearlyLegacyMarketingRewards, yearlyPlans, yearlyWorkLogs]);
+  }, [selectedYear, yearlyAdSpendEntries, yearlyPlans, yearlyWorkLogs]);
 
   const annualSummary = useMemo(() => {
     const plannedTotal = annualRows.reduce((sum, row) => sum + row.plannedTotal, 0);
     const actualTotal = annualRows.reduce((sum, row) => sum + row.actualTotal, 0);
+    const actualLabor = annualRows.reduce((sum, row) => sum + row.actualLabor, 0);
+    const actualSpend = annualRows.reduce((sum, row) => sum + row.actualSpend, 0);
     return {
       plannedTotal,
       actualTotal,
+      actualLabor,
+      actualSpend,
       diff: plannedTotal - actualTotal,
     };
   }, [annualRows]);
+
+  const annualProjectRows = useMemo(() => {
+    const byMonth = new Map<number, { socials: number; danny: number; otas: number }>();
+    for (let month = 1; month <= 12; month += 1) {
+      byMonth.set(month, { socials: 0, danny: 0, otas: 0 });
+    }
+
+    yearlyWorkLogs.forEach((log) => {
+      const date = new Date(log.activity_date);
+      if (!Number.isFinite(date.getTime())) return;
+      const month = date.getMonth() + 1;
+      const project = log.project;
+      if (!project || !byMonth.has(month)) return;
+      const bucket = byMonth.get(month)!;
+      bucket[project] += Number(log.amount || 0);
+    });
+
+    return Array.from({ length: 12 }, (_, idx) => {
+      const month = idx + 1;
+      const values = byMonth.get(month) || { socials: 0, danny: 0, otas: 0 };
+      const total = values.socials + values.danny + values.otas;
+      return {
+        month,
+        monthLabel: format(new Date(selectedYear, idx, 1), 'LLLL', { locale: cs }),
+        ...values,
+        total,
+      };
+    });
+  }, [selectedYear, yearlyWorkLogs]);
+
+  const annualProjectTotals = useMemo(() => {
+    const socials = annualProjectRows.reduce((sum, row) => sum + row.socials, 0);
+    const danny = annualProjectRows.reduce((sum, row) => sum + row.danny, 0);
+    const otas = annualProjectRows.reduce((sum, row) => sum + row.otas, 0);
+    return {
+      socials,
+      danny,
+      otas,
+      total: socials + danny + otas,
+    };
+  }, [annualProjectRows]);
+
+  const annualAllocationData = useMemo(() => {
+    let content = 0;
+    let video = 0;
+    let podcast = 0;
+    let graphic = 0;
+
+    yearlyWorkLogs.forEach((log) => {
+      const activity = resolveMainActivityFromLog(log);
+      const amount = Number(log.amount || 0);
+      if (!Number.isFinite(amount) || amount <= 0) return;
+      if (activity === 'content_management') content += amount;
+      if (activity === 'video_editing_production') video += amount;
+      if (activity === 'podcast_postproduction') podcast += amount;
+      if (activity === 'graphic_design') graphic += amount;
+    });
+
+    const meta = yearlyAdSpendEntries
+      .filter((entry) => entry.channel === 'meta')
+      .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+    const ppc = yearlyAdSpendEntries
+      .filter((entry) => entry.channel === 'ppc')
+      .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+    const otherSpend = yearlyAdSpendEntries
+      .filter((entry) => entry.channel === 'other')
+      .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+    const raw = [
+      { key: 'content', label: 'Content management', amount: content },
+      { key: 'video', label: 'Video editing', amount: video },
+      { key: 'podcast', label: 'Podcast postprodukce', amount: podcast },
+      { key: 'graphic', label: 'Grafika', amount: graphic },
+      { key: 'meta', label: 'Meta spend', amount: meta },
+      { key: 'ppc', label: 'PPC spend', amount: ppc },
+      { key: 'other', label: 'Ostatní / fix', amount: otherSpend },
+    ].filter((row) => row.amount > 0);
+
+    const total = raw.reduce((sum, row) => sum + row.amount, 0);
+    return {
+      total,
+      rows: raw.map((row) => ({
+        ...row,
+        percent: total > 0 ? (row.amount / total) * 100 : 0,
+      })),
+    };
+  }, [yearlyAdSpendEntries, yearlyWorkLogs]);
 
   const annualColleagueSummary = useMemo(() => {
     const byColleague = new Map<string, { name: string; amount: number; logs: number }>();
@@ -1030,26 +1318,51 @@ function MarketingPageContent() {
     return [...defaults, ...others].sort((a, b) => a.sortOrder - b.sortOrder);
   }, [colleagueNameById, defaultMarketingColleagues, yearlyWorkLogs]);
 
-  const setAnnualDraftValue = <K extends keyof MarketingPlanDraft>(month: number, key: K, value: MarketingPlanDraft[K]) => {
-    setAnnualPlanDrafts((prev) => ({
-      ...prev,
-      [month]: {
-        ...(prev[month] || {
-          planned_total_budget: 0,
-        }),
-        [key]: value,
-      },
-    }));
-  };
 
   const isLoading = isPlanLoading || isWorkLogsLoading || isAdSpendLoading;
   const actualCpl = leadsInMonth > 0 ? actualTotalCost / leadsInMonth : null;
   const plannedCpl = planForm.planned_leads > 0 ? plannedDetailTotalBudget / planForm.planned_leads : null;
   const actualCac = newClientsInMonth > 0 ? actualTotalCost / newClientsInMonth : null;
   const plannedCac = planForm.planned_new_clients > 0 ? plannedDetailTotalBudget / planForm.planned_new_clients : null;
+  const canEditLog = (log: MarketingWorkLog) => canCreateLogsForOthers || (colleagueId ? log.colleague_id === colleagueId : false);
+
+  const beginEditWorkLog = (log: MarketingWorkLog) => {
+    if (!canEditLog(log)) return;
+    const mainActivity = resolveMainActivityFromLog(log);
+    const workType = resolveWorkTypeFromLog(log);
+    const fixedReward = getFixedReward(mainActivity, workType);
+    const quantity = supportsQuantity(mainActivity, workType) && fixedReward > 0
+      ? Math.max(1, Math.round((log.amount || 0) / fixedReward))
+      : 1;
+    const hourlyRate = (log.hours && log.hours > 0) ? Math.round((log.amount || 0) / log.hours) : (colleagueHourlyRateById.get(log.colleague_id) ?? 500);
+    setWorkLogForm({
+      colleague_id: log.colleague_id,
+      role: log.role,
+      main_activity: mainActivity,
+      work_type: workType,
+      project: log.project || 'socials',
+      activity_date: log.activity_date,
+      title: log.title || '',
+      description: log.description || '',
+      quantity: String(quantity),
+      hours: log.hours ? String(log.hours) : '',
+      hourly_rate: String(hourlyRate || 500),
+    });
+    setEditingWorkLogId(log.id);
+    setIsWorkLogFormOpen(true);
+  };
+
+  const beginEditManualCost = (entry: MarketingAdSpendEntry) => {
+    setManualCostForm({
+      spend_date: entry.spend_date,
+      amount: String(entry.amount || ''),
+      note: entry.note || '',
+    });
+    setEditingManualCostId(entry.id);
+  };
 
   return (
-    <div className="space-y-4 p-3 sm:p-4">
+    <div className="space-y-4 p-3 pb-24 sm:p-4 sm:pb-28">
       <PageHeader
         title="📣 Marketing"
         titleAccent="interní přehled"
@@ -1059,7 +1372,7 @@ function MarketingPageContent() {
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'monthly' | 'annual')}>
         <TabsList className="h-8">
           <TabsTrigger value="monthly">Měsíční přehled</TabsTrigger>
-          <TabsTrigger value="annual">Roční plán</TabsTrigger>
+          <TabsTrigger value="annual">Roční přehled</TabsTrigger>
         </TabsList>
 
         <TabsContent value="monthly" className="mt-3 space-y-3">
@@ -1088,6 +1401,17 @@ function MarketingPageContent() {
                 ))}
               </SelectContent>
             </Select>
+            {canManageBudgets && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={() => syncMetaSpendMutation.mutate()}
+                disabled={syncMetaSpendMutation.isPending}
+              >
+                {syncMetaSpendMutation.isPending ? 'Synchronizuji Meta spend…' : '↻ Načíst spend z Meta Ads'}
+              </Button>
+            )}
             {canManageBudgets && (
               <Badge variant="outline" className="text-xs h-7">admin / management</Badge>
             )}
@@ -1274,17 +1598,17 @@ function MarketingPageContent() {
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div className="rounded-lg border bg-card px-3 py-2.5">
               <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Plánovaný rozpočet</p>
-              <p className="mt-0.5 text-xl font-bold text-primary leading-tight">{Math.round(plannedTotalBudget).toLocaleString('cs-CZ')} Kč</p>
+              <p className="mt-0.5 text-xl font-bold text-primary leading-tight">{Math.round(plannedDetailTotalBudget).toLocaleString('cs-CZ')} Kč</p>
             </div>
             <div className="rounded-lg border bg-card px-3 py-2.5">
               <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Skutečné náklady</p>
               <p className="mt-0.5 text-xl font-bold leading-tight">{Math.round(actualTotalCost).toLocaleString('cs-CZ')} Kč</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">práce {Math.round(actualLaborCost + legacyLaborCost).toLocaleString('cs-CZ')} · spend {Math.round(adSpendTotal).toLocaleString('cs-CZ')}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">práce {Math.round(actualLaborCost).toLocaleString('cs-CZ')} · spend {Math.round(adSpendTotal).toLocaleString('cs-CZ')}</p>
             </div>
             <div className="rounded-lg border bg-card px-3 py-2.5">
-              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Rozdíl plán / detail</p>
-              <p className={`mt-0.5 text-xl font-bold leading-tight ${summaryVsDetailPlanDiff >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-                +{Math.round(Math.abs(summaryVsDetailPlanDiff)).toLocaleString('cs-CZ')} Kč
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Rozdíl plán / realita</p>
+              <p className={`mt-0.5 text-xl font-bold leading-tight ${detailBudgetDiff >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                {detailBudgetDiff >= 0 ? '+' : ''}{Math.round(detailBudgetDiff).toLocaleString('cs-CZ')} Kč
               </p>
             </div>
             <div className="rounded-lg border border-emerald-200/60 bg-emerald-50/30 px-3 py-2.5 dark:border-emerald-800/40 dark:bg-emerald-950/20">
@@ -1299,8 +1623,9 @@ function MarketingPageContent() {
           </div>
 
           {/* ── Detailní plán + Rozpad kolegů (side-by-side) ── */}
-          <div className="grid gap-2 xl:grid-cols-2">
-            <Collapsible open={isDetailMonthlyPlanOpen} onOpenChange={setIsDetailMonthlyPlanOpen}>
+          {canAccessAdminMarketingSections && (
+            <div className="grid gap-2 xl:grid-cols-2">
+              <Collapsible open={isDetailMonthlyPlanOpen} onOpenChange={setIsDetailMonthlyPlanOpen}>
               <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition-colors hover:bg-muted/40">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">Detailní plán měsíce</span>
@@ -1352,9 +1677,9 @@ function MarketingPageContent() {
                   </div>
                 </div>
               </CollapsibleContent>
-            </Collapsible>
+              </Collapsible>
 
-            <Collapsible open={isRoleBreakdownOpen} onOpenChange={setIsRoleBreakdownOpen}>
+              <Collapsible open={isRoleBreakdownOpen} onOpenChange={setIsRoleBreakdownOpen}>
               <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition-colors hover:bg-muted/40">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">Rozpad nákladů podle kolegů</span>
@@ -1423,17 +1748,19 @@ function MarketingPageContent() {
                   </div>
                 )}
               </CollapsibleContent>
-            </Collapsible>
-          </div>
+              </Collapsible>
+            </div>
+          )}
 
           {/* ── KPI tabulka ── */}
-          <Collapsible>
-            <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-lg border border-sky-200/60 bg-sky-50/20 px-3 py-2 text-left transition-colors hover:bg-sky-50/40 dark:border-sky-800/40 dark:bg-sky-950/20">
-              <span className="text-sm font-medium">Marketing KPI: plán vs realita</span>
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="mt-1 rounded-lg border overflow-x-auto">
+          {canAccessAdminMarketingSections && (
+            <Collapsible>
+              <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-lg border border-sky-200/60 bg-sky-50/20 px-3 py-2 text-left transition-colors hover:bg-sky-50/40 dark:border-sky-800/40 dark:bg-sky-950/20">
+                <span className="text-sm font-medium">Marketing KPI: plán vs realita</span>
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="mt-1 rounded-lg border overflow-x-auto">
                 <Table className="[&_td]:py-1.5 [&_th]:py-1.5 text-sm">
                   <TableHeader>
                     <TableRow className="bg-muted/30">
@@ -1492,9 +1819,10 @@ function MarketingPageContent() {
                     </TableRow>
                   </TableBody>
                 </Table>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
 
           {/* ── Zapsat práci ── */}
           <Collapsible open={isWorkLogFormOpen} onOpenChange={setIsWorkLogFormOpen}>
@@ -1537,7 +1865,10 @@ function MarketingPageContent() {
                           ...prev,
                           colleague_id: value,
                           role: nextRole,
-                          main_activity: getDefaultMainActivityForWorkType(prev.work_type, nextRole),
+                          main_activity: getDefaultMainActivityForRole(nextRole),
+                          work_type: getDefaultWorkTypeForActivity(getDefaultMainActivityForRole(nextRole)),
+                          title: '',
+                          quantity: '1',
                           hourly_rate: nextHourlyRate ? String(nextHourlyRate) : prev.hourly_rate,
                         };
                       })}
@@ -1549,23 +1880,23 @@ function MarketingPageContent() {
                   </div>
                   <div className="space-y-0.5">
                     <Label className="text-xs">Role</Label>
-                    <Select value={workLogForm.role} onValueChange={(value) => { const nextRole = value as MarketingRole; setWorkLogForm((prev) => ({ ...prev, role: nextRole, main_activity: getDefaultMainActivityForWorkType(prev.work_type, nextRole) })); }}>
+                    <Select value={workLogForm.role} onValueChange={(value) => { const nextRole = value as MarketingRole; const ma = getDefaultMainActivityForRole(nextRole); const wt = getDefaultWorkTypeForActivity(ma); const opt = ACTIVITY_WORK_OPTIONS[ma][0]; setWorkLogForm((prev) => ({ ...prev, role: nextRole, main_activity: ma, work_type: wt, title: opt.fixedReward ? opt.label : '', quantity: supportsQuantity(ma, wt) ? prev.quantity : '1', hours: opt.fixedReward ? '' : prev.hours })); }}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>{Object.entries(ROLE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-0.5">
                     <Label className="text-xs">Hlavní činnost</Label>
-                    <Select value={workLogForm.main_activity} onValueChange={(value) => setWorkLogForm((prev) => ({ ...prev, main_activity: value as MainMarketingActivity }))}>
+                    <Select value={workLogForm.main_activity} onValueChange={(value) => { const ma = value as MainMarketingActivity; const opts = ACTIVITY_WORK_OPTIONS[ma]; const existing = opts.find((o) => o.value === workLogForm.work_type); const pick = existing || opts[0]; const hourly = !pick.fixedReward; setWorkLogForm((prev) => ({ ...prev, main_activity: ma, work_type: pick.value, title: hourly ? '' : pick.label, quantity: supportsQuantity(ma, pick.value) ? prev.quantity : '1', hours: hourly ? prev.hours : '' })); }}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>{Object.entries(MAIN_ACTIVITY_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-0.5">
                     <Label className="text-xs">Činnost</Label>
-                    <Select value={workLogForm.work_type} onValueChange={(value) => { const wt = value as MarketingWorkType; setWorkLogForm((prev) => ({ ...prev, work_type: wt, main_activity: getDefaultMainActivityForWorkType(wt, prev.role), title: wt === 'other_hourly' ? prev.title : WORK_TYPE_LABELS[wt], hours: wt === 'other_hourly' ? prev.hours : '' })); }}>
+                    <Select value={workLogForm.work_type} onValueChange={(value) => { const wt = value as MarketingWorkType; const ma = workLogForm.main_activity as MainMarketingActivity; const opt = getWorkOptionForForm(ma, wt); const hourly = !opt?.fixedReward; setWorkLogForm((prev) => ({ ...prev, work_type: wt, title: hourly ? '' : (opt?.label || WORK_TYPE_LABELS[wt]), quantity: supportsQuantity(ma, wt) ? prev.quantity : '1', hours: hourly ? prev.hours : '' })); }}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>{Object.entries(WORK_TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+                      <SelectContent>{ACTIVITY_WORK_OPTIONS[workLogForm.main_activity as MainMarketingActivity]?.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}{o.fixedReward ? ` (${o.fixedReward.toLocaleString('cs-CZ')} Kč)` : ''}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 </div>
@@ -1574,14 +1905,14 @@ function MarketingPageContent() {
                     <Label className="text-xs">Datum</Label>
                     <Input className="h-8 text-xs w-36" type="date" value={workLogForm.activity_date} onChange={(e) => setWorkLogForm((prev) => ({ ...prev, activity_date: e.target.value }))} />
                   </div>
-                  {workLogForm.work_type === 'other_hourly' ? (
+                  {isHourlyWork(workLogForm.main_activity as MainMarketingActivity, workLogForm.work_type) ? (
                     <>
                       <div className="space-y-0.5 flex-1">
-                        <Label className="text-xs">Název činnosti</Label>
-                        <Input className="h-8 text-xs" value={workLogForm.title} onChange={(e) => setWorkLogForm((prev) => ({ ...prev, title: e.target.value }))} placeholder="Strategická příprava…" />
+                        <Label className="text-xs">Název činnosti <span className="text-destructive">*</span></Label>
+                        <Input className="h-8 text-xs" value={workLogForm.title} onChange={(e) => setWorkLogForm((prev) => ({ ...prev, title: e.target.value }))} placeholder={getWorkOptionForForm(workLogForm.main_activity as MainMarketingActivity, workLogForm.work_type)?.label || 'Popis…'} />
                       </div>
                       <div className="space-y-0.5 w-20">
-                        <Label className="text-xs">Hodiny</Label>
+                        <Label className="text-xs">Hodiny <span className="text-destructive">*</span></Label>
                         <Input className="h-8 text-xs" type="number" value={workLogForm.hours} onChange={(e) => setWorkLogForm((prev) => ({ ...prev, hours: e.target.value }))} placeholder="3.5" />
                       </div>
                       <div className="space-y-0.5 w-32">
@@ -1593,18 +1924,55 @@ function MarketingPageContent() {
                       </div>
                     </>
                   ) : (
-                    <div className="flex-1 rounded-md border bg-muted/30 px-2.5 py-1.5">
-                      <p className="text-xs font-medium">Fixní odměna: {FIXED_WORK_REWARD[workLogForm.work_type].toLocaleString('cs-CZ')} Kč</p>
-                    </div>
+                    <>
+                      {supportsQuantity(workLogForm.main_activity as MainMarketingActivity, workLogForm.work_type) && (
+                        <div className="space-y-0.5 w-20">
+                          <Label className="text-xs">Počet (ks)</Label>
+                          <Input
+                            className="h-8 text-xs"
+                            type="number"
+                            min={1}
+                            step={1}
+                            value={workLogForm.quantity}
+                            onChange={(e) => setWorkLogForm((prev) => ({ ...prev, quantity: e.target.value }))}
+                            placeholder="1"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 rounded-md border bg-muted/30 px-2.5 py-1.5">
+                        <p className="text-xs font-medium">
+                          Fixní odměna:{' '}
+                          {(
+                            getFixedReward(workLogForm.main_activity as MainMarketingActivity, workLogForm.work_type)
+                            * (supportsQuantity(workLogForm.main_activity as MainMarketingActivity, workLogForm.work_type)
+                              ? Math.max(1, Math.floor(Number(workLogForm.quantity) || 1))
+                              : 1)
+                          ).toLocaleString('cs-CZ')} Kč
+                        </p>
+                      </div>
+                    </>
                   )}
                 </div>
                 <div className="space-y-0.5">
-                  <Label className="text-xs">Popis (volitelné)</Label>
-                  <Textarea className="text-xs resize-none" rows={1} value={workLogForm.description} onChange={(e) => setWorkLogForm((prev) => ({ ...prev, description: e.target.value }))} />
+                  <Label className="text-xs">Popis <span className="text-destructive">*</span></Label>
+                  <Textarea className="text-xs resize-none" rows={1} value={workLogForm.description} onChange={(e) => setWorkLogForm((prev) => ({ ...prev, description: e.target.value }))} placeholder="Např. název reelska, epizoda podcastu, případová studie…" />
                 </div>
-                <Button size="sm" onClick={() => addWorkLogMutation.mutate()} disabled={addWorkLogMutation.isPending}>
-                  Přidat aktivitu
-                </Button>
+                <div className="flex items-center gap-2">
+                  {editingWorkLogId && (
+                    <Button size="sm" variant="outline" onClick={() => resetWorkLogForm()} disabled={updateWorkLogMutation.isPending}>
+                      Zrušit úpravu
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    onClick={() => (editingWorkLogId ? updateWorkLogMutation.mutate() : addWorkLogMutation.mutate())}
+                    disabled={addWorkLogMutation.isPending || updateWorkLogMutation.isPending}
+                  >
+                    {editingWorkLogId
+                      ? (updateWorkLogMutation.isPending ? 'Ukládám…' : 'Uložit úpravy')
+                      : (addWorkLogMutation.isPending ? 'Přidávám…' : 'Přidat aktivitu')}
+                  </Button>
+                </div>
               </div>
             </CollapsibleContent>
           </Collapsible>
@@ -1612,12 +1980,30 @@ function MarketingPageContent() {
           {/* ── Work log tabulka ── */}
           <div className="rounded-lg border overflow-hidden">
             <div className="flex items-center justify-between border-b bg-muted/30 px-3 py-1.5">
-              <p className="text-sm font-medium">Zalogované aktivity</p>
-              {isLoading && <p className="text-xs text-muted-foreground">Načítám…</p>}
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium">Zalogované aktivity</p>
+                <Select value={activityFilterColleagueId} onValueChange={setActivityFilterColleagueId}>
+                  <SelectTrigger className="h-7 w-[210px] text-xs bg-background">
+                    <SelectValue placeholder="Filtrovat podle kolegy" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Všichni kolegové</SelectItem>
+                    {activityFilterOptions.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {filteredWorkLogs.length} / {workLogs.length}
+                </span>
+                {isLoading && <p className="text-xs text-muted-foreground">Načítám…</p>}
+              </div>
             </div>
-            <div className="overflow-x-auto">
+            <div className="max-h-[430px] overflow-auto">
               <Table className="[&_td]:py-1.5 [&_th]:py-1.5">
-                <TableHeader>
+                <TableHeader className="sticky top-0 z-10 bg-background">
                   <TableRow className="bg-muted/20">
                     <TableHead className="text-xs w-[70px]">Datum</TableHead>
                     <TableHead className="text-xs">Kolega</TableHead>
@@ -1625,17 +2011,20 @@ function MarketingPageContent() {
                     <TableHead className="text-xs">Činnost</TableHead>
                     <TableHead className="text-xs">Aktivita</TableHead>
                     <TableHead className="text-right text-xs w-[100px]">Kč</TableHead>
+                    <TableHead className="text-right text-xs w-[140px]">Akce</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {workLogs.length === 0 ? (
+                  {filteredWorkLogs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-xs text-muted-foreground py-6">
-                        Žádné aktivity v tomto měsíci.
+                      <TableCell colSpan={7} className="text-center text-xs text-muted-foreground py-6">
+                        {activityFilterColleagueId === 'all'
+                          ? 'Žádné aktivity v tomto měsíci.'
+                          : 'Pro vybraného kolegu nejsou v tomto měsíci žádné aktivity.'}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    workLogs.map((log) => (
+                    filteredWorkLogs.map((log) => (
                       <TableRow key={log.id}>
                         <TableCell className="text-xs tabular-nums text-muted-foreground">{new Date(log.activity_date).toLocaleDateString('cs-CZ', { day: '2-digit', month: '2-digit' })}</TableCell>
                         <TableCell className="text-xs">{colleagueNameById.get(log.colleague_id) || '—'}</TableCell>
@@ -1652,10 +2041,38 @@ function MarketingPageContent() {
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{MAIN_ACTIVITY_LABELS[resolveMainActivityFromLog(log)]}</TableCell>
                         <TableCell className="text-xs">
+                          {getOutputUnitsFromLog(log) > 1 && (
+                            <span className="mr-1 inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
+                              {getOutputUnitsFromLog(log)}×
+                            </span>
+                          )}
                           <span className="font-medium">{log.title}</span>
                           {log.description && <span className="text-muted-foreground"> · {log.description}</span>}
                         </TableCell>
                         <TableCell className="text-right text-xs font-medium tabular-nums">{Math.round(log.amount).toLocaleString('cs-CZ')} Kč</TableCell>
+                        <TableCell className="text-right">
+                          {canEditLog(log) ? (
+                            <div className="flex justify-end gap-1">
+                              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => beginEditWorkLog(log)}>
+                                Upravit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                                disabled={deleteWorkLogMutation.isPending}
+                                onClick={() => {
+                                  if (!window.confirm('Opravdu chcete tuto aktivitu smazat?')) return;
+                                  deleteWorkLogMutation.mutate(log.id);
+                                }}
+                              >
+                                Smazat
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -1664,144 +2081,323 @@ function MarketingPageContent() {
             </div>
           </div>
 
-        </TabsContent>
+          {/* ── Manuální marketingové náklady (other spend) ── */}
+          {canManageBudgets && (
+            <div className="rounded-lg border overflow-hidden">
+              <div className="flex items-center justify-between border-b bg-muted/30 px-3 py-1.5">
+                <p className="text-sm font-medium">Manuální marketingové náklady (Ostatní výdaje)</p>
+                <span className="text-xs text-muted-foreground">
+                  {manualOtherCosts.length} záznamů
+                </span>
+              </div>
 
-        <TabsContent value="annual" className="mt-3 space-y-4">
-          <div className="grid gap-3 md:grid-cols-3">
-            <Card className="border-primary/20">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Roční plán rozpočtu</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-primary">{Math.round(annualSummary.plannedTotal).toLocaleString('cs-CZ')} Kč</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Roční skutečné náklady</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{Math.round(annualSummary.actualTotal).toLocaleString('cs-CZ')} Kč</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Roční rozdíl</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className={`text-2xl font-bold ${annualSummary.diff >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-                  {annualSummary.diff >= 0 ? '+' : ''}
-                  {Math.round(annualSummary.diff).toLocaleString('cs-CZ')} Kč
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle>Nastavení ročního plánu po měsících (sbalené)</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <Collapsible open={isAnnualPlanOpen} onOpenChange={setIsAnnualPlanOpen}>
-                <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md border p-2.5 text-left hover:bg-muted/40 transition-colors">
-                  <div>
-                    <p className="text-sm font-semibold">Zobrazit nastavení měsíčního budgetu</p>
-                    <p className="text-xs text-muted-foreground">Na roční úrovni se nastavuje pouze celkový náklad na měsíc.</p>
+              <div className="space-y-2 border-b p-3">
+                <div className="grid gap-2 sm:grid-cols-[150px,160px,1fr]">
+                  <div className="space-y-0.5">
+                    <Label className="text-xs">Datum</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      type="date"
+                      value={manualCostForm.spend_date}
+                      onChange={(e) => setManualCostForm((prev) => ({ ...prev, spend_date: e.target.value }))}
+                    />
                   </div>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-2 overflow-x-auto">
-                  <Table>
-                    <TableHeader>
+                  <div className="space-y-0.5">
+                    <Label className="text-xs">Částka (Kč)</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      type="number"
+                      value={manualCostForm.amount}
+                      onChange={(e) => setManualCostForm((prev) => ({ ...prev, amount: e.target.value }))}
+                      placeholder="25000"
+                    />
+                  </div>
+                  <div className="space-y-0.5">
+                    <Label className="text-xs">Poznámka</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      value={manualCostForm.note}
+                      onChange={(e) => setManualCostForm((prev) => ({ ...prev, note: e.target.value }))}
+                      placeholder="Např. event, pronájem prostoru, produkční náklady..."
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {editingManualCostId && (
+                    <Button size="sm" variant="outline" onClick={resetManualCostForm} disabled={saveManualCostMutation.isPending}>
+                      Zrušit úpravu
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    onClick={() => saveManualCostMutation.mutate()}
+                    disabled={saveManualCostMutation.isPending}
+                  >
+                    {editingManualCostId
+                      ? (saveManualCostMutation.isPending ? 'Ukládám…' : 'Uložit úpravy')
+                      : (saveManualCostMutation.isPending ? 'Přidávám…' : 'Přidat náklad')}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="max-h-[280px] overflow-auto">
+                <Table className="[&_td]:py-1.5 [&_th]:py-1.5">
+                  <TableHeader className="sticky top-0 z-10 bg-background">
+                    <TableRow className="bg-muted/20">
+                      <TableHead className="text-xs w-[90px]">Datum</TableHead>
+                      <TableHead className="text-xs">Poznámka</TableHead>
+                      <TableHead className="text-right text-xs w-[120px]">Kč</TableHead>
+                      <TableHead className="text-right text-xs w-[140px]">Akce</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {manualOtherCosts.length === 0 ? (
                       <TableRow>
-                        <TableHead>Měsíc</TableHead>
-                        <TableHead>Plánovaný měsíční budget</TableHead>
-                        <TableHead />
+                        <TableCell colSpan={4} className="text-center text-xs text-muted-foreground py-5">
+                          Zatím žádné manuální náklady.
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {Array.from({ length: 12 }, (_, idx) => idx + 1).map((month) => {
-                        const draft = annualPlanDrafts[month];
-                        if (!draft) return null;
-                        return (
-                          <TableRow key={`draft-${month}`}>
-                            <TableCell className="font-medium capitalize">{format(new Date(selectedYear, month - 1, 1), 'LLLL', { locale: cs })}</TableCell>
-                            <TableCell><Input type="number" value={draft.planned_total_budget} onChange={(e) => setAnnualDraftValue(month, 'planned_total_budget', Number(e.target.value) || 0)} /></TableCell>
-                            <TableCell>
+                    ) : (
+                      manualOtherCosts.map((entry) => (
+                        <TableRow key={entry.id}>
+                          <TableCell className="text-xs tabular-nums text-muted-foreground">
+                            {new Date(entry.spend_date).toLocaleDateString('cs-CZ', { day: '2-digit', month: '2-digit' })}
+                          </TableCell>
+                          <TableCell className="text-xs">{entry.note || '—'}</TableCell>
+                          <TableCell className="text-right text-xs font-medium tabular-nums">
+                            {Math.round(entry.amount || 0).toLocaleString('cs-CZ')} Kč
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => beginEditManualCost(entry)}>
+                                Upravit
+                              </Button>
                               <Button
                                 size="sm"
-                                onClick={() => saveAnnualMonthPlanMutation.mutate(month)}
-                                disabled={!canManageBudgets || saveAnnualMonthPlanMutation.isPending}
+                                variant="ghost"
+                                className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                                disabled={deleteManualCostMutation.isPending}
+                                onClick={() => {
+                                  if (!window.confirm('Opravdu chcete tento manuální náklad smazat?')) return;
+                                  deleteManualCostMutation.mutate(entry.id);
+                                }}
                               >
-                                Uložit
+                                Smazat
                               </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </CollapsibleContent>
-              </Collapsible>
-            </CardContent>
-          </Card>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle>Roční rozpad nákladů podle kolegů (sbalené)</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <Collapsible open={isAnnualRoleBreakdownOpen} onOpenChange={setIsAnnualRoleBreakdownOpen}>
-                <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md border p-2.5 text-left hover:bg-muted/40 transition-colors">
-                  <div>
-                    <p className="text-sm font-semibold">Zobrazit roční rozpad podle kolegů</p>
-                    <p className="text-xs text-muted-foreground">Podle toho, kdo aktivity v roce logoval.</p>
-                  </div>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-2 grid gap-2 md:grid-cols-3">
-                  {annualColleagueSummary.map((item) => (
-                    <div key={item.name} className="rounded-md border p-2.5">
-                      <p className="text-sm text-muted-foreground">{item.name}</p>
-                      <p className="text-xl font-bold">{Math.round(item.amount).toLocaleString('cs-CZ')} Kč</p>
-                      <p className="text-xs text-muted-foreground">{item.logs} záznamů</p>
+        </TabsContent>
+
+        <TabsContent value="annual" className="mt-3 space-y-3">
+
+          {/* ── Year selector ── */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={String(selectedYear)} onValueChange={(value) => setSelectedYear(Number(value))}>
+              <SelectTrigger className="h-8 w-[90px] text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 4 }, (_, idx) => now.getFullYear() - idx).map((year) => (
+                  <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* ── KPI stats strip (same style as monthly) ── */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="rounded-lg border bg-card px-3 py-2.5">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Plánovaný rozpočet</p>
+              <p className="mt-0.5 text-xl font-bold text-primary leading-tight">{Math.round(annualSummary.plannedTotal).toLocaleString('cs-CZ')} Kč</p>
+            </div>
+            <div className="rounded-lg border bg-card px-3 py-2.5">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Skutečné náklady</p>
+              <p className="mt-0.5 text-xl font-bold leading-tight">{Math.round(annualSummary.actualTotal).toLocaleString('cs-CZ')} Kč</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">práce {Math.round(annualSummary.actualLabor).toLocaleString('cs-CZ')} · spend {Math.round(annualSummary.actualSpend).toLocaleString('cs-CZ')}</p>
+            </div>
+            <div className="rounded-lg border bg-card px-3 py-2.5">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Rozdíl plán / realita</p>
+              <p className={`mt-0.5 text-xl font-bold leading-tight ${annualSummary.diff >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                {annualSummary.diff >= 0 ? '+' : ''}{Math.round(annualSummary.diff).toLocaleString('cs-CZ')} Kč
+              </p>
+            </div>
+            <div className="rounded-lg border bg-card px-3 py-2.5">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Průměr / měsíc</p>
+              <p className="mt-0.5 text-xl font-bold leading-tight">
+                {Math.round(annualSummary.actualTotal / 12).toLocaleString('cs-CZ')} Kč
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                plán {Math.round(annualSummary.plannedTotal / 12).toLocaleString('cs-CZ')} Kč/měs
+              </p>
+            </div>
+          </div>
+
+          {/* ── Allocation chart ── */}
+          <div className="rounded-lg border p-3">
+            <div className="mb-2">
+              <p className="text-sm font-medium">Podíl marketingového rozpočtu podle činností a spendu</p>
+              <p className="text-xs text-muted-foreground">
+                Roční realita: {Math.round(annualAllocationData.total).toLocaleString('cs-CZ')} Kč
+              </p>
+            </div>
+            {annualAllocationData.rows.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4">Zatím nejsou data pro vykreslení grafu.</p>
+            ) : (
+              <div className="grid gap-3 lg:grid-cols-[320px,1fr] items-center">
+                <div className="h-[220px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={annualAllocationData.rows}
+                        dataKey="amount"
+                        nameKey="label"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={82}
+                        innerRadius={48}
+                      >
+                        {annualAllocationData.rows.map((row, idx) => (
+                          <Cell key={row.key} fill={ALLOCATION_COLORS[idx % ALLOCATION_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip
+                        formatter={(value: number, _name, entry) => {
+                          const payload = entry?.payload as { percent?: number };
+                          const percent = payload?.percent ?? 0;
+                          return [`${Math.round(Number(value)).toLocaleString('cs-CZ')} Kč (${percent.toFixed(1)} %)`, ''];
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="grid gap-1.5 sm:grid-cols-2">
+                  {annualAllocationData.rows.map((row, idx) => (
+                    <div key={row.key} className="flex items-center justify-between rounded border px-2 py-1.5 text-xs">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: ALLOCATION_COLORS[idx % ALLOCATION_COLORS.length] }} />
+                        <span className="truncate">{row.label}</span>
+                      </div>
+                      <span className="font-semibold tabular-nums">
+                        {row.percent.toFixed(1)} %
+                      </span>
                     </div>
                   ))}
-                </CollapsibleContent>
-              </Collapsible>
-            </CardContent>
-          </Card>
+                </div>
+              </div>
+            )}
+          </div>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle>Roční plán vs realita po měsících</CardTitle>
-            </CardHeader>
-            <CardContent className="overflow-x-auto pt-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Měsíc</TableHead>
-                    <TableHead className="text-right">Plán rozpočet</TableHead>
-                    <TableHead className="text-right">Skutečné náklady</TableHead>
-                    <TableHead className="text-right">Rozdíl</TableHead>
+          {/* ── Monthly breakdown table ── */}
+          <div className="overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="text-xs">Měsíc</TableHead>
+                  <TableHead className="text-right text-xs">Plán</TableHead>
+                  <TableHead className="text-right text-xs">Práce</TableHead>
+                  <TableHead className="text-right text-xs">Spend</TableHead>
+                  <TableHead className="text-right text-xs">Skutečné celkem</TableHead>
+                  <TableHead className="text-right text-xs">Rozdíl</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {annualRows.map((row) => (
+                  <TableRow key={row.month} className={row.actualTotal === 0 && row.plannedTotal === 0 ? 'opacity-40' : ''}>
+                    <TableCell className="text-xs font-medium capitalize">{row.monthLabel}</TableCell>
+                    <TableCell className="text-right text-xs tabular-nums">{Math.round(row.plannedTotal).toLocaleString('cs-CZ')}</TableCell>
+                    <TableCell className="text-right text-xs tabular-nums">{Math.round(row.actualLabor).toLocaleString('cs-CZ')}</TableCell>
+                    <TableCell className="text-right text-xs tabular-nums">{Math.round(row.actualSpend).toLocaleString('cs-CZ')}</TableCell>
+                    <TableCell className="text-right text-xs tabular-nums font-medium">{Math.round(row.actualTotal).toLocaleString('cs-CZ')}</TableCell>
+                    <TableCell className={`text-right text-xs tabular-nums font-semibold ${row.diff >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                      {row.diff >= 0 ? '+' : ''}{Math.round(row.diff).toLocaleString('cs-CZ')}
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {annualRows.map((row) => (
-                    <TableRow key={row.month}>
-                      <TableCell className="font-medium capitalize">{row.monthLabel}</TableCell>
-                      <TableCell className="text-right">{Math.round(row.plannedTotal).toLocaleString('cs-CZ')} Kč</TableCell>
-                      <TableCell className="text-right">{Math.round(row.actualTotal).toLocaleString('cs-CZ')} Kč</TableCell>
-                      <TableCell className={`text-right font-semibold ${row.diff >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
-                        {row.diff >= 0 ? '+' : ''}
-                        {Math.round(row.diff).toLocaleString('cs-CZ')} Kč
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                ))}
+                <TableRow className="bg-muted/40 font-semibold">
+                  <TableCell className="text-xs">Celkem</TableCell>
+                  <TableCell className="text-right text-xs tabular-nums">{Math.round(annualSummary.plannedTotal).toLocaleString('cs-CZ')}</TableCell>
+                  <TableCell className="text-right text-xs tabular-nums">{Math.round(annualSummary.actualLabor).toLocaleString('cs-CZ')}</TableCell>
+                  <TableCell className="text-right text-xs tabular-nums">{Math.round(annualSummary.actualSpend).toLocaleString('cs-CZ')}</TableCell>
+                  <TableCell className="text-right text-xs tabular-nums">{Math.round(annualSummary.actualTotal).toLocaleString('cs-CZ')}</TableCell>
+                  <TableCell className={`text-right text-xs tabular-nums ${annualSummary.diff >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                    {annualSummary.diff >= 0 ? '+' : ''}{Math.round(annualSummary.diff).toLocaleString('cs-CZ')}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* ── Project breakdown table ── */}
+          <div className="overflow-x-auto rounded-lg border">
+            <div className="border-b bg-muted/30 px-3 py-2">
+              <p className="text-sm font-medium">Rozpad podle projektu (interní práce)</p>
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/20">
+                  <TableHead className="text-xs">Měsíc</TableHead>
+                  <TableHead className="text-right text-xs">Socials</TableHead>
+                  <TableHead className="text-right text-xs">Danny</TableHead>
+                  <TableHead className="text-right text-xs">Oťas</TableHead>
+                  <TableHead className="text-right text-xs">Celkem</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {annualProjectRows.map((row) => (
+                  <TableRow key={`project-${row.month}`} className={row.total === 0 ? 'opacity-40' : ''}>
+                    <TableCell className="text-xs font-medium capitalize">{row.monthLabel}</TableCell>
+                    <TableCell className="text-right text-xs tabular-nums">{Math.round(row.socials).toLocaleString('cs-CZ')}</TableCell>
+                    <TableCell className="text-right text-xs tabular-nums">{Math.round(row.danny).toLocaleString('cs-CZ')}</TableCell>
+                    <TableCell className="text-right text-xs tabular-nums">{Math.round(row.otas).toLocaleString('cs-CZ')}</TableCell>
+                    <TableCell className="text-right text-xs tabular-nums font-medium">{Math.round(row.total).toLocaleString('cs-CZ')}</TableCell>
+                  </TableRow>
+                ))}
+                <TableRow className="bg-muted/40 font-semibold">
+                  <TableCell className="text-xs">Celkem</TableCell>
+                  <TableCell className="text-right text-xs tabular-nums">{Math.round(annualProjectTotals.socials).toLocaleString('cs-CZ')}</TableCell>
+                  <TableCell className="text-right text-xs tabular-nums">{Math.round(annualProjectTotals.danny).toLocaleString('cs-CZ')}</TableCell>
+                  <TableCell className="text-right text-xs tabular-nums">{Math.round(annualProjectTotals.otas).toLocaleString('cs-CZ')}</TableCell>
+                  <TableCell className="text-right text-xs tabular-nums">{Math.round(annualProjectTotals.total).toLocaleString('cs-CZ')}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* ── Colleague breakdown (collapsible) ── */}
+          <Collapsible open={isAnnualRoleBreakdownOpen} onOpenChange={setIsAnnualRoleBreakdownOpen}>
+            <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition-colors hover:bg-muted/40">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Rozpad nákladů podle kolegů</span>
+                <span className="text-xs text-muted-foreground">
+                  {annualColleagueSummary.filter((c) => c.logs > 0).length} aktivních
+                </span>
+              </div>
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-1 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {annualColleagueSummary.filter((c) => c.logs > 0).map((item) => (
+                  <div key={item.name} className="flex items-center justify-between rounded-lg border px-3 py-2">
+                    <div>
+                      <p className="text-sm font-medium">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">{item.logs} záznamů</p>
+                    </div>
+                    <p className="text-sm font-bold tabular-nums">{Math.round(item.amount).toLocaleString('cs-CZ')} Kč</p>
+                  </div>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
         </TabsContent>
       </Tabs>
     </div>

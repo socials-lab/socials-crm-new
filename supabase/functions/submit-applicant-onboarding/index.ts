@@ -102,9 +102,60 @@ serve(async (req) => {
     if (updateError) {
       console.error("Update applicant error:", updateError);
       return new Response(
-        JSON.stringify({ error: "Failed to save onboarding data" }),
+        JSON.stringify({
+          error: "Failed to save onboarding data",
+          details: updateError.message || updateError.code || String(updateError),
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Notify admin/management/super-admin users about completed applicant onboarding.
+    // Email sending is handled asynchronously by DB trigger on notifications table.
+    try {
+      const { data: rolesData, error: rolesError } = await supabaseAdmin
+        .from("user_roles")
+        .select("user_id, role, is_super_admin, is_active")
+        .eq("is_active", true);
+
+      if (rolesError) {
+        console.error("Fetch user roles for onboarding notification failed:", rolesError);
+      } else if (Array.isArray(rolesData) && rolesData.length > 0) {
+        const recipientIds = Array.from(
+          new Set(
+            rolesData
+              .filter((r: { role?: string | null; is_super_admin?: boolean | null }) =>
+                r?.is_super_admin === true || r?.role === "admin" || r?.role === "management")
+              .map((r: { user_id: string }) => r.user_id),
+          ),
+        );
+
+        if (recipientIds.length > 0) {
+          const notifications = recipientIds.map((userId) => ({
+            user_id: userId,
+            type: "form_completed",
+            title: "Onboarding kolegy vyplněn",
+            message: `Kandidát "${fullName}" dokončil onboarding formulář.`,
+            link: `/recruitment?openApplicant=${data.applicantId}`,
+            metadata: {
+              applicant_id: data.applicantId,
+              full_name: fullName,
+              email,
+            },
+          }));
+
+          const { error: notifError } = await supabaseAdmin
+            .from("notifications")
+            .insert(notifications);
+
+          if (notifError) {
+            console.error("Create onboarding notifications failed:", notifError);
+          }
+        }
+      }
+    } catch (notifErr) {
+      console.error("Onboarding notification pipeline failed:", notifErr);
+      // Do not fail the onboarding submission due to notification issue.
     }
 
     return new Response(

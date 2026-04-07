@@ -248,7 +248,7 @@ export default function ApplicantOnboardingForm() {
     setIsSubmitting(true);
 
     try {
-      const { data, error } = await invokeWithTimeout<{ error?: string }>('submit-applicant-onboarding', {
+      const { data, error } = await invokeWithTimeout<{ error?: string; details?: string }>('submit-applicant-onboarding', {
         body: {
           applicantId,
           ...formData,
@@ -258,7 +258,7 @@ export default function ApplicantOnboardingForm() {
       });
 
       if (error || data?.error) {
-        const errorMessage = data?.error || error?.message || 'Neznámá chyba';
+        const errorMessage = data?.details || data?.error || error?.message || 'Neznámá chyba';
         toast.error(`Nepodařilo se uložit: ${errorMessage}`);
         return;
       }
