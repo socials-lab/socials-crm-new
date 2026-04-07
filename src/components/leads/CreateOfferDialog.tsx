@@ -656,7 +656,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[95vh] p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[900px] max-h-[95vh] p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>
             {createdOfferUrl 

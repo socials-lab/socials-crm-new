@@ -458,7 +458,12 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold">{lead.company_name}</span>
+                      <InlineEditField
+                        value={lead.company_name}
+                        onSave={(v) => { updateLead(lead.id, { company_name: v }); toast.success('Uloženo'); }}
+                        displayClassName="font-semibold"
+                        emptyText="Doplnit název"
+                      />
                       {lead.ico && (
                         <a href={`https://or.justice.cz/ias/ui/rejstrik-firma.vysledky?ico=${lead.ico}`} target="_blank" rel="noopener noreferrer"
                           className="text-xs text-primary hover:underline">📋 Rejstřík</a>
@@ -513,17 +518,30 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">Adresa</span>
-                        <p className="font-medium text-sm">
-                          {lead.company_address || [lead.billing_street, lead.billing_city, lead.billing_zip].filter(Boolean).join(', ') || '–'}
-                        </p>
+                        <InlineEditField
+                          value={lead.company_address || [lead.billing_street, lead.billing_city, lead.billing_zip].filter(Boolean).join(', ')}
+                          onSave={(v) => { updateLead(lead.id, { billing_street: v } as any); toast.success('Uloženo'); }}
+                          emptyText="Doplnit adresu"
+                          displayClassName="font-medium text-sm"
+                        />
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">E-shop</span>
-                        <p className="font-medium">{lead.is_ecommerce !== null && lead.is_ecommerce !== undefined ? (lead.is_ecommerce ? 'Ano' : 'Ne') : '–'}</p>
+                        <InlineEditField
+                          value={lead.is_ecommerce !== null && lead.is_ecommerce !== undefined ? (lead.is_ecommerce ? 'Ano' : 'Ne') : ''}
+                          onSave={(v) => { updateLead(lead.id, { is_ecommerce: v.toLowerCase() === 'ano' } as any); toast.success('Uloženo'); }}
+                          emptyText="–"
+                          displayClassName="font-medium"
+                        />
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">Kredibilita</span>
-                        <p className="font-medium">{lead.credibility_score !== null && lead.credibility_score !== undefined ? lead.credibility_score : '–'}</p>
+                        <InlineEditField
+                          value={lead.credibility_score !== null && lead.credibility_score !== undefined ? String(lead.credibility_score) : ''}
+                          onSave={(v) => { updateLead(lead.id, { credibility_score: v || null } as any); toast.success('Uloženo'); }}
+                          emptyText="–"
+                          displayClassName="font-medium"
+                        />
                       </div>
                     </div>
                     {/* Social */}
@@ -565,15 +583,30 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                       <div>
                         <span className="text-muted-foreground text-xs">Typ webu</span>
-                        <p className="font-medium">{lead.is_ecommerce ? 'E-shop' : lead.business_type || '–'}</p>
+                        <InlineEditField
+                          value={lead.is_ecommerce ? 'E-shop' : lead.business_type || ''}
+                          onSave={(v) => { updateLead(lead.id, { business_type: v } as any); toast.success('Uloženo'); }}
+                          emptyText="–"
+                          displayClassName="font-medium"
+                        />
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">Platforma</span>
-                        <p className="font-medium">{lead.enrichment_platform || '–'}</p>
+                        <InlineEditField
+                          value={lead.enrichment_platform || ''}
+                          onSave={(v) => { updateLead(lead.id, { enrichment_platform: v || null } as any); toast.success('Uloženo'); }}
+                          emptyText="–"
+                          displayClassName="font-medium"
+                        />
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">Vyspělost</span>
-                        <p className="font-medium">{lead.marketing_maturity || '–'}</p>
+                        <InlineEditField
+                          value={lead.marketing_maturity || ''}
+                          onSave={(v) => { updateLead(lead.id, { marketing_maturity: v || null } as any); toast.success('Uloženo'); }}
+                          emptyText="–"
+                          displayClassName="font-medium"
+                        />
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">Web</span>
@@ -618,24 +651,50 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                     Marketing
                   </h4>
                   <div className="space-y-2 text-sm">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-2">
                       <div>
                         <span className="text-muted-foreground text-xs">Kanály</span>
-                        <p className="font-medium">{lead.enrichment_services_needed || '–'}</p>
+                        <InlineEditField
+                          value={lead.enrichment_services_needed || ''}
+                          onSave={(v) => { updateLead(lead.id, { enrichment_services_needed: v || null } as any); toast.success('Uloženo'); }}
+                          emptyText="–"
+                          displayClassName="font-medium"
+                        />
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">Kdo řeší reklamu</span>
-                        <p className="font-medium">{lead.marketing_experience || '–'}</p>
+                        <InlineEditField
+                          value={lead.marketing_experience || ''}
+                          onSave={(v) => { updateLead(lead.id, { marketing_experience: v || null } as any); toast.success('Uloženo'); }}
+                          emptyText="–"
+                          displayClassName="font-medium"
+                        />
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">Grafický tým</span>
-                        <p className="font-medium">{lead.has_creative_team || '–'}</p>
+                        <InlineEditField
+                          value={lead.has_creative_team || ''}
+                          onSave={(v) => { updateLead(lead.id, { has_creative_team: v || null } as any); toast.success('Uloženo'); }}
+                          emptyText="–"
+                          displayClassName="font-medium"
+                        />
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">Ad spend</span>
-                        <p className="font-medium">
-                          {lead.enrichment_ad_spend_range || (lead.ad_spend_monthly ? `${lead.ad_spend_monthly.toLocaleString('cs-CZ')} Kč` : '–')}
-                        </p>
+                        <InlineEditField
+                          value={lead.ad_spend_monthly ? String(lead.ad_spend_monthly) : (lead.enrichment_ad_spend_range || '')}
+                          onSave={(v) => {
+                            const num = Number(v.replace(/\s/g, ''));
+                            if (!isNaN(num) && num > 0) {
+                              updateLead(lead.id, { ad_spend_monthly: num });
+                            } else {
+                              updateLead(lead.id, { enrichment_ad_spend_range: v || null } as any);
+                            }
+                            toast.success('Uloženo');
+                          }}
+                          emptyText="–"
+                          displayClassName="font-medium"
+                        />
                       </div>
                       <div>
                         <span className="text-muted-foreground text-xs">Zdroj</span>
@@ -647,12 +706,15 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                         />
                       </div>
                     </div>
-                    {lead.pain_point && (
-                      <div className="p-2.5 rounded-lg border-l-4 border-red-400 bg-red-500/5">
-                        <span className="text-xs text-muted-foreground block mb-0.5">🎯 Pain point</span>
-                        <p className="text-sm font-medium">{lead.pain_point}</p>
-                      </div>
-                    )}
+                    <div className="p-2.5 rounded-lg border-l-4 border-red-400 bg-red-500/5">
+                      <span className="text-xs text-muted-foreground block mb-0.5">🎯 Pain point</span>
+                      <InlineEditField
+                        value={lead.pain_point || ''}
+                        onSave={(v) => { updateLead(lead.id, { pain_point: v || null } as any); toast.success('Uloženo'); }}
+                        emptyText="Doplnit pain point"
+                        displayClassName="text-sm font-medium"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -899,9 +961,9 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
               <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
                 <div className="flex items-center gap-2">
                   <Clock className="h-3.5 w-3.5" />
-                  <span>Vytvořeno: {new Date(lead.created_at).toLocaleString('cs-CZ')}</span>
+                  <span>Vytvořeno: {new Date(lead.created_at).toLocaleDateString('cs-CZ')}</span>
                   <span>•</span>
-                  <span>Aktualizace: {new Date(lead.updated_at).toLocaleString('cs-CZ')}</span>
+                  <span>Aktualizace: {new Date(lead.updated_at).toLocaleDateString('cs-CZ')}</span>
                 </div>
               </div>
 
@@ -1063,6 +1125,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
         onSuccess={(token, offerUrl, syncData) => {
           setSharedOfferUrl(offerUrl);
           const updateData: Partial<Lead> = {
+            offer_url: offerUrl,
             offer_created_at: new Date().toISOString(),
           };
           // Sync services from offer back to lead's potential_services
