@@ -285,6 +285,16 @@ serve(async (req) => {
             can_view: true,
             can_edit: false,
           },
+          {
+            page: 'sop',
+            can_view: true,
+            can_edit: false,
+          },
+          {
+            page: 'bug-reports',
+            can_view: true,
+            can_edit: false,
+          },
         ],
       });
 

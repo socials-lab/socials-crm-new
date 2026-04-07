@@ -51,7 +51,7 @@ const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
   client: 'Přístup k vlastním datům a zakázkám',
 };
 
-const DEFAULT_NEW_COLLEAGUE_PAGES = ['my-work'];
+const DEFAULT_NEW_COLLEAGUE_PAGES = ['my-work', 'sop', 'bug-reports'];
 const PRIVILEGED_ROLES: AppRole[] = ['admin', 'management'];
 
 export function EditUserRoleDialog({ open, onOpenChange, user, onSave }: EditUserRoleDialogProps) {

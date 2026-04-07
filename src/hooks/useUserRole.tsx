@@ -25,7 +25,7 @@ interface UserRoleContextType {
 
 const UserRoleContext = createContext<UserRoleContextType | undefined>(undefined);
 
-const DEFAULT_PAGES_WITHOUT_EXPLICIT_PERMISSIONS = ['my-work'];
+const DEFAULT_PAGES_WITHOUT_EXPLICIT_PERMISSIONS = ['my-work', 'sop', 'bug-reports'];
 
 export function UserRoleProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();

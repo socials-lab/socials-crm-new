@@ -323,6 +323,7 @@ function MarketingPageContent() {
   const [isRoleBreakdownOpen, setIsRoleBreakdownOpen] = useState(false);
   const [isMainMonthlyPlanOpen, setIsMainMonthlyPlanOpen] = useState(false);
   const [isDetailMonthlyPlanOpen, setIsDetailMonthlyPlanOpen] = useState(false);
+  const [isManualCostsOpen, setIsManualCostsOpen] = useState(false);
   const [isWorkLogFormOpen, setIsWorkLogFormOpen] = useState(true);
   const [editingWorkLogId, setEditingWorkLogId] = useState<string | null>(null);
   const [activityFilterColleagueId, setActivityFilterColleagueId] = useState<string>('all');
@@ -1824,6 +1825,124 @@ function MarketingPageContent() {
             </Collapsible>
           )}
 
+          {/* ── Manuální marketingové náklady (other spend) ── */}
+          {canManageBudgets && (
+            <Collapsible open={isManualCostsOpen} onOpenChange={setIsManualCostsOpen}>
+              <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-lg border border-amber-200/70 bg-amber-50/30 px-3 py-2 text-left transition-colors hover:bg-amber-50/60 dark:border-amber-800/40 dark:bg-amber-950/20">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Manuální marketingové náklady</span>
+                  <span className="text-xs text-muted-foreground">{manualOtherCosts.length} záznamů</span>
+                </div>
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="mt-1 rounded-lg border overflow-hidden">
+                  <div className="space-y-2 border-b p-3">
+                    <div className="grid gap-2 sm:grid-cols-[150px,160px,1fr]">
+                      <div className="space-y-0.5">
+                        <Label className="text-xs">Datum</Label>
+                        <Input
+                          className="h-8 text-xs"
+                          type="date"
+                          value={manualCostForm.spend_date}
+                          onChange={(e) => setManualCostForm((prev) => ({ ...prev, spend_date: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-0.5">
+                        <Label className="text-xs">Částka (Kč)</Label>
+                        <Input
+                          className="h-8 text-xs"
+                          type="number"
+                          value={manualCostForm.amount}
+                          onChange={(e) => setManualCostForm((prev) => ({ ...prev, amount: e.target.value }))}
+                          placeholder="25000"
+                        />
+                      </div>
+                      <div className="space-y-0.5">
+                        <Label className="text-xs">Poznámka</Label>
+                        <Input
+                          className="h-8 text-xs"
+                          value={manualCostForm.note}
+                          onChange={(e) => setManualCostForm((prev) => ({ ...prev, note: e.target.value }))}
+                          placeholder="Např. event, pronájem prostoru, produkční náklady..."
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {editingManualCostId && (
+                        <Button size="sm" variant="outline" onClick={resetManualCostForm} disabled={saveManualCostMutation.isPending}>
+                          Zrušit úpravu
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        onClick={() => saveManualCostMutation.mutate()}
+                        disabled={saveManualCostMutation.isPending}
+                      >
+                        {editingManualCostId
+                          ? (saveManualCostMutation.isPending ? 'Ukládám…' : 'Uložit úpravy')
+                          : (saveManualCostMutation.isPending ? 'Přidávám…' : 'Přidat náklad')}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="max-h-[280px] overflow-auto">
+                    <Table className="[&_td]:py-1.5 [&_th]:py-1.5">
+                      <TableHeader className="sticky top-0 z-10 bg-background">
+                        <TableRow className="bg-muted/20">
+                          <TableHead className="text-xs w-[90px]">Datum</TableHead>
+                          <TableHead className="text-xs">Poznámka</TableHead>
+                          <TableHead className="text-right text-xs w-[120px]">Kč</TableHead>
+                          <TableHead className="text-right text-xs w-[140px]">Akce</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {manualOtherCosts.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center text-xs text-muted-foreground py-5">
+                              Zatím žádné manuální náklady.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          manualOtherCosts.map((entry) => (
+                            <TableRow key={entry.id}>
+                              <TableCell className="text-xs tabular-nums text-muted-foreground">
+                                {new Date(entry.spend_date).toLocaleDateString('cs-CZ', { day: '2-digit', month: '2-digit' })}
+                              </TableCell>
+                              <TableCell className="text-xs">{entry.note || '—'}</TableCell>
+                              <TableCell className="text-right text-xs font-medium tabular-nums">
+                                {Math.round(entry.amount || 0).toLocaleString('cs-CZ')} Kč
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-1">
+                                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => beginEditManualCost(entry)}>
+                                    Upravit
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                                    disabled={deleteManualCostMutation.isPending}
+                                    onClick={() => {
+                                      if (!window.confirm('Opravdu chcete tento manuální náklad smazat?')) return;
+                                      deleteManualCostMutation.mutate(entry.id);
+                                    }}
+                                  >
+                                    Smazat
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
           {/* ── Zapsat práci ── */}
           <Collapsible open={isWorkLogFormOpen} onOpenChange={setIsWorkLogFormOpen}>
             <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-lg border border-emerald-200/70 bg-emerald-50/40 px-3 py-2.5 text-left transition-colors hover:bg-emerald-50/70 dark:border-emerald-800/40 dark:bg-emerald-950/20">
@@ -2080,120 +2199,6 @@ function MarketingPageContent() {
               </Table>
             </div>
           </div>
-
-          {/* ── Manuální marketingové náklady (other spend) ── */}
-          {canManageBudgets && (
-            <div className="rounded-lg border overflow-hidden">
-              <div className="flex items-center justify-between border-b bg-muted/30 px-3 py-1.5">
-                <p className="text-sm font-medium">Manuální marketingové náklady (Ostatní výdaje)</p>
-                <span className="text-xs text-muted-foreground">
-                  {manualOtherCosts.length} záznamů
-                </span>
-              </div>
-
-              <div className="space-y-2 border-b p-3">
-                <div className="grid gap-2 sm:grid-cols-[150px,160px,1fr]">
-                  <div className="space-y-0.5">
-                    <Label className="text-xs">Datum</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      type="date"
-                      value={manualCostForm.spend_date}
-                      onChange={(e) => setManualCostForm((prev) => ({ ...prev, spend_date: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-0.5">
-                    <Label className="text-xs">Částka (Kč)</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      type="number"
-                      value={manualCostForm.amount}
-                      onChange={(e) => setManualCostForm((prev) => ({ ...prev, amount: e.target.value }))}
-                      placeholder="25000"
-                    />
-                  </div>
-                  <div className="space-y-0.5">
-                    <Label className="text-xs">Poznámka</Label>
-                    <Input
-                      className="h-8 text-xs"
-                      value={manualCostForm.note}
-                      onChange={(e) => setManualCostForm((prev) => ({ ...prev, note: e.target.value }))}
-                      placeholder="Např. event, pronájem prostoru, produkční náklady..."
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {editingManualCostId && (
-                    <Button size="sm" variant="outline" onClick={resetManualCostForm} disabled={saveManualCostMutation.isPending}>
-                      Zrušit úpravu
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    onClick={() => saveManualCostMutation.mutate()}
-                    disabled={saveManualCostMutation.isPending}
-                  >
-                    {editingManualCostId
-                      ? (saveManualCostMutation.isPending ? 'Ukládám…' : 'Uložit úpravy')
-                      : (saveManualCostMutation.isPending ? 'Přidávám…' : 'Přidat náklad')}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="max-h-[280px] overflow-auto">
-                <Table className="[&_td]:py-1.5 [&_th]:py-1.5">
-                  <TableHeader className="sticky top-0 z-10 bg-background">
-                    <TableRow className="bg-muted/20">
-                      <TableHead className="text-xs w-[90px]">Datum</TableHead>
-                      <TableHead className="text-xs">Poznámka</TableHead>
-                      <TableHead className="text-right text-xs w-[120px]">Kč</TableHead>
-                      <TableHead className="text-right text-xs w-[140px]">Akce</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {manualOtherCosts.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center text-xs text-muted-foreground py-5">
-                          Zatím žádné manuální náklady.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      manualOtherCosts.map((entry) => (
-                        <TableRow key={entry.id}>
-                          <TableCell className="text-xs tabular-nums text-muted-foreground">
-                            {new Date(entry.spend_date).toLocaleDateString('cs-CZ', { day: '2-digit', month: '2-digit' })}
-                          </TableCell>
-                          <TableCell className="text-xs">{entry.note || '—'}</TableCell>
-                          <TableCell className="text-right text-xs font-medium tabular-nums">
-                            {Math.round(entry.amount || 0).toLocaleString('cs-CZ')} Kč
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => beginEditManualCost(entry)}>
-                                Upravit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-                                disabled={deleteManualCostMutation.isPending}
-                                onClick={() => {
-                                  if (!window.confirm('Opravdu chcete tento manuální náklad smazat?')) return;
-                                  deleteManualCostMutation.mutate(entry.id);
-                                }}
-                              >
-                                Smazat
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          )}
 
         </TabsContent>
 
