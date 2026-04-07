@@ -28,22 +28,26 @@ CREATE INDEX IF NOT EXISTS idx_manual_upsell_commissions_colleague
 
 ALTER TABLE manual_upsell_commissions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "manual_upsell_commissions_select" ON manual_upsell_commissions;
 CREATE POLICY "manual_upsell_commissions_select"
   ON manual_upsell_commissions
   FOR SELECT
   USING (has_crm_access(auth.uid()) AND deleted_at IS NULL);
 
+DROP POLICY IF EXISTS "manual_upsell_commissions_insert_admin_only" ON manual_upsell_commissions;
 CREATE POLICY "manual_upsell_commissions_insert_admin_only"
   ON manual_upsell_commissions
   FOR INSERT
   WITH CHECK ((has_role('admin') OR is_super_admin(auth.uid())) AND deleted_at IS NULL);
 
+DROP POLICY IF EXISTS "manual_upsell_commissions_update_admin_only" ON manual_upsell_commissions;
 CREATE POLICY "manual_upsell_commissions_update_admin_only"
   ON manual_upsell_commissions
   FOR UPDATE
   USING (has_role('admin') OR is_super_admin(auth.uid()))
   WITH CHECK (has_role('admin') OR is_super_admin(auth.uid()));
 
+DROP POLICY IF EXISTS "manual_upsell_commissions_delete_admin_only" ON manual_upsell_commissions;
 CREATE POLICY "manual_upsell_commissions_delete_admin_only"
   ON manual_upsell_commissions
   FOR DELETE
