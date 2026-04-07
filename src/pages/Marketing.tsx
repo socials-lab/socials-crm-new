@@ -660,6 +660,14 @@ function MarketingPageContent() {
 
   const buildWorkLogPayload = () => {
     if (!workLogForm.colleague_id) throw new Error('Vyberte kolegu.');
+    if (!canCreateLogsForOthers) {
+      if (!colleagueId) {
+        throw new Error('Váš účet není propojený s kartou kolegy. Kontaktujte administrátora.');
+      }
+      if (workLogForm.colleague_id !== colleagueId) {
+        throw new Error('Můžete zapisovat pouze vlastní aktivity.');
+      }
+    }
     if (!workLogForm.main_activity) throw new Error('Vyberte hlavní činnost.');
     if (!workLogForm.description.trim()) throw new Error('Vyplňte popis (např. název reelska, epizoda podcastu, případová studie…).');
     const ma = workLogForm.main_activity as MainMarketingActivity;
@@ -1070,6 +1078,13 @@ function MarketingPageContent() {
     [colleagues]
   );
 
+  const loggableColleagues = useMemo(
+    () => canCreateLogsForOthers
+      ? selectableColleagues
+      : selectableColleagues.filter((c: any) => c.id === colleagueId),
+    [canCreateLogsForOthers, colleagueId, selectableColleagues]
+  );
+
   useEffect(() => {
     if (!canAccessAnnualMarketingOverview && activeTab === 'annual') {
       setActiveTab('monthly');
@@ -1101,9 +1116,9 @@ function MarketingPageContent() {
   );
 
   useEffect(() => {
-    if (selectableColleagues.length === 0) return;
-    const hasLoggedInColleague = !!colleagueId && selectableColleagues.some((c) => c.id === colleagueId);
-    const fallbackId = selectableColleagues[0].id;
+    if (loggableColleagues.length === 0) return;
+    const hasLoggedInColleague = !!colleagueId && loggableColleagues.some((c) => c.id === colleagueId);
+    const fallbackId = loggableColleagues[0].id;
     const preferredId = hasLoggedInColleague ? colleagueId! : fallbackId;
     const preferredRole = colleaguePrimaryRoleById.get(preferredId);
     const preferredHourlyRate = colleagueHourlyRateById.get(preferredId);
@@ -1146,7 +1161,7 @@ function MarketingPageContent() {
           : prev.hourly_rate,
       }));
     }
-  }, [colleagueHourlyRateById, colleagueId, colleaguePrimaryRoleById, selectableColleagues, workLogForm.colleague_id]);
+  }, [colleagueHourlyRateById, colleagueId, colleaguePrimaryRoleById, loggableColleagues, workLogForm.colleague_id]);
 
   useEffect(() => {
     if (!workLogForm.colleague_id) return;
@@ -2034,10 +2049,10 @@ function MarketingPageContent() {
                           hourly_rate: nextHourlyRate ? String(nextHourlyRate) : prev.hourly_rate,
                         };
                       })}
-                      disabled={!canCreateLogsForOthers && !!colleagueId}
+                      disabled={!canCreateLogsForOthers}
                     >
                       <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>{selectableColleagues.map((c) => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}</SelectContent>
+                      <SelectContent>{loggableColleagues.map((c) => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-0.5">

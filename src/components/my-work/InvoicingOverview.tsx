@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { 
   FileText, Copy, Briefcase, Building2, Sparkles, 
-  CheckCircle, Megaphone, Pencil, Plus, ChevronDown, ChevronRight
+  CheckCircle, Megaphone, Pencil, Plus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ActivityReward, ActivityCategory } from '@/hooks/useActivityRewards';
@@ -183,61 +183,49 @@ function InvoiceLineItemRow({
 function MarketingSummaryRow({
   items,
   onCopy,
-  onEditReward,
   formatAmount,
+  selectedMonth,
+  selectedYear,
 }: {
   items: InvoiceLineItem[];
   onCopy: (text: string) => void;
-  onEditReward: (id: string) => void;
   formatAmount: (amount: number) => string;
+  selectedMonth: number;
+  selectedYear: number;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const total = items.reduce((s, i) => s + i.amount, 0);
-  const summaryLabel = 'Marketing';
+  const summaryLabel = `Marketing - Příprava marketingových podkladů - ${MONTHS[selectedMonth - 1]} ${selectedYear}`;
 
   return (
     <div className="pl-2 border-l-2 border-primary/20">
-      {/* Summary row */}
       <div className="flex items-center gap-2 py-2 group hover:bg-muted/50 rounded px-2 -mx-2">
-        <button
-          onClick={() => setExpanded(v => !v)}
-          className="flex items-center gap-1.5 flex-1 min-w-0 text-left"
-        >
-          {expanded
-            ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-            : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-          }
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
           <Megaphone className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
           <span className="text-sm font-medium">{summaryLabel}</span>
           <Badge variant="secondary" className="text-xs shrink-0">{items.length} pol.</Badge>
-        </button>
+        </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0"
-            onClick={() => onCopy(summaryLabel)} title="Kopírovat název">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 flex-shrink-0"
+            onClick={() => onCopy(summaryLabel)}
+            title="Kopírovat název položky"
+          >
             <Copy className="h-3 w-3" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0"
-            onClick={() => onCopy(formatAmount(total))} title="Kopírovat částku">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 flex-shrink-0"
+            onClick={() => onCopy(formatAmount(total))}
+            title="Kopírovat částku"
+          >
             <Copy className="h-3 w-3" />
           </Button>
         </div>
         <span className="font-medium whitespace-nowrap text-sm">{formatAmount(total)}</span>
       </div>
-
-      {/* Expanded detail */}
-      {expanded && (
-        <div className="ml-5 border-l border-border/50 pl-2 space-y-0.5 pb-1">
-          {items.map((item) => (
-            <InvoiceLineItemRow
-              key={item.id}
-              item={item}
-              onCopy={onCopy}
-              onEdit={item.isEditable ? () => onEditReward(item.id) : undefined}
-              formatAmount={formatAmount}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -495,8 +483,9 @@ export function InvoicingOverview({
                   <MarketingSummaryRow
                     items={groupedItems.marketing}
                     onCopy={handleCopy}
-                    onEditReward={handleEditReward}
                     formatAmount={formatAmount}
+                    selectedMonth={selectedMonth}
+                    selectedYear={selectedYear}
                   />
                 )}
 
