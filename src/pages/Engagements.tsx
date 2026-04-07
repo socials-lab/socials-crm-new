@@ -1477,6 +1477,70 @@ function EngagementsContent() {
                         </Button>
                       )}
                     </div>
+
+                    {/* Integrace section - shows status of automations */}
+                    {(() => {
+                      const client = getClientById(engagement.client_id);
+                      const hasFakturoid = !!(client as any)?.fakturoid_subject_id;
+                      const hasFreelo = !!engagement.freelo_url;
+                      const hasSlack = !!engagement.slack_channel_name;
+
+                      return (
+                        <div className="space-y-3">
+                          <h4 className="font-medium text-sm flex items-center gap-2">
+                            <Globe className="h-4 w-4 text-muted-foreground" />
+                            Integrace
+                          </h4>
+                          <div className="space-y-1.5 text-sm">
+                            <div className="flex items-center gap-2">
+                              {hasFakturoid ? (
+                                <Check className="h-3.5 w-3.5 text-green-600" />
+                              ) : (
+                                <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                              )}
+                              <span className={hasFakturoid ? 'text-muted-foreground' : 'text-amber-600 font-medium'}>
+                                Fakturoid {hasFakturoid ? 'propojeno' : 'nepropojeno'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {hasFreelo ? (
+                                <>
+                                  <Check className="h-3.5 w-3.5 text-green-600" />
+                                  <a
+                                    href={engagement.freelo_url!}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="text-primary hover:underline"
+                                  >
+                                    Freelo projekt
+                                  </a>
+                                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                                </>
+                              ) : (
+                                <>
+                                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                                  <span className="text-amber-600 font-medium">Freelo nevytvořeno</span>
+                                </>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {hasSlack ? (
+                                <>
+                                  <Check className="h-3.5 w-3.5 text-green-600" />
+                                  <span className="text-muted-foreground">Slack #{engagement.slack_channel_name}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                                  <span className="text-amber-600 font-medium">Slack kanál nevytvořen</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {canDeleteEngagement && (

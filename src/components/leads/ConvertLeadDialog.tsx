@@ -450,6 +450,8 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         if (slackError || !slackResult?.success) {
           slackFailed = true;
           console.warn('Slack channel creation failed (non-blocking):', slackError || slackResult?.error);
+        } else if (slackResult.channel_name && conversionResult.engagement_id) {
+          await supabase.from('engagements').update({ slack_channel_name: slackResult.channel_name } as any).eq('id', conversionResult.engagement_id);
         }
       } catch (err) {
         slackFailed = true;

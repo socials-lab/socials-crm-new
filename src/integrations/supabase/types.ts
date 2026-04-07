@@ -1516,6 +1516,7 @@ export type Database = {
           offer_url: string | null
           one_off_fee: number | null
           platforms: string[] | null
+          slack_channel_name: string | null
           start_date: string
           status: Database["public"]["Enums"]["engagement_status"] | null
           termination_initiated_by: string | null
@@ -1543,6 +1544,7 @@ export type Database = {
           offer_url?: string | null
           one_off_fee?: number | null
           platforms?: string[] | null
+          slack_channel_name?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["engagement_status"] | null
           termination_initiated_by?: string | null
@@ -1570,6 +1572,7 @@ export type Database = {
           offer_url?: string | null
           one_off_fee?: number | null
           platforms?: string[] | null
+          slack_channel_name?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["engagement_status"] | null
           termination_initiated_by?: string | null

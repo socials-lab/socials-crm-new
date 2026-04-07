@@ -248,6 +248,7 @@ export interface Engagement {
   end_date: string | null;
   notice_period_months: number | null;
   freelo_url: string | null;
+  slack_channel_name: string | null;
   platforms: string[];
   managed_countries?: string[];
   notes: string;
