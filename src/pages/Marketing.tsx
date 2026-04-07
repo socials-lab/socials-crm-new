@@ -1618,7 +1618,6 @@ function MarketingPageContent() {
                 <span className="text-muted-foreground">Zájemci <strong className="text-foreground">{prospectsInMonth}</strong></span>
                 <span className="text-muted-foreground">Poptávky <strong className="text-foreground">{leadsInMonth}</strong></span>
                 <span className="text-muted-foreground">Klienti <strong className="text-foreground">{newClientsInMonth}</strong></span>
-                <span className="text-muted-foreground">Konverze <strong className="text-foreground">{convertedLeadsInMonth}</strong></span>
               </div>
             </div>
           </div>
