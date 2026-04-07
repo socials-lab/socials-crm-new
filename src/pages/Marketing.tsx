@@ -144,7 +144,7 @@ const ROLE_LABELS: Record<MarketingRole, string> = {
 };
 
 const DEFAULT_MARKETING_COLLEAGUES = [
-  { label: 'Kristýn Zborníková - Content Manager', tokens: ['kristyn', 'zbornikov'], primaryRole: 'content_manager' as MarketingRole },
+  { label: 'Kristýna Zborníková - Content Manager', tokens: ['kristyna', 'zbornik'], primaryRole: 'content_manager' as MarketingRole },
   { label: 'Jan Bečvář - Video editor', tokens: ['jan', 'becvar'], monthlyMinimum: 45000, primaryRole: 'video_editor' as MarketingRole },
   { label: 'Michal Bartošek - Video editor', tokens: ['michal', 'bartosek'], primaryRole: 'video_editor' as MarketingRole },
   { label: 'Alexandra - Graphic Designer', tokens: ['alexandra'], primaryRole: 'graphic_designer' as MarketingRole },
@@ -156,6 +156,20 @@ const normalizeForMatch = (value: unknown) =>
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
+
+const inferPrimaryRoleFromName = (fullName: string): MarketingRole | null => {
+  const normalized = normalizeForMatch(fullName);
+  if ((normalized.includes('jan') && normalized.includes('becvar')) || (normalized.includes('michal') && normalized.includes('bartosek'))) {
+    return 'video_editor';
+  }
+  if (normalized.includes('kristyna') && normalized.includes('zbornik')) {
+    return 'content_manager';
+  }
+  if (normalized.includes('alexandra') || normalized.includes('ivana')) {
+    return 'graphic_designer';
+  }
+  return null;
+};
 
 const WORK_TYPE_LABELS: Record<MarketingWorkType, string> = {
   reels_video: 'Reels z podcastu',
@@ -365,6 +379,7 @@ function MarketingPageContent() {
 
   const canManageBudgets = isSuperAdmin || role === 'admin' || role === 'management';
   const canAccessAdminMarketingSections = isSuperAdmin || role === 'admin';
+  const canAccessAnnualMarketingOverview = isSuperAdmin || role === 'admin';
   const canCreateLogsForOthers = canManageBudgets;
 
   const monthStart = startOfMonth(new Date(selectedYear, selectedMonth - 1, 1));
@@ -941,13 +956,10 @@ function MarketingPageContent() {
 
   const colleaguePrimaryRoleById = useMemo(() => {
     const map = new Map<string, MarketingRole>();
-    DEFAULT_MARKETING_COLLEAGUES.forEach((config) => {
-      const found = colleagues.find((colleague: any) => {
-        if (typeof colleague?.full_name !== 'string') return false;
-        const normalized = normalizeForMatch(colleague.full_name || '');
-        return config.tokens.every((token) => normalized.includes(token));
-      });
-      if (found?.id) map.set(found.id, config.primaryRole);
+    colleagues.forEach((colleague: any) => {
+      if (typeof colleague?.id !== 'string' || typeof colleague?.full_name !== 'string') return;
+      const inferred = inferPrimaryRoleFromName(colleague.full_name);
+      if (inferred) map.set(colleague.id, inferred);
     });
     return map;
   }, [colleagues]);
@@ -1058,6 +1070,12 @@ function MarketingPageContent() {
     [colleagues]
   );
 
+  useEffect(() => {
+    if (!canAccessAnnualMarketingOverview && activeTab === 'annual') {
+      setActiveTab('monthly');
+    }
+  }, [activeTab, canAccessAnnualMarketingOverview]);
+
   const activityFilterOptions = useMemo(() => {
     const byId = new Map<string, string>();
     workLogs.forEach((log) => {
@@ -1129,6 +1147,23 @@ function MarketingPageContent() {
       }));
     }
   }, [colleagueHourlyRateById, colleagueId, colleaguePrimaryRoleById, selectableColleagues, workLogForm.colleague_id]);
+
+  useEffect(() => {
+    if (!workLogForm.colleague_id) return;
+    const mappedRole = colleaguePrimaryRoleById.get(workLogForm.colleague_id);
+    if (!mappedRole || mappedRole === workLogForm.role) return;
+    const mappedMainActivity = getDefaultMainActivityForRole(mappedRole);
+    const mappedWorkType = getDefaultWorkTypeForActivity(mappedMainActivity);
+    setWorkLogForm((prev) => ({
+      ...prev,
+      role: mappedRole,
+      main_activity: mappedMainActivity,
+      work_type: mappedWorkType,
+      title: '',
+      quantity: '1',
+      hourly_rate: String((colleagueHourlyRateById.get(prev.colleague_id) ?? Number(prev.hourly_rate)) || 500),
+    }));
+  }, [colleagueHourlyRateById, colleaguePrimaryRoleById, workLogForm.colleague_id, workLogForm.role]);
 
   const annualRows = useMemo(() => {
     const plansByMonth = new Map<number, MarketingMonthlyPlan>();
@@ -1370,10 +1405,19 @@ function MarketingPageContent() {
         description="Cíle, rozpočet, náklady a přínos interního marketingu po měsících."
       />
 
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'monthly' | 'annual')}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => {
+          const next = value as 'monthly' | 'annual';
+          if (next === 'annual' && !canAccessAnnualMarketingOverview) return;
+          setActiveTab(next);
+        }}
+      >
         <TabsList className="h-8">
           <TabsTrigger value="monthly">Měsíční přehled</TabsTrigger>
-          <TabsTrigger value="annual">Roční přehled</TabsTrigger>
+          {canAccessAnnualMarketingOverview && (
+            <TabsTrigger value="annual">Roční přehled</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="monthly" className="mt-3 space-y-3">
@@ -2201,6 +2245,7 @@ function MarketingPageContent() {
 
         </TabsContent>
 
+        {canAccessAnnualMarketingOverview && (
         <TabsContent value="annual" className="mt-3 space-y-3">
 
           {/* ── Year selector ── */}
@@ -2403,6 +2448,7 @@ function MarketingPageContent() {
           </Collapsible>
 
         </TabsContent>
+        )}
       </Tabs>
     </div>
   );
