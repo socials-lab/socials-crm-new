@@ -2217,6 +2217,7 @@ export type Database = {
           contract_sent_at: string | null
           contract_signed_at: string | null
           contract_url: string | null
+          google_docs_contract_url: string | null
           converted_at: string | null
           converted_to_client_id: string | null
           converted_to_engagement_id: string | null
@@ -2281,6 +2282,7 @@ export type Database = {
           contract_sent_at?: string | null
           contract_signed_at?: string | null
           contract_url?: string | null
+          google_docs_contract_url?: string | null
           converted_at?: string | null
           converted_to_client_id?: string | null
           converted_to_engagement_id?: string | null
@@ -2345,6 +2347,7 @@ export type Database = {
           contract_sent_at?: string | null
           contract_signed_at?: string | null
           contract_url?: string | null
+          google_docs_contract_url?: string | null
           converted_at?: string | null
           converted_to_client_id?: string | null
           converted_to_engagement_id?: string | null

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -38,10 +38,42 @@ const DEFAULT_GOOGLE_CONTRACT_TEMPLATE_DOC_ID = '1KYziONs6kHi23mo5_LSIMSTopdeqEi
 export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl, onSend }: SendContractDialogProps) {
   const [copied, setCopied] = useState(false);
   const [showPayload, setShowPayload] = useState(false);
-  const [googleDocsUrl, setGoogleDocsUrl] = useState(
-    lead.contract_url?.includes('docs.google.com/document/') ? lead.contract_url : ''
-  );
+  const getInitialGoogleDocsUrl = () =>
+    lead.google_docs_contract_url ||
+    (lead.contract_url?.includes('docs.google.com/document/') ? lead.contract_url : '') ||
+    '';
+  const [googleDocsUrl, setGoogleDocsUrl] = useState(getInitialGoogleDocsUrl);
+  const lastSavedUrl = useRef(getInitialGoogleDocsUrl());
   const [isSendingToDraft, setIsSendingToDraft] = useState(false);
+
+  // Sync URL from lead prop whenever it changes (e.g. after React Query refresh or prop update).
+  useEffect(() => {
+    const freshUrl =
+      lead.google_docs_contract_url ||
+      (lead.contract_url?.includes('docs.google.com/document/') ? lead.contract_url : '') ||
+      '';
+    setGoogleDocsUrl(freshUrl);
+    lastSavedUrl.current = freshUrl;
+  }, [lead.google_docs_contract_url, lead.contract_url]);
+
+  // Auto-save when the dialog opens so URL is always current.
+  useEffect(() => {
+    if (!open) return;
+    const url =
+      lead.google_docs_contract_url ||
+      (lead.contract_url?.includes('docs.google.com/document/') ? lead.contract_url : '') ||
+      '';
+    setGoogleDocsUrl(url);
+    lastSavedUrl.current = url;
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleGoogleDocsUrlBlur = async () => {
+    const trimmed = googleDocsUrl.trim();
+    if (trimmed && trimmed.includes('docs.google.com') && trimmed !== lastSavedUrl.current) {
+      lastSavedUrl.current = trimmed;
+      await onSaveContractUrl(trimmed);
+    }
+  };
   const [isPreparingContractDoc, setIsPreparingContractDoc] = useState(false);
   const [draftCreated, setDraftCreated] = useState(false);
   const [draftEnvelopeId, setDraftEnvelopeId] = useState<string | null>(null);
@@ -378,6 +410,7 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
                       placeholder="https://docs.google.com/document/d/..."
                       value={googleDocsUrl}
                       onChange={e => setGoogleDocsUrl(e.target.value)}
+                      onBlur={handleGoogleDocsUrlBlur}
                       className="pl-9 text-sm"
                     />
                   </div>

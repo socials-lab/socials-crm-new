@@ -1220,7 +1220,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
         onOpenChange={setIsContractDialogOpen}
         lead={lead}
         onSaveContractUrl={async (contractUrl) => {
-          await updateLead(lead.id, { contract_url: contractUrl });
+          await updateLead(lead.id, { google_docs_contract_url: contractUrl });
         }}
         onSend={(data) => {
           updateLead(lead.id, {

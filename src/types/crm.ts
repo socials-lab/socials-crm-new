@@ -682,6 +682,7 @@ export interface Lead {
   onboarding_form_completed_at: string | null;
   
   // Contract tracking (DigiSign)
+  google_docs_contract_url: string | null;
   contract_url: string | null;
   contract_created_at: string | null;
   contract_sent_at: string | null;

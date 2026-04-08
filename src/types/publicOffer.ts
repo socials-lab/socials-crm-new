@@ -31,6 +31,8 @@ export interface PublicOfferService {
   detailed_sections?: ServiceDetailSection[];  // Expandable structured detail sections
   managed_countries?: string[];         // Country codes this service covers (e.g. ['CZ', 'SK'])
   country_variants?: CountryVariant[];  // Additional country expansions with pricing
+  creative_boost_credits?: number | null;
+  creative_boost_price_per_credit?: number | null;
 }
 
 // Country variant for service expansion to additional markets

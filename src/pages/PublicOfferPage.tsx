@@ -47,6 +47,7 @@ import {
   Star as StarIcon,
   Plus as PlusIcon,
   History,
+  Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PublicOfferService, PublicOffer, PortfolioLink, CountryVariant } from '@/types/publicOffer';
@@ -264,6 +265,7 @@ const ONBOARDING_STEPS = [
 function ServiceCard({ service, showTypeLabel = false, isDark = false }: { service: PublicOfferService; showTypeLabel?: boolean; isDark?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showDetailedSections, setShowDetailedSections] = useState(false);
+  const [showCreditsPricing, setShowCreditsPricing] = useState(false);
 
   const hasDeliverables = service.deliverables && service.deliverables.length > 0;
   const hasRequirements = service.requirements && service.requirements.length > 0;
@@ -274,6 +276,29 @@ function ServiceCard({ service, showTypeLabel = false, isDark = false }: { servi
   const basePrice = service.price;
   const variantsTotal = (service.country_variants || []).reduce((sum: number, variant: CountryVariant) => sum + variant.price, 0);
   const serviceTotalPrice = basePrice + variantsTotal;
+  const parsedCreditsFromName = (() => {
+    const match = service.name.match(/\((\d+)\s*kredit/i);
+    if (!match) return null;
+    const value = Number(match[1]);
+    return Number.isFinite(value) && value > 0 ? value : null;
+  })();
+  const creativeBoostCredits = Number.isFinite(service.creative_boost_credits as number)
+    && (service.creative_boost_credits as number) > 0
+    ? Number(service.creative_boost_credits)
+    : parsedCreditsFromName;
+  const isCreativeBoostService = service.name.toLowerCase().includes('creative boost');
+  const normalizedDetailedSections = Array.isArray(service.detailed_sections)
+    ? service.detailed_sections.filter((section): section is ServiceDetailSection =>
+      !!section &&
+      typeof section === 'object' &&
+      typeof section.title === 'string' &&
+      Array.isArray(section.items),
+    )
+    : [];
+  const creditPricingSections = normalizedDetailedSections.filter((section) =>
+    /hodnota jednotlivých výstupů|expresní dodání/i.test(section.title || ''),
+  );
+  const hasCreativeBoostCreditPricing = isCreativeBoostService && creditPricingSections.length > 0;
   const baseOriginalPrice = service.original_price ?? service.price;
   const serviceTotalOriginalPrice = baseOriginalPrice + variantsTotal;
   const hasServiceDiscount = serviceTotalOriginalPrice > serviceTotalPrice;
@@ -327,6 +352,11 @@ function ServiceCard({ service, showTypeLabel = false, isDark = false }: { servi
                     {service.service_type === 'addon' && (
                       <Badge variant="outline" className="text-[10px] border-foreground/20 text-muted-foreground">
                         Doplněk
+                      </Badge>
+                    )}
+                    {isCreativeBoostService && creativeBoostCredits && (
+                      <Badge variant="outline" className="text-[10px] border-[#94e700]/40 text-[#94e700] bg-[#94e700]/10">
+                        {creativeBoostCredits} kreditů
                       </Badge>
                     )}
                     {!service.service_type && service.selected_tier && (
@@ -444,6 +474,12 @@ function ServiceCard({ service, showTypeLabel = false, isDark = false }: { servi
 
               {(service.frequency || service.turnaround) && (
                 <div className="flex flex-wrap gap-3">
+                  {isCreativeBoostService && creativeBoostCredits && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#94e700]/5 border border-[#94e700]/20 text-sm text-foreground/80">
+                      <Zap className="h-4 w-4 text-[#94e700]" />
+                      <span>{creativeBoostCredits} kreditů / měsíc</span>
+                    </div>
+                  )}
                   {service.frequency && (
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-foreground/[0.03] border border-foreground/[0.06] text-sm text-foreground/70">
                       <Clock className="h-4 w-4 text-muted-foreground/70" />
@@ -464,6 +500,34 @@ function ServiceCard({ service, showTypeLabel = false, isDark = false }: { servi
                   <Calendar className="h-4 w-4 text-[#94e700]" />
                   <span className="font-medium text-[#94e700]">Start: {service.start_timeline}</span>
                 </div>
+              )}
+
+              {hasCreativeBoostCreditPricing && (
+                <Collapsible open={showCreditsPricing} onOpenChange={setShowCreditsPricing}>
+                  <CollapsibleTrigger className="w-full">
+                    <div className="flex items-center justify-center gap-2 py-2 px-4 rounded-lg border border-dashed border-[#94e700]/30 hover:bg-[#94e700]/5 transition-colors text-sm text-muted-foreground hover:text-[#94e700] cursor-pointer">
+                      <span>{showCreditsPricing ? 'Skrýt ceník výstupů (kredity)' : 'Zobrazit ceník výstupů (kredity)'}</span>
+                      <ChevronDown className={cn('h-4 w-4 transition-transform', showCreditsPricing && 'rotate-180')} />
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="mt-4 p-4 rounded-lg bg-foreground/[0.02] border border-foreground/[0.06] space-y-4">
+                      {creditPricingSections.map((section, sectionIndex) => (
+                        <div key={sectionIndex} className="space-y-2">
+                          <h4 className="font-semibold text-sm">{section.emoji} {section.title}</h4>
+                          <ul className="space-y-1.5 ml-6">
+                            {section.items.map((item, itemIndex) => (
+                              <li key={itemIndex} className="flex items-start gap-2 text-sm text-muted-foreground">
+                                <span className={cn("shrink-0 mt-1.5 w-1 h-1 rounded-full", isDark ? "bg-white/30" : "bg-foreground/40")} />
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               )}
 
               {hasRequirements && (

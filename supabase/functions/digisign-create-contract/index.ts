@@ -799,21 +799,22 @@ serve(async (req) => {
       );
     }
 
+    // Helper: strip parenthetical suffixes from names, e.g. "Michaela Zářecká (glamstore.cz)" → "Michaela Zářecká"
+    const cleanSignatoryName = (name: string | null | undefined): string =>
+      (name || "").replace(/\s*\(.*?\)\s*/g, "").trim() || "Kontaktní osoba";
+
     // Enrich signatories: fill missing phone/email from lead contact info
     const signatories: Signatory[] = (lead.onboarding_signatories || []).map((s: Signatory) => ({
       ...s,
+      name: cleanSignatoryName(s.name),
       phone: (s.phone && s.phone.trim()) ? s.phone.trim() : (lead.contact_phone || ''),
       email: (s.email && s.email.trim()) ? s.email.trim() : (lead.contact_email || ''),
     }));
-    if (signatories.length === 0 && !isPreviewOnly) {
-      return new Response(
-        JSON.stringify({ error: "Chybí podpisující osoby (onboarding_signatories)" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    if (signatories.length === 0 && isPreviewOnly) {
+
+    // If no onboarding signatories, fall back to lead contact info (always — preview or not).
+    if (signatories.length === 0) {
       signatories.push({
-        name: lead.contact_name || "Kontaktní osoba",
+        name: cleanSignatoryName(lead.contact_name),
         position: "jednatel",
         email: lead.contact_email || lead.billing_email || "",
         phone: lead.contact_phone || "",
@@ -990,7 +991,7 @@ serve(async (req) => {
         await supabaseAdmin
           .from("leads")
           .update({
-            contract_url: previewContractUrl,
+            google_docs_contract_url: previewContractUrl,
           })
           .eq("id", lead_id);
       }
