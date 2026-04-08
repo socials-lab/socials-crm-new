@@ -1028,6 +1028,16 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
     const variantsTotal = (service.country_variants || []).reduce((sum: number, variant: CountryVariant) => sum + variant.price, 0);
     return service.price + variantsTotal;
   };
+  const sortFreeServicesLast = (services: PublicOfferService[]) => {
+    return [...services].sort((a, b) => {
+      const aTotal = getServiceMonthlyPrice(a);
+      const bTotal = getServiceMonthlyPrice(b);
+      const aFree = aTotal <= 0;
+      const bFree = bTotal <= 0;
+      if (aFree === bFree) return 0;
+      return aFree ? 1 : -1;
+    });
+  };
   const getServiceMonthlyOriginalPrice = (service: PublicOfferService) => {
     const variantsTotal = (service.country_variants || []).reduce((sum: number, variant: CountryVariant) => sum + variant.price, 0);
     return (service.original_price ?? service.price) + variantsTotal;
@@ -1050,7 +1060,11 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   const historyEntries = [...(offer.history || [])]
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   const hasVersionHistory = historyEntries.length > 0;
-  const lastChangeDate = hasVersionHistory ? new Date(historyEntries[0].timestamp) : null;
+  const fallbackLastChange = offer.updated_at || offer.created_at;
+  const lastChangeDate = hasVersionHistory
+    ? new Date(historyEntries[0].timestamp)
+    : (fallbackLastChange ? new Date(fallbackLastChange) : null);
+  const hasLastChangeDate = !!lastChangeDate && !Number.isNaN(lastChangeDate.getTime());
 
   const onboardingUrl = `/onboarding/${offer.lead_id}`;
 
@@ -1113,16 +1127,30 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
               <span>
                 Připraveno pro {offer.contact_name === 'Jan Novák' ? 'Jana Nováka' : offer.contact_name}
               </span>
-              {hasVersionHistory && lastChangeDate && (
+              {hasLastChangeDate && (
                 <>
                   <span className="hidden md:inline text-muted-foreground/40">·</span>
-                  <button
-                    type="button"
-                    onClick={() => setShowOfferHistory((prev) => !prev)}
-                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <History className="h-3.5 w-3.5" />
-                    <span>
+                  {hasVersionHistory ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowOfferHistory((prev) => !prev)}
+                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <History className="h-3.5 w-3.5" />
+                      <span>
+                        Poslední změna {lastChangeDate.toLocaleString('cs-CZ', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                      <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showOfferHistory && 'rotate-180')} />
+                    </button>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <History className="h-3.5 w-3.5" />
                       Poslední změna {lastChangeDate.toLocaleString('cs-CZ', {
                         day: '2-digit',
                         month: '2-digit',
@@ -1131,8 +1159,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                         minute: '2-digit',
                       })}
                     </span>
-                    <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showOfferHistory && 'rotate-180')} />
-                  </button>
+                  )}
                 </>
               )}
             </div>
@@ -1341,10 +1368,10 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
           )}
           
           {(() => {
-            const coreServices = offer.services.filter(s => s.service_type === 'core' && s.billing_type !== 'one_off');
-            const addonServices = offer.services.filter(s => s.service_type === 'addon' && s.billing_type !== 'one_off');
-            const oneOffServices = offer.services.filter(s => s.billing_type === 'one_off');
-            const otherServices = offer.services.filter(s => !s.service_type && s.billing_type !== 'one_off');
+            const coreServices = sortFreeServicesLast(offer.services.filter(s => s.service_type === 'core' && s.billing_type !== 'one_off'));
+            const addonServices = sortFreeServicesLast(offer.services.filter(s => s.service_type === 'addon' && s.billing_type !== 'one_off'));
+            const oneOffServices = sortFreeServicesLast(offer.services.filter(s => s.billing_type === 'one_off'));
+            const otherServices = sortFreeServicesLast(offer.services.filter(s => !s.service_type && s.billing_type !== 'one_off'));
             
             if (coreServices.length === 0 && addonServices.length === 0 && oneOffServices.length === 0) {
               return (
