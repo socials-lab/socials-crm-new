@@ -88,6 +88,16 @@ function toLoomEmbedUrl(url: string | null | undefined): string | null {
   return null;
 }
 
+function hasMeaningfulHtmlContent(html: string | null | undefined): boolean {
+  if (!html || typeof html !== 'string') return false;
+  const textOnly = html
+    .replace(/<img\b[^>]*>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .trim();
+  return textOnly.length > 0;
+}
+
 // Helper to get content block from offer snapshot or fallback to hardcoded defaults
 function getOfferContent(offer: PublicOffer | null, sectionKey: string) {
   if (offer?.content_blocks_snapshot?.[sectionKey]) {
@@ -641,9 +651,27 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 };
 
 function WhyUsSection({ offer }: { offer: PublicOffer }) {
+  const rawWhyUsBlock = offer.content_blocks_snapshot?.why_us;
   const block = getOfferContent(offer, 'why_us');
-  const items = block.content?.items || [];
-  const links = block.content?.links || [];
+  const items = rawWhyUsBlock?.content?.items || [];
+  const links = rawWhyUsBlock?.content?.links || [];
+  const defaultWhyUsBlock = DEFAULT_OFFER_CONTENT.why_us;
+  const isDefaultWhyUsContent =
+    !!rawWhyUsBlock &&
+    rawWhyUsBlock.title === defaultWhyUsBlock.title &&
+    rawWhyUsBlock.subtitle === defaultWhyUsBlock.subtitle &&
+    JSON.stringify(rawWhyUsBlock.content || {}) === JSON.stringify(defaultWhyUsBlock.content || {});
+  const hasWhyUsContent =
+    !!rawWhyUsBlock &&
+    !isDefaultWhyUsContent &&
+    (
+      (Array.isArray(items) && items.length > 0) ||
+      (Array.isArray(links) && links.length > 0) ||
+      (typeof rawWhyUsBlock.title === 'string' && rawWhyUsBlock.title.trim().length > 0) ||
+      (typeof rawWhyUsBlock.subtitle === 'string' && rawWhyUsBlock.subtitle.trim().length > 0)
+    );
+
+  if (!hasWhyUsContent) return null;
 
   return (
     <section>
@@ -688,9 +716,27 @@ function WhyUsSection({ offer }: { offer: PublicOffer }) {
 }
 
 function ReportingSection({ offer }: { offer: PublicOffer }) {
+  const rawReportingBlock = offer.content_blocks_snapshot?.reporting;
+  const hiddenByFlag =
+    rawReportingBlock?.content?.hide_section === true ||
+    rawReportingBlock?.content?.hidden === true;
+  if (hiddenByFlag) return null;
+
   const block = getOfferContent(offer, 'reporting');
-  const demoReportUrl = block.content?.demo_report_url || 'https://adfactory.socials.cz/shared-report/376158d883246f2ecfec54891d03e0a3c0ae4090e0c5dda9';
-  const note = block.content?.note || '(Na implementaci dalších platforem jako Shopify a Upgates nyní pracujeme.)';
+  const rawDemoReportUrl = typeof rawReportingBlock?.content?.demo_report_url === 'string'
+    ? rawReportingBlock.content.demo_report_url.trim()
+    : '';
+  const rawTitle = typeof rawReportingBlock?.title === 'string' ? rawReportingBlock.title.trim() : '';
+  const rawSubtitle = typeof rawReportingBlock?.subtitle === 'string' ? rawReportingBlock.subtitle.trim() : '';
+  const rawNote = typeof rawReportingBlock?.content?.note === 'string' ? rawReportingBlock.content.note.trim() : '';
+
+  // If reporting block exists in offer snapshot but has no content, hide the whole section.
+  if (rawReportingBlock && !rawDemoReportUrl && !rawTitle && !rawSubtitle && !rawNote) {
+    return null;
+  }
+
+  const demoReportUrl = rawDemoReportUrl || block.content?.demo_report_url || 'https://adfactory.socials.cz/shared-report/376158d883246f2ecfec54891d03e0a3c0ae4090e0c5dda9';
+  const note = rawNote || block.content?.note || '(Na implementaci dalších platforem jako Shopify a Upgates nyní pracujeme.)';
   
   return (
     <section>
@@ -1060,6 +1106,11 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   const historyEntries = [...(offer.history || [])]
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   const hasVersionHistory = historyEntries.length > 0;
+  const hasAuditSectionContent =
+    hasMeaningfulHtmlContent(offer.audit_html) ||
+    (typeof offer.audit_summary === 'string' && offer.audit_summary.trim().length > 0) ||
+    (typeof offer.recommendation_intro === 'string' && offer.recommendation_intro.trim().length > 0) ||
+    (typeof offer.custom_note === 'string' && offer.custom_note.trim().length > 0);
   const fallbackLastChange = offer.updated_at || offer.created_at;
   const lastChangeDate = hasVersionHistory
     ? new Date(historyEntries[0].timestamp)
@@ -1269,7 +1320,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         )}
 
         {/* ===== AUDIT FINDINGS ===== */}
-        {(offer.audit_html || offer.audit_summary) && (
+        {hasAuditSectionContent && (
           <>
             <ScrollReveal>
               <section>

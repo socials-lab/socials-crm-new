@@ -39,6 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 
 // Map enrichment platform keywords to service codes
 const PLATFORM_TO_SERVICE_CODES: Record<string, string[]> = {
@@ -158,6 +159,7 @@ interface OfferDraftData {
   cbPricePerCredit: number;
   editableServices: PublicOfferService[];
   rewardOverrides: Record<string, { role: string; reward: number; rewardType?: string }[]>;
+  hideReportingSection?: boolean;
   savedAt: number;
 }
 
@@ -236,6 +238,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
   const [createdOfferUrl, setCreatedOfferUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [hideReportingSection, setHideReportingSection] = useState(false);
   
   // Editable services state
   const [editableServices, setEditableServices] = useState<PublicOfferService[]>([]);
@@ -263,6 +266,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
     setCbPricePerCredit(Number.isFinite(draft.cbPricePerCredit) ? Math.max(0, draft.cbPricePerCredit) : 400);
     setEditableServices(Array.isArray(draft.editableServices) ? draft.editableServices : []);
     setRewardOverrides(draft.rewardOverrides && typeof draft.rewardOverrides === 'object' ? draft.rewardOverrides : {});
+    setHideReportingSection(draft.hideReportingSection === true);
     setRestoredDraftAt(typeof draft.savedAt === 'number' ? draft.savedAt : Date.now());
   }, []);
 
@@ -329,6 +333,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       setRecommendationIntro(offerForEdit.recommendation_intro || '');
       setCustomNote(offerForEdit.custom_note || '');
       setLoomUrl(offerForEdit.loom_url || '');
+      setHideReportingSection(offerForEdit.content_blocks_snapshot?.reporting?.content?.hide_section === true);
       setValidUntil(offerForEdit.valid_until || '');
       setEditableServices(offerForEdit.services);
       setMonthlyDiscountPercent(offerForEdit.monthly_discount_percent || 0);
@@ -432,6 +437,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
         cbPricePerCredit,
         editableServices,
         rewardOverrides,
+        hideReportingSection,
         savedAt: Date.now(),
       };
       saveOfferDraft(draftKey, draftToSave);
@@ -459,6 +465,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
     cbPricePerCredit,
     editableServices,
     rewardOverrides,
+    hideReportingSection,
   ]);
 
   useEffect(() => {
@@ -480,6 +487,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
         cbPricePerCredit,
         editableServices,
         rewardOverrides,
+        hideReportingSection,
         savedAt: Date.now(),
       });
       setOfferDraftRef(lead.id, draftKey);
@@ -507,6 +515,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
     cbPricePerCredit,
     editableServices,
     rewardOverrides,
+    hideReportingSection,
   ]);
 
   // Initialize reward overrides from catalog when services change
@@ -635,6 +644,32 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
     setEditableServices(prev => prev.filter((_, i) => i !== index));
   };
 
+  type OfferContentSnapshot = Record<string, {
+    section_key?: string;
+    title?: string | null;
+    subtitle?: string | null;
+    content?: Record<string, unknown>;
+  }>;
+
+  const applyReportingVisibility = useCallback((snapshot: OfferContentSnapshot): OfferContentSnapshot => {
+    const next: OfferContentSnapshot = { ...snapshot };
+    const reporting = next.reporting ? { ...next.reporting } : { section_key: 'reporting', title: null, subtitle: null, content: {} };
+    const reportingContent = typeof reporting.content === 'object' && reporting.content !== null
+      ? { ...reporting.content }
+      : {};
+
+    if (hideReportingSection) {
+      reportingContent.hide_section = true;
+    } else {
+      delete reportingContent.hide_section;
+      delete reportingContent.hidden;
+    }
+
+    reporting.content = reportingContent;
+    next.reporting = reporting;
+    return next;
+  }, [hideReportingSection]);
+
   const handleCreate = async () => {
     if (editableServices.length === 0) {
       toast.error('Přidejte alespoň jednu službu do nabídky');
@@ -663,6 +698,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
           intro_discount_percent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
           intro_discount_months: introDiscountPercent > 0 ? introDiscountMonths : undefined,
           valid_until: validUntil || null,
+          content_blocks_snapshot: applyReportingVisibility((offerForEdit.content_blocks_snapshot || {}) as OfferContentSnapshot),
           owner_name: leadOwner?.full_name || undefined,
           owner_email: leadOwner?.email || undefined,
           owner_phone: leadOwner?.phone || undefined,
@@ -704,6 +740,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
             intro_discount_percent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
             intro_discount_months: introDiscountPercent > 0 ? introDiscountMonths : undefined,
             valid_until: validUntil || null,
+            content_blocks_snapshot: applyReportingVisibility((existingOfferForLead.content_blocks_snapshot || {}) as OfferContentSnapshot),
             owner_name: leadOwner?.full_name || undefined,
             owner_email: leadOwner?.email || undefined,
             owner_phone: leadOwner?.phone || undefined,
@@ -739,7 +776,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
           subtitle: string | null;
           content: Record<string, unknown>;
         }
-        const contentSnapshot: Record<string, OfferContentSnapshotRow> = {};
+        const contentSnapshot: OfferContentSnapshot = {};
         const { data } = await supabase
           .from('offer_content_blocks' as never)
           .select('section_key, title, subtitle, content');
@@ -755,6 +792,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
             content: row.content,
           };
         });
+        const contentSnapshotWithVisibility = applyReportingVisibility(contentSnapshot);
 
         const newOffer: PublicOffer = {
           id: crypto.randomUUID(),
@@ -787,7 +825,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
           owner_name: leadOwner?.full_name || undefined,
           owner_email: leadOwner?.email || undefined,
           owner_phone: leadOwner?.phone || undefined,
-          content_blocks_snapshot: contentSnapshot,
+          content_blocks_snapshot: contentSnapshotWithVisibility,
         };
 
         await addPublicOffer(newOffer);
@@ -835,6 +873,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
     setCreatedOfferUrl(null);
     setCopied(false);
     setEditableServices([]);
+    setHideReportingSection(false);
     setMonthlyDiscountPercent(0);
     setDiscountScope('core_only');
     setIntroDiscountPercent(0);
@@ -955,6 +994,24 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                     onChange={(e) => setLoomUrl(e.target.value)}
                     placeholder="https://www.loom.com/share/..."
                   />
+                </div>
+
+                <div className="rounded-lg border p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <Label htmlFor="hide-reporting-switch" className="text-sm font-medium">
+                        📊 Skrýt sekci „Reporting až na úroveň zisku“
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Pokud je zapnuto, sekce Reporting se ve sdílené nabídce vůbec nezobrazí.
+                      </p>
+                    </div>
+                    <Switch
+                      id="hide-reporting-switch"
+                      checked={hideReportingSection}
+                      onCheckedChange={setHideReportingSection}
+                    />
+                  </div>
                 </div>
 
                 <Separator />
