@@ -259,7 +259,32 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
       }).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leads'] }),
+    onMutate: async ({ id, data }: { id: string; data: Partial<Lead> }) => {
+      await queryClient.cancelQueries({ queryKey: ['leads'] });
+      const previousLeads = queryClient.getQueryData<Lead[]>(['leads']);
+
+      queryClient.setQueryData<Lead[]>(['leads'], (current = []) =>
+        current.map((lead) =>
+          lead.id === id
+            ? {
+                ...lead,
+                ...data,
+                updated_at: now(),
+              }
+            : lead
+        )
+      );
+
+      return { previousLeads };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousLeads) {
+        queryClient.setQueryData(['leads'], context.previousLeads);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    },
   });
 
   const deleteLeadMutation = useMutation({
@@ -295,26 +320,28 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
 
   const updateLead = useCallback(async (id: string, data: Partial<Lead>) => {
     const lead = leads.find(l => l.id === id);
-    if (!lead) return;
 
-    // Log field changes before updating
-    const historyPromises: Promise<void>[] = [];
-    Object.keys(data).forEach(key => {
-      if (key === 'updated_at' || key === 'updated_by' || key === 'notes' || key === 'offer_token') return;
-      const oldVal = String((lead as Record<string, unknown>)[key] ?? '');
-      const newVal = String((data as Record<string, unknown>)[key] ?? '');
-      if (oldVal !== newVal) {
-        const fieldLabel = LEAD_FIELD_LABELS[key] || key;
-        if (key === 'owner_id') {
-          historyPromises.push(addHistoryEntry(id, 'owner_change', key, fieldLabel, oldVal, newVal));
-        } else {
-          historyPromises.push(addHistoryEntry(id, 'field_update', key, fieldLabel, oldVal, newVal));
+    // Log field changes before updating when local snapshot is available.
+    // If it's missing (e.g. transient cache state), we still persist update.
+    if (lead) {
+      const historyPromises: Promise<void>[] = [];
+      Object.keys(data).forEach(key => {
+        if (key === 'updated_at' || key === 'updated_by' || key === 'notes' || key === 'offer_token') return;
+        const oldVal = String((lead as Record<string, unknown>)[key] ?? '');
+        const newVal = String((data as Record<string, unknown>)[key] ?? '');
+        if (oldVal !== newVal) {
+          const fieldLabel = LEAD_FIELD_LABELS[key] || key;
+          if (key === 'owner_id') {
+            historyPromises.push(addHistoryEntry(id, 'owner_change', key, fieldLabel, oldVal, newVal));
+          } else {
+            historyPromises.push(addHistoryEntry(id, 'field_update', key, fieldLabel, oldVal, newVal));
+          }
         }
-      }
-    });
+      });
 
-    // Wait for history entries to be logged (non-blocking)
-    Promise.all(historyPromises).then(() => {}).catch(e => console.error('History logging error:', e));
+      // Wait for history entries to be logged (non-blocking)
+      Promise.all(historyPromises).then(() => {}).catch(e => console.error('History logging error:', e));
+    }
 
     await withTimeout(updateLeadMutation.mutateAsync({ id, data }), 30000);
   }, [leads, updateLeadMutation, addHistoryEntry]);
@@ -325,19 +352,21 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
 
   const updateLeadStage = useCallback(async (id: string, stage: LeadStage) => {
     const lead = leads.find(l => l.id === id);
-    if (!lead) return;
+    if (lead) {
+      const oldStageLabel = STAGE_LABELS[lead.stage];
+      const newStageLabel = STAGE_LABELS[stage];
 
-    const oldStageLabel = STAGE_LABELS[lead.stage];
-    const newStageLabel = STAGE_LABELS[stage];
-
-    // Log stage change
-    await addHistoryEntry(id, 'stage_change', 'stage', LEAD_FIELD_LABELS.stage || 'Stav', oldStageLabel, newStageLabel);
+      // Log stage change
+      await addHistoryEntry(id, 'stage_change', 'stage', LEAD_FIELD_LABELS.stage || 'Stav', oldStageLabel, newStageLabel);
+    }
 
     await withTimeout(updateLeadMutation.mutateAsync({ id, data: { stage } }), 30000);
 
     // Non-blocking notifications
-    if (stage === 'lost') notifyLeadLost(id, lead.company_name).catch(() => {});
-    if (lead.offer_sent_at && !lead.contract_signed_at && stage === 'offer_sent') notifyOfferSent(id, lead.company_name).catch(() => {});
+    if (lead) {
+      if (stage === 'lost') notifyLeadLost(id, lead.company_name).catch(() => {});
+      if (lead.offer_sent_at && !lead.contract_signed_at && stage === 'offer_sent') notifyOfferSent(id, lead.company_name).catch(() => {});
+    }
   }, [leads, updateLeadMutation, addHistoryEntry]);
 
   const addNote = useCallback(async (

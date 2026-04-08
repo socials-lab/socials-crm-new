@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Building2, 
@@ -31,7 +31,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { format, subDays, isAfter, parseISO, addDays, differenceInDays, differenceInCalendarDays, formatDistanceToNow } from 'date-fns';
+import { format, subDays, isAfter, parseISO, addDays, differenceInDays, differenceInCalendarDays, formatDistanceToNow, startOfMonth, endOfMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { KPICard } from '@/components/shared/KPICard';
@@ -41,6 +41,9 @@ import { useMeetingsData } from '@/hooks/useMeetingsData';
 import { useApplicantsData } from '@/hooks/useApplicantsData';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useModificationRequests } from '@/hooks/useModificationRequests';
+import { useCreativeBoostData } from '@/hooks/useCreativeBoostData';
+import { useUpsellApprovals } from '@/hooks/useUpsellApprovals';
+import { useTeamEarnings } from '@/hooks/useTeamEarnings';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -49,8 +52,8 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getUpcomingBirthdays, formatBirthdayShort } from '@/utils/birthdayUtils';
-import { getTargetForMonth, calculateActualRevenue, formatCurrencyShort } from '@/utils/businessPlanUtils';
 import { getEngagementMonthlyRevenue } from '@/utils/engagementRevenueUtils';
+import { buildColleagueInvoiceData } from '@/components/colleagues/TeamInvoicingOverview';
 import { supabase } from '@/integrations/supabase/client';
 import type { LucideIcon } from 'lucide-react';
 
@@ -182,9 +185,41 @@ export default function Dashboard() {
   const { applicants } = useApplicantsData();
   const { isSuperAdmin, canSeeFinancials: userCanSeeFinancials } = useUserRole();
   const { pendingRequests } = useModificationRequests();
+  const { getColleagueCreditsByClient, getClientMonthSummaries } = useCreativeBoostData();
+  const { getApprovedCommissionsForColleague } = useUpsellApprovals();
+  const { getColleagueActivities } = useTeamEarnings();
   
   const canSeeFinancials = userCanSeeFinancials || isSuperAdmin;
   const activityFromIso = useMemo(() => subDays(new Date(), 7).toISOString(), []);
+
+  const getTeamInvoicingTotalForMonth = useCallback((year: number, month: number) => {
+    const activeColleagues = colleagues.filter((colleague) => colleague.status === 'active');
+    return activeColleagues.reduce((sum, colleague) => {
+      const activities = getColleagueActivities(colleague.id, year, month);
+      const invoiceData = buildColleagueInvoiceData(
+        colleague,
+        year,
+        month,
+        assignments,
+        engagements,
+        clients,
+        extraWorks || [],
+        activities,
+        getColleagueCreditsByClient,
+        getApprovedCommissionsForColleague,
+      );
+      return sum + invoiceData.grandTotal;
+    }, 0);
+  }, [
+    colleagues,
+    getColleagueActivities,
+    assignments,
+    engagements,
+    clients,
+    extraWorks,
+    getColleagueCreditsByClient,
+    getApprovedCommissionsForColleague,
+  ]);
 
   const { data: activityHistoryRows = [] } = useQuery({
     queryKey: ['dashboard-activity-history', activityFromIso],
@@ -247,21 +282,6 @@ export default function Dashboard() {
     },
   });
 
-  // === BUSINESS PLAN (current month) ===
-  const currentMonthPlan = useMemo(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const monthName = format(now, 'LLLL', { locale: cs });
-    
-    const target = getTargetForMonth(year, month);
-    const { actual, source } = calculateActualRevenue(
-      year, month, issuedInvoices || [], engagements, extraWorks || [], engagementServices || []
-    );
-    const progress = target > 0 ? Math.min((actual / target) * 100, 100) : 0;
-    
-    return { year, month, monthName, target, actual, progress, source };
-  }, [issuedInvoices, engagements, extraWorks, engagementServices]);
   // === EXECUTIVE METRICS ===
   const metrics = useMemo(() => {
     const activeClients = clients.filter(c => c.status === 'active');
@@ -582,14 +602,53 @@ export default function Dashboard() {
     postponed: leads.filter(l => l.stage === 'postponed').length,
   }), [leads]);
 
-  // === NEXT MONTH INVOICING ===
-  const nextMonthInvoicing = useMemo(() => {
+  // === LAST MONTH PERFORMANCE ===
+  const lastMonthPerformance = useMemo(() => {
     const now = new Date();
-    const invoiceYear = now.getFullYear();
-    const invoiceMonth = now.getMonth() + 1;
+    const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const year = lastMonthDate.getFullYear();
+    const month = lastMonthDate.getMonth() + 1;
+
+    const lastMonthInvoices = (issuedInvoices || []).filter((invoice) => {
+        const invoiceDateRaw = invoice.fakturoid_duzp_date || invoice.issued_at;
+        if (!invoiceDateRaw) return false;
+        const invoiceDate = new Date(invoiceDateRaw);
+        if (Number.isNaN(invoiceDate.getTime())) return false;
+        return invoiceDate.getFullYear() === year && (invoiceDate.getMonth() + 1) === month;
+      });
+    const invoicing = lastMonthInvoices
+      .reduce((sum, invoice) => sum + Number(invoice.fakturoid_total_without_vat ?? invoice.total_amount ?? 0), 0);
+
+    const teamInvoicing = getTeamInvoicingTotalForMonth(year, month);
+    const margin = invoicing - teamInvoicing;
+
+    return {
+      monthName: format(lastMonthDate, 'LLLL', { locale: cs }),
+      invoicing,
+      teamInvoicing,
+      margin,
+    };
+  }, [issuedInvoices, getTeamInvoicingTotalForMonth]);
+
+  // === NEXT MONTH PLAN ===
+  const nextMonthPlan = useMemo(() => {
+    const now = new Date();
+    const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const periodStart = startOfMonth(nextMonthDate);
+    const periodEnd = endOfMonth(nextMonthDate);
+    const invoiceYear = nextMonthDate.getFullYear();
+    const invoiceMonth = nextMonthDate.getMonth() + 1;
     const invoicePeriod = `${invoiceYear}-${String(invoiceMonth).padStart(2, '0')}`;
     const activeEngagementIds = new Set(
-      engagements.filter(e => e.status === 'active').map(e => e.id)
+      engagements
+        .filter((engagement) => {
+          if (engagement.status !== 'active') return false;
+          const start = engagement.start_date ? new Date(engagement.start_date) : null;
+          const end = engagement.end_date ? new Date(engagement.end_date) : null;
+          if (!start) return false;
+          return start <= periodEnd && (!end || end >= periodStart);
+        })
+        .map((engagement) => engagement.id)
     );
     const activeEngagements = engagements.filter((engagement) => activeEngagementIds.has(engagement.id));
     const retainerTotal = activeEngagements.reduce(
@@ -597,26 +656,22 @@ export default function Dashboard() {
       0,
     );
     
-    const extraWorksToInvoice = extraWorks
-      ?.filter(w => w.status === 'ready_to_invoice' && w.billing_period === invoicePeriod)
-      .reduce((sum, w) => sum + w.amount, 0) || 0;
-    
-    const oneOffPending = engagementServices
-      ?.filter(s =>
-        s.is_active &&
-        s.billing_type === 'one_off' &&
-        s.invoicing_status === 'pending' &&
-        activeEngagementIds.has(s.engagement_id)
-      )
-      .reduce((sum, s) => sum + (s.price || 0), 0) || 0;
-    
+    const creativeBoostPlan = getClientMonthSummaries(invoiceYear, invoiceMonth)
+      .reduce((sum, summary) => sum + (summary.maxCredits * summary.pricePerCredit), 0);
+
+    // Planned revenue in agency overview = active engagements + 100 % CB credits.
+    const plannedRevenue = retainerTotal + creativeBoostPlan;
+    const plannedTeamInvoicing = getTeamInvoicingTotalForMonth(invoiceYear, invoiceMonth);
+
     return {
+      monthName: format(nextMonthDate, 'LLLL', { locale: cs }),
       retainer: retainerTotal,
-      extraWorks: extraWorksToInvoice,
-      oneOff: oneOffPending,
-      total: retainerTotal + extraWorksToInvoice + oneOffPending,
+      creativeBoost: creativeBoostPlan,
+      total: plannedRevenue,
+      plannedTeamInvoicing,
+      plannedMargin: plannedRevenue - plannedTeamInvoicing,
     };
-  }, [engagements, extraWorks, engagementServices]);
+  }, [engagements, engagementServices, getClientMonthSummaries, getTeamInvoicingTotalForMonth]);
 
   // === MODIFICATIONS PIPELINE ===
   const modificationsPipeline = useMemo(() => {
@@ -701,9 +756,6 @@ export default function Dashboard() {
     leadsPipeline.access_received + leadsPipeline.preparing_offer + leadsPipeline.offer_sent
   , [leadsPipeline]);
 
-  // Previous month name (invoicing is for previous month's work)
-  const previousMonthName = format(addDays(new Date(new Date().getFullYear(), new Date().getMonth(), 1), -1), 'LLLL', { locale: cs });
-
   return (
     <div className="p-4 md:p-6 space-y-6 animate-fade-in">
       <PageHeader 
@@ -716,17 +768,22 @@ export default function Dashboard() {
       <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
         <KPICard
           title="💰 Fakturace"
-          value={canSeeFinancials ? `${(nextMonthInvoicing.total / 1000).toFixed(0)}k` : '***'}
-          subtitle={canSeeFinancials ? `Za ${previousMonthName}` : undefined}
+          value={canSeeFinancials ? `${(lastMonthPerformance.invoicing / 1000).toFixed(0)}k` : '***'}
+          subtitle={canSeeFinancials ? `Za ${lastMonthPerformance.monthName}` : undefined}
           icon={Receipt}
           className="border-primary/30 bg-primary/5"
         />
         <KPICard
-          title="💵 Plán. marže"
-          value={canSeeFinancials ? `${(metrics.plannedMargin / 1000).toFixed(0)}k` : '***'}
-          subtitle={canSeeFinancials ? `Náklady: ${(metrics.totalCosts / 1000).toFixed(0)}k` : undefined}
+          title="💵 Marže"
+          value={canSeeFinancials ? `${(lastMonthPerformance.margin / 1000).toFixed(0)}k` : '***'}
+          subtitle={canSeeFinancials ? (
+            <div className="space-y-1">
+              <span>Za {lastMonthPerformance.monthName}</span>
+              <span>Celková fakturace týmu: {(lastMonthPerformance.teamInvoicing / 1000).toFixed(0)}k</span>
+            </div>
+          ) : undefined}
           icon={DollarSign}
-          className={metrics.plannedMargin >= 0 ? 'border-status-active/30 bg-status-active/5' : 'border-destructive/30 bg-destructive/5'}
+          className={lastMonthPerformance.margin >= 0 ? 'border-status-active/30 bg-status-active/5' : 'border-destructive/30 bg-destructive/5'}
         />
         <KPICard
           title="📊 Profitabilita"
@@ -743,22 +800,24 @@ export default function Dashboard() {
         />
         <Link to="/analytics" className="block">
           <KPICard
-            title={`📊 Plán ${currentMonthPlan.monthName}`}
-            value={canSeeFinancials ? `${currentMonthPlan.progress.toFixed(0)}%` : '***'}
+            title={`📊 Plán tržeb ${nextMonthPlan.monthName}`}
+            value={canSeeFinancials ? `${(nextMonthPlan.total / 1000).toFixed(0)}k` : '***'}
             subtitle={canSeeFinancials ? (
               <div className="space-y-1">
-                <span>{formatCurrencyShort(currentMonthPlan.actual)} / {formatCurrencyShort(currentMonthPlan.target)} Kč</span>
+                <span>Plán. marže: {(nextMonthPlan.plannedMargin / 1000).toFixed(0)}k</span>
+                <span>CB (100 % kreditů): {(nextMonthPlan.creativeBoost / 1000).toFixed(0)}k</span>
+                <span>Plán. fakturace týmu: {(nextMonthPlan.plannedTeamInvoicing / 1000).toFixed(0)}k</span>
                 <Progress 
-                  value={currentMonthPlan.progress} 
+                  value={nextMonthPlan.total > 0 ? Math.min(((nextMonthPlan.total - nextMonthPlan.plannedTeamInvoicing) / nextMonthPlan.total) * 100, 100) : 0}
                   className="h-1.5"
                 />
               </div>
             ) : undefined}
             icon={BarChart3}
             className={
-              currentMonthPlan.progress >= 100 
+              nextMonthPlan.plannedMargin >= 0
                 ? 'border-status-active/30 bg-status-active/5' 
-                : currentMonthPlan.progress >= 80 
+                : nextMonthPlan.total > 0 
                   ? 'border-amber-500/30 bg-amber-500/5' 
                   : 'border-destructive/30 bg-destructive/5'
             }

@@ -134,6 +134,19 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
   // Use fresh lead data from context to reflect updates immediately
   const lead = leadProp?.id ? getLeadById(leadProp.id) ?? leadProp : leadProp;
 
+  const persistLeadUpdate = useMemo(() => {
+    return async (data: Partial<Lead>, successMessage: string) => {
+      if (!lead?.id) return;
+      try {
+        await updateLead(lead.id, data);
+        toast.success(successMessage);
+      } catch (error) {
+        console.error('Failed to persist lead update:', error);
+        toast.error('Nepodařilo se uložit změnu');
+      }
+    };
+  }, [lead?.id, updateLead]);
+
   if (!lead) return null;
 
   const owner = colleagues.find(c => c.id === lead.owner_id);
@@ -933,14 +946,34 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
                       )}
                     </div>
                   </div>
-                  <Button
-                    variant={lead.offer_sent_at ? "outline" : "default"}
-                    size="sm"
-                    onClick={() => setIsSendOfferOpen(true)}
-                    disabled={!resolvedOfferUrl}
-                  >
-                    {lead.offer_sent_at ? 'Znovu odeslat' : 'Odeslat'}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {!lead.offer_sent_at && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          void persistLeadUpdate(
+                            {
+                              offer_sent_at: new Date().toISOString(),
+                              stage: 'offer_sent' as LeadStage,
+                            },
+                            '📤 Nabídka byla označena jako odeslaná',
+                          );
+                        }}
+                        disabled={!resolvedOfferUrl}
+                      >
+                        ✓ Označit ručně
+                      </Button>
+                    )}
+                    <Button
+                      variant={lead.offer_sent_at ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => setIsSendOfferOpen(true)}
+                      disabled={!resolvedOfferUrl}
+                    >
+                      {lead.offer_sent_at ? 'Znovu odeslat' : 'Odeslat'}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>

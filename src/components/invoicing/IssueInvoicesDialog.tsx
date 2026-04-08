@@ -83,6 +83,11 @@ function formatAmountsByCurrency(items: Array<{ amount: number; currency: string
     .join(' + ');
 }
 
+function getInvoiceTotal(invoice: MonthlyEngagementInvoice): number {
+  const computed = invoice.line_items.reduce((sum, item) => sum + Number(item.final_amount || 0), 0);
+  return Number.isFinite(computed) ? computed : Number(invoice.total_amount || 0);
+}
+
 export function IssueInvoicesDialog({ 
   open, 
   onOpenChange, 
@@ -159,7 +164,7 @@ export function IssueInvoicesDialog({
 
     const count = invoices.length;
     const totalsByCurrency = invoices.map((inv) => ({
-      amount: inv.total_amount,
+      amount: getInvoiceTotal(inv),
       currency: requireCurrency(inv.currency, `invoice ${inv.id}`),
     }));
 
@@ -197,6 +202,7 @@ export function IssueInvoicesDialog({
       });
 
       // First create the invoice locally (without Fakturoid IDs yet)
+      const computedTotalAmount = getInvoiceTotal(invoice);
       const invoiceData: Omit<IssuedInvoice, 'id' | 'created_at' | 'invoice_number'> = {
         engagement_id: invoice.engagement_id,
         engagement_name: invoice.engagement_name,
@@ -207,7 +213,7 @@ export function IssueInvoicesDialog({
         fakturoid_id: null,
         fakturoid_url: null,
         line_items: invoice.line_items,
-        total_amount: invoice.total_amount,
+        total_amount: computedTotalAmount,
         currency: invoice.currency,
         issued_at: new Date().toISOString(),
         issued_by: null,
@@ -288,7 +294,7 @@ export function IssueInvoicesDialog({
       issuedInvoiceInfos.push({
         invoice_number: fakturoidResult.fakturoid_number || createdInvoice.invoice_number,
         engagement_name: invoice.engagement_name,
-        amount: invoice.total_amount,
+        amount: computedTotalAmount,
         currency: requireCurrency(invoice.currency, `invoice ${invoice.id}`),
         fakturoid_url: fakturoidResult.fakturoid_url ?? null,
       });

@@ -15,6 +15,22 @@ import { User, Bell, Loader2, Calendar, Save } from 'lucide-react';
 import { EmailTemplatesManager } from '@/components/settings/EmailTemplatesManager';
 
 type EmailNotificationLevel = 'none' | 'important' | 'all';
+type NotificationEmailRoute = {
+  notification_type: string;
+  recipient_emails: string[];
+  is_enabled: boolean;
+};
+
+const NOTIFICATION_ROUTE_LABELS: Record<string, string> = {
+  new_lead: 'Nový lead',
+  form_completed: 'Vyplněný formulář',
+  contract_signed: 'Podepsaná smlouva',
+  lead_converted: 'Lead převeden na klienta',
+  access_granted: 'Přístupy přijaty',
+  offer_sent: 'Nabídka odeslána',
+  colleague_birthday: 'Narozeniny kolegy',
+  new_feedback_idea: 'Nový feedback nápad',
+};
 
 export default function Settings() {
   const { user } = useAuth();
@@ -28,6 +44,9 @@ export default function Settings() {
   const [loadingPrefs, setLoadingPrefs] = useState(true);
   const [meetingUrlValue, setMeetingUrlValue] = useState('');
   const [isMeetingUrlDirty, setIsMeetingUrlDirty] = useState(false);
+  const [routesLoading, setRoutesLoading] = useState(true);
+  const [notificationRoutes, setNotificationRoutes] = useState<NotificationEmailRoute[]>([]);
+  const [savingRouteType, setSavingRouteType] = useState<string | null>(null);
 
   // Load email notification preference from profiles table
   useEffect(() => {
@@ -74,6 +93,65 @@ export default function Settings() {
   };
 
   const canSeeSettings = isSuperAdmin || role === 'admin' || role === 'management';
+
+  useEffect(() => {
+    if (!canSeeSettings) return;
+
+    let cancelled = false;
+    const loadRoutes = async () => {
+      setRoutesLoading(true);
+      const { data, error } = await supabase.functions.invoke<{ routes: NotificationEmailRoute[] }>('notification-email-routing', {
+        body: { action: 'list' },
+      });
+      if (cancelled) return;
+      if (error) {
+        toast({ title: 'Chyba', description: 'Nepodařilo se načíst routování notifikačních e-mailů.', variant: 'destructive' });
+      } else {
+        setNotificationRoutes(data?.routes || []);
+      }
+      setRoutesLoading(false);
+    };
+
+    loadRoutes();
+    return () => {
+      cancelled = true;
+    };
+  }, [canSeeSettings]);
+
+  const updateRouteField = (notificationType: string, patch: Partial<NotificationEmailRoute>) => {
+    setNotificationRoutes((prev) => prev.map((route) => (
+      route.notification_type === notificationType ? { ...route, ...patch } : route
+    )));
+  };
+
+  const saveRoute = async (route: NotificationEmailRoute) => {
+    setSavingRouteType(route.notification_type);
+    const normalizedEmails = route.recipient_emails
+      .map((email) => String(email || '').trim().toLowerCase())
+      .filter((email) => email.length > 0);
+
+    const { error } = await supabase.functions.invoke('notification-email-routing', {
+      body: {
+        action: 'upsert',
+        routes: [
+          {
+            notification_type: route.notification_type,
+            recipient_emails: normalizedEmails,
+            is_enabled: route.is_enabled,
+          },
+        ],
+      },
+    });
+
+    if (error) {
+      toast({ title: 'Chyba', description: `Nepodařilo se uložit routování pro "${NOTIFICATION_ROUTE_LABELS[route.notification_type] || route.notification_type}".`, variant: 'destructive' });
+    } else {
+      toast({ title: 'Uloženo', description: `Routování pro "${NOTIFICATION_ROUTE_LABELS[route.notification_type] || route.notification_type}" bylo uloženo.` });
+      updateRouteField(route.notification_type, { recipient_emails: normalizedEmails });
+    }
+
+    setSavingRouteType(null);
+  };
 
   const handleSaveProfile = async () => {
     if (!user) return;
@@ -259,6 +337,61 @@ export default function Settings() {
             <p className="text-xs text-muted-foreground">
               Notifikace v aplikaci jsou vždy aktivní.
             </p>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Bell className="h-4 w-4" />
+              Routování notifikačních e-mailů
+            </CardTitle>
+            <CardDescription>
+              Nastavte, komu chodí jednotlivé notifikační e-maily. Více adres oddělte čárkou.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {routesLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Načítám routování...
+              </div>
+            ) : (
+              notificationRoutes.map((route) => (
+                <div key={route.notification_type} className="rounded-md border p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium text-sm">
+                      {NOTIFICATION_ROUTE_LABELS[route.notification_type] || route.notification_type}
+                    </p>
+                    <Switch
+                      checked={route.is_enabled}
+                      onCheckedChange={(checked) => updateRouteField(route.notification_type, { is_enabled: checked })}
+                    />
+                  </div>
+                  <Input
+                    placeholder="email1@socials.cz, email2@socials.cz"
+                    value={route.recipient_emails.join(', ')}
+                    onChange={(event) => {
+                      const emails = event.target.value
+                        .split(',')
+                        .map((email) => email.trim())
+                        .filter((email) => email.length > 0);
+                      updateRouteField(route.notification_type, { recipient_emails: emails });
+                    }}
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      size="sm"
+                      onClick={() => saveRoute(route)}
+                      disabled={savingRouteType === route.notification_type}
+                    >
+                      {savingRouteType === route.notification_type && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Uložit
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
 

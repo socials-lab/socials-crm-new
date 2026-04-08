@@ -25,19 +25,24 @@ interface SendContractDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lead: Lead;
+  onSaveContractUrl: (url: string) => Promise<void>;
   onSend: (data: {
     contract_url: string;
     digisign_envelope_id: string | null;
     digisign_document_url: string | null;
-    contract_sent_at: string;
   }) => void;
 }
 
-export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendContractDialogProps) {
+const DEFAULT_GOOGLE_CONTRACT_TEMPLATE_DOC_ID = '1KYziONs6kHi23mo5_LSIMSTopdeqEiSQOrOVEP1HDZo';
+
+export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl, onSend }: SendContractDialogProps) {
   const [copied, setCopied] = useState(false);
   const [showPayload, setShowPayload] = useState(false);
-  const [googleDocsUrl, setGoogleDocsUrl] = useState(lead.contract_url || '');
+  const [googleDocsUrl, setGoogleDocsUrl] = useState(
+    lead.contract_url?.includes('docs.google.com/document/') ? lead.contract_url : ''
+  );
   const [isSendingToDraft, setIsSendingToDraft] = useState(false);
+  const [isPreparingContractDoc, setIsPreparingContractDoc] = useState(false);
   const [draftCreated, setDraftCreated] = useState(false);
   const [draftEnvelopeId, setDraftEnvelopeId] = useState<string | null>(null);
   const { createContract } = useDigiSign();
@@ -133,61 +138,34 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Build Google Docs content for pre-filled contract
-  const buildGoogleDocsContent = () => {
-    const billingAddress = [lead.billing_street, lead.billing_city, lead.billing_zip, lead.billing_country].filter(Boolean).join(', ');
+  const handleOpenGoogleDocs = async () => {
+    setIsPreparingContractDoc(true);
+    try {
+      const templateId = import.meta.env.VITE_GOOGLE_CONTRACT_TEMPLATE_DOC_ID || DEFAULT_GOOGLE_CONTRACT_TEMPLATE_DOC_ID;
+      const templateUrl = `https://docs.google.com/document/d/${templateId}/edit`;
+      const result = await createContract(lead.id, undefined, templateUrl, true);
+      if (!result) return;
 
-    let content = `SMLOUVA O SPOLUPRÁCI\n\n`;
-    content += `1. SMLUVNÍ STRANY\n\n`;
-    content += `Objednatel:\n`;
-    content += `${lead.company_name}\n`;
-    if (lead.ico) content += `IČO: ${lead.ico}\n`;
-    if (lead.dic) content += `DIČ: ${lead.dic}\n`;
-    if (billingAddress) content += `Sídlo: ${billingAddress}\n`;
-    content += `Kontaktní osoba: ${lead.contact_name}\n`;
-    if (lead.contact_email) content += `E-mail: ${lead.contact_email}\n`;
-    if (lead.contact_phone) content += `Tel: ${lead.contact_phone}\n`;
-    if (lead.billing_email) content += `Fakturační e-mail: ${lead.billing_email}\n`;
-    content += `\n`;
-    content += `Poskytovatel:\n`;
-    content += `[DOPLNIT ÚDAJE POSKYTOVATELE]\n\n`;
-    content += `2. PŘEDMĚT SMLOUVY\n\n`;
+      const generatedGoogleDocUrl =
+        typeof result === 'object' && result && 'google_doc_url' in result && typeof result.google_doc_url === 'string'
+          ? result.google_doc_url
+          : null;
 
-    if (leadServices.length > 0) {
-      leadServices.forEach((svc, idx) => {
-        const tierLabel = svc.selected_tier ? ` (${svc.selected_tier.toUpperCase()})` : '';
-        const priceLabel = `${(svc.price || 0).toLocaleString('cs-CZ')} ${svc.currency || currency}`;
-        const billingLabel = (svc.billing_type || 'monthly') === 'monthly' ? '/měs' : ' jednorázově';
-        content += `${idx + 1}. ${svc.name}${tierLabel} — ${priceLabel}${billingLabel}\n`;
-      });
-      content += `\n`;
-      if (monthlyTotal > 0) {
-        content += `Celková měsíční cena: ${monthlyTotal.toLocaleString('cs-CZ')} ${currency}/měs\n`;
+      if (!generatedGoogleDocUrl) {
+        toast.error('Nepodařilo se připravit Google Docs smlouvu');
+        return;
       }
-      if (oneOffTotal > 0) {
-        content += `Jednorázová cena: ${oneOffTotal.toLocaleString('cs-CZ')} ${currency}\n`;
-      }
+
+      setGoogleDocsUrl(generatedGoogleDocUrl);
+      await onSaveContractUrl(generatedGoogleDocUrl);
+      window.open(generatedGoogleDocUrl, '_blank');
+      toast.success('Smlouva byla připravena, uložena do CRM a otevřena v Google Docs');
+    } catch (error) {
+      console.error('Failed to prepare contract document:', error);
+      toast.error('Nepodařilo se připravit smlouvu v Google Docs');
+    } finally {
+      setIsPreparingContractDoc(false);
     }
-
-    content += `\n3. DOBA TRVÁNÍ\n\n[DOPLNIT]\n\n`;
-    content += `4. PLATEBNÍ PODMÍNKY\n\n[DOPLNIT]\n\n`;
-    content += `5. ZÁVĚREČNÁ USTANOVENÍ\n\n[DOPLNIT]\n\n`;
-    content += `\nV __________ dne __________\n\n`;
-    content += `Za objednatele:\t\t\tZa poskytovatele:\n`;
-    content += `${lead.contact_name}\t\t\t[JMÉNO]\n`;
-
-    return content;
-  };
-
-  const handleOpenGoogleDocs = () => {
-    const content = buildGoogleDocsContent();
-    const title = encodeURIComponent(`Smlouva — ${lead.company_name}`);
-
-    navigator.clipboard.writeText(content).then(() => {
-      toast.success('Text smlouvy zkopírován do schránky — vložte ho do nového dokumentu (Ctrl+V)');
-    });
-
-    window.open(`https://docs.google.com/document/create?title=${title}`, '_blank');
   };
 
   const handleSendDraftToDigisign = async () => {
@@ -199,7 +177,7 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
     setIsSendingToDraft(true);
 
     try {
-      const result = await createContract(lead.id);
+      const result = await createContract(lead.id, undefined, googleDocsUrl.trim());
       if (!result) return;
 
       const envelopeId =
@@ -209,6 +187,10 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
         (typeof result === 'object' && result && 'envelope_id' in result && typeof result.envelope_id === 'string'
           ? result.envelope_id
           : null);
+      const generatedGoogleDocUrl =
+        typeof result === 'object' && result && 'google_doc_url' in result && typeof result.google_doc_url === 'string'
+          ? result.google_doc_url
+          : null;
 
       if (!envelopeId) {
         throw new Error('DigiSign returned success without envelope id');
@@ -222,14 +204,17 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
       });
 
       onSend({
-        contract_url: googleDocsUrl.trim(),
+        contract_url: generatedGoogleDocUrl || googleDocsUrl.trim(),
         digisign_envelope_id: envelopeId,
         digisign_document_url: null,
-        contract_sent_at: new Date().toISOString(),
       });
+      if (generatedGoogleDocUrl) {
+        setGoogleDocsUrl(generatedGoogleDocUrl);
+      }
     } catch (error) {
       console.error('Failed to create DigiSign draft:', error);
-      toast.error('Nepodarilo se vytvorit draft smlouvy v DigiSign');
+      const message = error instanceof Error ? error.message : 'Nepodařilo se vytvořit draft smlouvy v DigiSign';
+      toast.error(message);
     } finally {
       setIsSendingToDraft(false);
     }
@@ -357,17 +342,17 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
 
             <div className="rounded-lg border p-4 space-y-3">
               <p className="text-xs text-muted-foreground">
-                Otevře nový Google Doc s předvyplněnými údaji. Upravte smlouvu dle potřeby a zkopírujte odkaz.
+                Otevře kopii finální šablony smlouvy v Google Docs. Upravte ji dle potřeby a zkopírujte odkaz.
               </p>
               <Button
                 variant="outline"
                 size="sm"
                 className="gap-2"
                 onClick={handleOpenGoogleDocs}
-                disabled={leadServices.length === 0}
+                disabled={isPreparingContractDoc}
               >
                 <FileText className="h-4 w-4" />
-                Vytvořit v Google Docs
+                {isPreparingContractDoc ? 'Připravuji…' : 'Vytvořit v Google Docs'}
                 <ExternalLink className="h-3 w-3 text-muted-foreground" />
               </Button>
             </div>
@@ -466,7 +451,7 @@ export function SendContractDialog({ open, onOpenChange, lead, onSend }: SendCon
                       size="sm"
                       className="gap-2"
                       onClick={handleSendDraftToDigisign}
-                      disabled={!hasGoogleDocsUrl || leadServices.length === 0 || isSendingToDraft}
+                      disabled={!hasGoogleDocsUrl || isSendingToDraft}
                     >
                       <Send className="h-4 w-4" />
                       {isSendingToDraft ? 'Vytvářím draft…' : 'Vytvořit draft v DigiSign'}

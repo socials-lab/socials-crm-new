@@ -9,7 +9,12 @@ export function useDigiSign() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createContract = async (leadId: string, templateId?: string) => {
+  const createContract = async (
+    leadId: string,
+    templateId?: string,
+    googleDocsUrl?: string,
+    previewOnly?: boolean,
+  ) => {
     setIsLoading(true);
     setError(null);
 
@@ -20,10 +25,17 @@ export function useDigiSign() {
         throw new Error('Nejste přihlášeni. Obnovte prosím stránku a přihlaste se znovu.');
       }
 
-      const { data, error } = await invokeWithTimeout<{ error?: string; success?: boolean; digisign_id?: string }>(
+      const payload = {
+        lead_id: leadId,
+        template_id: templateId,
+        google_docs_url: googleDocsUrl || null,
+        preview_only: previewOnly === true,
+      };
+
+      const { data, error } = await invokeWithTimeout<{ error?: string; success?: boolean; digisign_id?: string; google_doc_url?: string }>(
         'digisign-create-contract',
         {
-          body: { lead_id: leadId, template_id: templateId },
+          body: payload,
           headers: {
             Authorization: `Bearer ${accessToken}`,
             apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -32,21 +44,58 @@ export function useDigiSign() {
         90000
       );
 
+      let effectiveData = data;
+      let effectiveError = error;
+
+      // Supabase client sometimes surfaces a generic network invoke error even when
+      // the edge endpoint is reachable. Retry once via direct fetch for better reliability.
+      if (effectiveError?.message?.includes('Failed to send a request to the Edge Function')) {
+        try {
+          const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/digisign-create-contract`;
+          const response = await fetch(fnUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken}`,
+              apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify(payload),
+          });
+
+          const text = await response.text();
+          const parsed = text ? JSON.parse(text) : null;
+
+          if (!response.ok) {
+            throw new Error(parsed?.error || `Edge function error (${response.status})`);
+          }
+
+          effectiveData = parsed;
+          effectiveError = null;
+        } catch (directFetchError) {
+          // Keep original invoke error if fallback fails too.
+          console.error('Direct edge fallback failed:', directFetchError);
+        }
+      }
+
       // Check for error in response data first (Edge Function error messages)
-      if (data?.error) {
-        throw new Error(data.error);
+      if (effectiveData?.error) {
+        throw new Error(effectiveData.error);
       }
 
       // Then check for Supabase client error (non-2xx status codes)
-      if (error) {
-        throw new Error(error.message || 'Chyba při volání DigiSign API');
+      if (effectiveError) {
+        throw new Error(effectiveError.message || 'Chyba při volání DigiSign API');
       }
 
       // Invalidate leads cache to refresh with new contract data
       queryClient.invalidateQueries({ queryKey: ['leads'] });
 
-      toast.success('Smlouva byla vytvořena v DigiSign');
-      return data;
+      if (previewOnly) {
+        toast.success('Smlouva byla připravena v Google Docs');
+      } else {
+        toast.success('Smlouva byla vytvořena v DigiSign');
+      }
+      return effectiveData;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Chyba při vytváření smlouvy';
       setError(errorMessage);

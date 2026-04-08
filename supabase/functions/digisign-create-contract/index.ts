@@ -53,11 +53,62 @@ interface ContractData {
   products: string;
 }
 
+interface GoogleServiceAccount {
+  client_email: string;
+  private_key: string;
+  token_uri?: string;
+}
+
+function parseGoogleDocId(rawUrl: string): string | null {
+  if (!rawUrl) return null;
+  const trimmed = rawUrl.trim();
+  const idOnlyMatch = trimmed.match(/^[a-zA-Z0-9_-]{20,}$/);
+  if (idOnlyMatch?.[0]) return idOnlyMatch[0];
+  const urlMatch = trimmed.match(/https:\/\/docs\.google\.com\/document\/d\/([^/]+)/i);
+  return urlMatch?.[1] || null;
+}
+
+function base64UrlEncode(input: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < input.length; i++) binary += String.fromCharCode(input[i]);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function pemToArrayBuffer(pem: string): ArrayBuffer {
+  const b64 = pem
+    .replace("-----BEGIN PRIVATE KEY-----", "")
+    .replace("-----END PRIVATE KEY-----", "")
+    .replace(/\s/g, "");
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+function getGoogleServiceAccount(): GoogleServiceAccount | null {
+  const b64Json = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_JSON_B64");
+  const rawJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_JSON");
+  const parsed = b64Json ? atob(b64Json) : rawJson;
+  if (!parsed) return null;
+  try {
+    const account = JSON.parse(parsed) as GoogleServiceAccount;
+    if (!account.client_email || !account.private_key) return null;
+    return account;
+  } catch {
+    return null;
+  }
+}
+
 interface PricingService {
   name: string;
   price: number;
   billing_type: "monthly" | "one_off";
   service_type?: string | null;
+  country_variants?: Array<{
+    country_code: string;
+    multiplier: number;
+    price: number;
+  }>;
 }
 
 function normalizePricingServices(rawServices: unknown[]): PricingService[] {
@@ -72,6 +123,22 @@ function normalizePricingServices(rawServices: unknown[]): PricingService[] {
         price,
         billing_type: service?.billing_type === "one_off" ? "one_off" : "monthly",
         service_type: typeof service?.service_type === "string" ? service.service_type : null,
+        country_variants: Array.isArray(service?.country_variants)
+          ? (service.country_variants as Array<Record<string, unknown>>)
+              .map((variant) => {
+                const countryCodeRaw = variant?.country_code;
+                const multiplierRaw = Number(variant?.multiplier);
+                const variantPriceRaw = Number(variant?.price);
+                const countryCode = typeof countryCodeRaw === "string" ? countryCodeRaw.trim().toUpperCase() : "";
+                if (!countryCode) return null;
+                return {
+                  country_code: countryCode,
+                  multiplier: Number.isFinite(multiplierRaw) ? multiplierRaw : 0,
+                  price: Number.isFinite(variantPriceRaw) ? variantPriceRaw : 0,
+                };
+              })
+              .filter((variant): variant is { country_code: string; multiplier: number; price: number } => variant !== null)
+          : [],
       } as PricingService;
     })
     .filter((service): service is PricingService => service !== null);
@@ -261,22 +328,6 @@ async function addSignatureTag(
   }
 }
 
-// Step 7: Send envelope
-async function sendEnvelope(token: string, envelopeId: string): Promise<void> {
-  const response = await fetchWithTimeout(`${DIGISIGN_API_URL}/envelopes/${envelopeId}/send`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Send envelope failed: ${error}`);
-  }
-}
-
 // Generate PDF via our service
 async function generateContractPdf(pdfGeneratorUrl: string, contractData: ContractData): Promise<ArrayBuffer> {
   const response = await fetchWithTimeout(`${pdfGeneratorUrl}/generate/contract`, {
@@ -288,6 +339,299 @@ async function generateContractPdf(pdfGeneratorUrl: string, contractData: Contra
   if (!response.ok) {
     const error = await response.text();
     throw new Error(`PDF generation failed: ${error}`);
+  }
+
+  return response.arrayBuffer();
+}
+
+async function getGoogleAccessToken(scopes: string[]): Promise<string> {
+  const serviceAccount = getGoogleServiceAccount();
+  if (!serviceAccount) {
+    throw new Error("Google Service Account není nakonfigurován");
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: "RS256", typ: "JWT" };
+  const payload = {
+    iss: serviceAccount.client_email,
+    scope: scopes.join(" "),
+    aud: serviceAccount.token_uri || "https://oauth2.googleapis.com/token",
+    exp: now + 3600,
+    iat: now,
+  };
+
+  const encodedHeader = base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)));
+  const encodedPayload = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)));
+  const signingInput = `${encodedHeader}.${encodedPayload}`;
+
+  const privateKey = await crypto.subtle.importKey(
+    "pkcs8",
+    pemToArrayBuffer(serviceAccount.private_key),
+    {
+      name: "RSASSA-PKCS1-v1_5",
+      hash: "SHA-256",
+    },
+    false,
+    ["sign"],
+  );
+
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    privateKey,
+    new TextEncoder().encode(signingInput),
+  );
+  const encodedSignature = base64UrlEncode(new Uint8Array(signature));
+  const assertion = `${signingInput}.${encodedSignature}`;
+
+  const tokenResponse = await fetchWithTimeout(
+    serviceAccount.token_uri || "https://oauth2.googleapis.com/token",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion,
+      }),
+    },
+    30000,
+  );
+
+  if (!tokenResponse.ok) {
+    const body = await tokenResponse.text();
+    throw new Error(`Google OAuth token failed (${tokenResponse.status}): ${body.slice(0, 200)}`);
+  }
+
+  const tokenData = await tokenResponse.json();
+  if (!tokenData?.access_token) {
+    throw new Error("Google OAuth token response neobsahuje access_token");
+  }
+  return tokenData.access_token as string;
+}
+
+async function createAndFillGoogleDocTemplate(
+  templateDocId: string,
+  documentName: string,
+  replacements: Record<string, string>,
+): Promise<{ docId: string; docUrl: string; pdf: ArrayBuffer }> {
+  const accessToken = await getGoogleAccessToken([
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/documents",
+  ]);
+
+  const fileMetaResponse = await fetchWithTimeout(
+    `https://www.googleapis.com/drive/v3/files/${templateDocId}?supportsAllDrives=true&fields=id,name,parents,driveId`,
+    {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+      },
+    },
+    30000,
+  );
+
+  if (!fileMetaResponse.ok) {
+    const body = await fileMetaResponse.text();
+    throw new Error(`Google Docs metadata fetch failed (${fileMetaResponse.status}): ${body.slice(0, 220)}`);
+  }
+
+  const fileMeta = await fileMetaResponse.json();
+  const templateParents = Array.isArray(fileMeta?.parents) ? (fileMeta.parents as string[]) : [];
+  const configuredOutputFolderId = Deno.env.get("GOOGLE_CONTRACT_OUTPUT_FOLDER_ID") || "";
+  const targetParents = configuredOutputFolderId
+    ? [configuredOutputFolderId]
+    : templateParents;
+
+  if (!targetParents || targetParents.length === 0) {
+    throw new Error(
+      "Nelze určit cílovou složku pro kopii Google dokumentu. Nastavte GOOGLE_CONTRACT_OUTPUT_FOLDER_ID."
+    );
+  }
+
+  const copyResponse = await fetchWithTimeout(
+    `https://www.googleapis.com/drive/v3/files/${templateDocId}/copy?supportsAllDrives=true`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: documentName,
+        parents: targetParents,
+      }),
+    },
+    30000,
+  );
+
+  if (!copyResponse.ok) {
+    const body = await copyResponse.text();
+    const normalizedBody = body.toLowerCase();
+    const quotaError =
+      copyResponse.status === 403 &&
+      (
+        normalizedBody.includes("service accounts do not have storage quota") ||
+        normalizedBody.includes("storage quota has been exceeded") ||
+        normalizedBody.includes("quota")
+      );
+    if (quotaError) {
+      throw new Error(`GOOGLE_COPY_QUOTA:${body.slice(0, 500)}`);
+    }
+    throw new Error(`Google Docs copy failed (${copyResponse.status}): ${body.slice(0, 220)}`);
+  }
+
+  const copyData = await copyResponse.json();
+  const copiedDocId = String(copyData.id || "");
+  if (!copiedDocId) {
+    throw new Error("Google Docs copy response neobsahuje ID dokumentu");
+  }
+
+  const requests = Object.entries(replacements).map(([placeholder, value]) => ({
+    replaceAllText: {
+      containsText: { text: placeholder, matchCase: true },
+      replaceText: value ?? "",
+    },
+  }));
+
+  if (requests.length > 0) {
+    const batchUpdateResponse = await fetchWithTimeout(
+      `https://docs.googleapis.com/v1/documents/${copiedDocId}:batchUpdate`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ requests }),
+      },
+      30000,
+    );
+
+    if (!batchUpdateResponse.ok) {
+      const body = await batchUpdateResponse.text();
+      throw new Error(`Google Docs replace failed (${batchUpdateResponse.status}): ${body.slice(0, 220)}`);
+    }
+  }
+
+  const exportResponse = await fetchWithTimeout(
+    `https://www.googleapis.com/drive/v3/files/${copiedDocId}/export?mimeType=application/pdf`,
+    {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Accept": "application/pdf",
+      },
+    },
+    60000,
+  );
+
+  if (!exportResponse.ok) {
+    const body = await exportResponse.text();
+    throw new Error(`Google Docs export failed (${exportResponse.status}): ${body.slice(0, 220)}`);
+  }
+
+  const pdf = await exportResponse.arrayBuffer();
+  return {
+    docId: copiedDocId,
+    docUrl: `https://docs.google.com/document/d/${copiedDocId}/edit`,
+    pdf,
+  };
+}
+
+async function fillExistingGoogleDocAndExportPdf(
+  docId: string,
+  replacements: Record<string, string>,
+): Promise<{ docId: string; docUrl: string; pdf: ArrayBuffer }> {
+  const accessToken = await getGoogleAccessToken([
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/documents",
+  ]);
+
+  const requests = Object.entries(replacements).map(([placeholder, value]) => ({
+    replaceAllText: {
+      containsText: { text: placeholder, matchCase: true },
+      replaceText: value ?? "",
+    },
+  }));
+
+  if (requests.length > 0) {
+    const batchUpdateResponse = await fetchWithTimeout(
+      `https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ requests }),
+      },
+      30000,
+    );
+
+    if (!batchUpdateResponse.ok) {
+      const body = await batchUpdateResponse.text();
+      const normalizedBody = body.toLowerCase();
+      if (
+        batchUpdateResponse.status === 400 &&
+        (
+          normalizedBody.includes("not supported for this document") ||
+          normalizedBody.includes("failed_precondition")
+        )
+      ) {
+        throw new Error(
+          `Google Docs šablona není v nativním Google Docs formátu pro API editaci (docId: ${docId}). Otevřete ji v Google Docs a zvolte Soubor -> Uložit jako Dokument Google, poté nasdílejte nový dokument service accountu a použijte jeho URL/ID.`
+        );
+      }
+      throw new Error(`Google Docs replace (in-place) failed (${batchUpdateResponse.status}): ${body.slice(0, 220)}`);
+    }
+  }
+
+  const exportResponse = await fetchWithTimeout(
+    `https://www.googleapis.com/drive/v3/files/${docId}/export?mimeType=application/pdf`,
+    {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Accept": "application/pdf",
+      },
+    },
+    60000,
+  );
+
+  if (!exportResponse.ok) {
+    const body = await exportResponse.text();
+    throw new Error(`Google Docs export (in-place) failed (${exportResponse.status}): ${body.slice(0, 220)}`);
+  }
+
+  return {
+    docId,
+    docUrl: `https://docs.google.com/document/d/${docId}/edit`,
+    pdf: await exportResponse.arrayBuffer(),
+  };
+}
+
+async function exportGoogleDocPdf(googleDocsUrl: string): Promise<ArrayBuffer> {
+  const docId = parseGoogleDocId(googleDocsUrl);
+  if (!docId) throw new Error("Neplatný Google Docs odkaz pro export PDF");
+  const exportUrl = `https://docs.google.com/document/d/${docId}/export?format=pdf`;
+
+  const response = await fetchWithTimeout(exportUrl, {
+    method: "GET",
+    headers: {
+      "Accept": "application/pdf",
+      "User-Agent": "socials-crm-contract-export/1.0",
+    },
+  }, 60000);
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(
+      `Google Docs export failed (${response.status}). Zkontrolujte sdílení dokumentu. ${body.slice(0, 180)}`
+    );
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.toLowerCase().includes("pdf")) {
+    throw new Error("Google Docs export nevrátil PDF. Zkontrolujte odkaz a práva dokumentu.");
   }
 
   return response.arrayBuffer();
@@ -311,6 +655,30 @@ function isLikelyPhoneNumber(value: string): boolean {
 
   const digitsOnly = trimmed.replace(/\D/g, "");
   return digitsOnly.length >= 9 && digitsOnly.length <= 15;
+}
+
+function buildTemplateVariables(contractData: ContractData): Record<string, string> {
+  const primarySignatory = contractData.signatories[0];
+  return {
+    "{{NAZEV_FIRMY}}": contractData.company_name || "",
+    "{{SIDLO_FIRMY}}": contractData.billing_address || "",
+    "{{ICO}}": contractData.ico || "",
+    "{{DIC}}": contractData.dic || "",
+    "{{NAZEV_SOUDU}}": contractData.court_name || "",
+    "{{SPISOVA_ZNACKA}}": contractData.court_file_number || "",
+    "{{CISLO_ZNACKY}}": contractData.court_file_number || "",
+    "{{JMENO_JEDNATELE}}": primarySignatory?.name || "",
+    "{{POZICE_JEDNATELE}}": primarySignatory?.position || "jednatel",
+    "{{EMAIL_JEDNATELE}}": primarySignatory?.email || "",
+    "{{WEB_URL}}": contractData.website_url || "",
+    "{{EMAIL_KONTAKTNI}}": contractData.additional_emails || "",
+    "{{EMAILY_KOLEGU}}": contractData.additional_emails || "",
+    "{{EMAIL_FAKTURACNI}}": contractData.invoice_email || "",
+    "{{PAUSAL_KC}}": String(contractData.monthly_fee || 0),
+    "{{JEDNORAZOVA_ODMENA_KC}}": String(contractData.setup_fee || 0),
+    "{{DATUM_UZAVRENI}}": contractData.contract_date || "",
+    "{{PRODUKTY}}": contractData.products || "",
+  };
 }
 
 serve(async (req) => {
@@ -348,7 +716,15 @@ serve(async (req) => {
     }
 
     userId = user.id;
-    const { lead_id }: { lead_id: string } = await req.json();
+    const {
+      lead_id,
+      google_docs_url,
+      preview_only,
+    }: {
+      lead_id: string;
+      google_docs_url?: string | null;
+      preview_only?: boolean;
+    } = await req.json();
     leadId = lead_id;
 
     if (!lead_id) {
@@ -362,8 +738,9 @@ serve(async (req) => {
     const DIGISIGN_ACCESS_KEY = Deno.env.get("DIGISIGN_ACCESS_KEY");
     const DIGISIGN_SECRET_KEY = Deno.env.get("DIGISIGN_SECRET_KEY");
     const PDF_GENERATOR_URL = Deno.env.get("PDF_GENERATOR_URL") || "http://188.245.148.53:8094";
+    const isPreviewOnly = preview_only === true;
 
-    if (!DIGISIGN_ACCESS_KEY || !DIGISIGN_SECRET_KEY) {
+    if (!isPreviewOnly && (!DIGISIGN_ACCESS_KEY || !DIGISIGN_SECRET_KEY)) {
       return new Response(
         JSON.stringify({ error: "DigiSign není nakonfigurováno (chybí DIGISIGN_ACCESS_KEY nebo DIGISIGN_SECRET_KEY)" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -376,6 +753,7 @@ serve(async (req) => {
       .from("leads")
       .select(`
         id,
+        contact_name,
         company_name,
         ico,
         dic,
@@ -389,8 +767,10 @@ serve(async (req) => {
         court_name,
         court_file_number,
         onboarding_signatories,
+        onboarding_project_contacts,
         potential_services,
         digisign_id,
+        contract_url,
         estimated_price
       `)
       .eq("id", lead_id)
@@ -407,13 +787,15 @@ serve(async (req) => {
     }
 
     // Idempotency check - prevent duplicate envelope creation
-    if (lead.digisign_id) {
+    if (!isPreviewOnly && lead.digisign_id) {
       return new Response(
         JSON.stringify({
-          error: "Smlouva již byla vytvořena",
-          digisign_id: lead.digisign_id
+          success: true,
+          already_exists: true,
+          digisign_id: lead.digisign_id,
+          digisign_url: lead.contract_url || null,
         }),
-        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -423,16 +805,24 @@ serve(async (req) => {
       phone: (s.phone && s.phone.trim()) ? s.phone.trim() : (lead.contact_phone || ''),
       email: (s.email && s.email.trim()) ? s.email.trim() : (lead.contact_email || ''),
     }));
-    if (signatories.length === 0) {
+    if (signatories.length === 0 && !isPreviewOnly) {
       return new Response(
         JSON.stringify({ error: "Chybí podpisující osoby (onboarding_signatories)" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    if (signatories.length === 0 && isPreviewOnly) {
+      signatories.push({
+        name: lead.contact_name || "Kontaktní osoba",
+        position: "jednatel",
+        email: lead.contact_email || lead.billing_email || "",
+        phone: lead.contact_phone || "",
+      });
+    }
 
     // Validate all signatories have email (DigiSign requires email for all recipients)
     const signatoriesWithoutEmail = signatories.filter(s => !s.email || s.email.trim() === '');
-    if (signatoriesWithoutEmail.length > 0) {
+    if (!isPreviewOnly && signatoriesWithoutEmail.length > 0) {
       const missingNames = signatoriesWithoutEmail.map(s => s.name || 'Neznámé jméno').join(', ');
       return new Response(
         JSON.stringify({
@@ -445,7 +835,7 @@ serve(async (req) => {
 
     // Validate all signatories have names (DigiSign requires non-empty recipient name)
     const signatoriesWithoutName = signatories.filter(s => !s.name || s.name.trim() === '');
-    if (signatoriesWithoutName.length > 0) {
+    if (!isPreviewOnly && signatoriesWithoutName.length > 0) {
       return new Response(
         JSON.stringify({
           error: "Některé podpisující osoby nemají vyplněné jméno. Doplňte jméno každého podepisujícího v onboarding formuláři.",
@@ -457,7 +847,7 @@ serve(async (req) => {
 
     // Validate all signatories have valid phone numbers (DigiSign requires mobile for all recipients)
     const signatoriesWithInvalidPhone = signatories.filter(s => !s.phone || !isLikelyPhoneNumber(s.phone));
-    if (signatoriesWithInvalidPhone.length > 0) {
+    if (!isPreviewOnly && signatoriesWithInvalidPhone.length > 0) {
       const missingNames = signatoriesWithInvalidPhone.map(s => s.name).join(', ');
       return new Response(
         JSON.stringify({
@@ -499,7 +889,17 @@ serve(async (req) => {
       );
     }
 
-    const products = services.map((s) => s.name).join(", ");
+    const products = services
+      .map((service) => {
+        const variants = Array.isArray(service.country_variants) ? service.country_variants : [];
+        if (variants.length === 0) return service.name;
+        const variantCodes = variants
+          .map((variant) => variant.country_code)
+          .filter((code) => code.length > 0);
+        if (variantCodes.length === 0) return service.name;
+        return `${service.name} (jazykové mutace: ${variantCodes.join(", ")})`;
+      })
+      .join(", ");
 
     const monthlyDiscountPercent = Number(latestOffer?.monthly_discount_percent ?? 0);
     const discountScope = latestOffer?.discount_scope === "all_services" ? "all_services" : "core_only";
@@ -514,6 +914,16 @@ serve(async (req) => {
     }
 
     // Prepare contract data for PDF generation
+    const projectContacts = Array.isArray(lead.onboarding_project_contacts)
+      ? (lead.onboarding_project_contacts as Array<Record<string, unknown>>)
+      : [];
+    const projectContactEmails = projectContacts
+      .map((contact) => (typeof contact.email === "string" ? contact.email.trim() : ""))
+      .filter((email) => email.length > 0);
+    const additionalEmails = projectContactEmails.length > 0
+      ? projectContactEmails.join(", ")
+      : (lead.contact_email || "");
+
     const contractData: ContractData = {
       company_name: lead.company_name || "",
       billing_address: billingAddress,
@@ -523,18 +933,92 @@ serve(async (req) => {
       court_file_number: lead.court_file_number || "",
       signatories,
       website_url: lead.website || "",
-      additional_emails: lead.contact_email || "",
+      additional_emails: additionalEmails,
       invoice_email: lead.billing_email || lead.contact_email || "",
       monthly_fee: monthlyFee,
       setup_fee: setupFee,
       contract_date: formatCzechDate(new Date()),
       products,
     };
+    const templateVariables = buildTemplateVariables(contractData);
 
     // Step 1: Generate PDF
-    console.log("Generating PDF...");
-    const pdfBuffer = await generateContractPdf(PDF_GENERATOR_URL, contractData);
+    // Preferred path: copy Google Docs template, replace placeholders, export PDF.
+    let pdfBuffer: ArrayBuffer;
+    let generatedGoogleDocUrl: string | null = null;
+    const templateDocId =
+      parseGoogleDocId(Deno.env.get("GOOGLE_CONTRACT_TEMPLATE_DOC_ID") || "") ||
+      parseGoogleDocId(google_docs_url || "");
+    const hasGoogleServiceAccount = !!getGoogleServiceAccount();
+
+    if (templateDocId && hasGoogleServiceAccount) {
+      try {
+        console.log("Creating filled Google Docs copy from template...");
+        const filled = await createAndFillGoogleDocTemplate(
+          templateDocId,
+          `Smlouva - ${contractData.company_name} - ${lead_id}`,
+          templateVariables,
+        );
+        pdfBuffer = filled.pdf;
+        generatedGoogleDocUrl = filled.docUrl;
+      } catch (copyError) {
+        const msg = copyError instanceof Error ? copyError.message : String(copyError);
+        const requestedDocId = templateDocId || parseGoogleDocId(google_docs_url || "");
+        if (msg.startsWith("GOOGLE_COPY_QUOTA:") && requestedDocId) {
+          console.warn("Google copy quota limitation hit, falling back to in-place template fill", {
+            requestedDocId,
+          });
+          const filled = await fillExistingGoogleDocAndExportPdf(requestedDocId, templateVariables);
+          pdfBuffer = filled.pdf;
+          generatedGoogleDocUrl = filled.docUrl;
+        } else {
+          throw copyError;
+        }
+      }
+    } else if (google_docs_url && typeof google_docs_url === "string" && google_docs_url.trim().length > 0) {
+      console.log("Exporting PDF from provided Google Docs URL (no placeholder replacement)...");
+      pdfBuffer = await exportGoogleDocPdf(google_docs_url);
+    } else {
+      console.log("Generating PDF from internal template...");
+      pdfBuffer = await generateContractPdf(PDF_GENERATOR_URL, contractData);
+    }
     console.log(`PDF generated, size: ${pdfBuffer.byteLength} bytes`);
+
+    if (isPreviewOnly) {
+      const previewContractUrl = generatedGoogleDocUrl || (google_docs_url || null);
+      if (previewContractUrl) {
+        await supabaseAdmin
+          .from("leads")
+          .update({
+            contract_url: previewContractUrl,
+          })
+          .eq("id", lead_id);
+      }
+
+      const durationMs = Date.now() - startTime;
+      await supabaseAdmin.from("integration_log").insert({
+        service: "digisign",
+        action: "prepare_contract_preview",
+        related_table: "leads",
+        related_record_id: leadId,
+        request_payload: { contractData, templateVariables },
+        response_payload: { google_doc_url: previewContractUrl },
+        response_status: 200,
+        is_success: true,
+        triggered_by: userId,
+        duration_ms: durationMs,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          prepared_only: true,
+          google_doc_url: previewContractUrl,
+          template_variables: templateVariables,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     // Step 2: Get DigiSign auth token
     console.log("Getting DigiSign auth token...");
@@ -596,13 +1080,10 @@ serve(async (req) => {
       await addSignatureTag(digisignToken, envelopeId, recipientIds[i], `PODPIS${i + 1}`);
     }
 
-    // Step 7: Send envelope
-    console.log("Sending envelope...");
-    await sendEnvelope(digisignToken, envelopeId);
-    console.log("Envelope sent!");
+    // Step 7: Keep envelope in draft state (do not send automatically)
+    console.log("Envelope prepared as draft (not sent)");
 
-    // Now that envelope is fully created and sent, save to database
-    // This prevents race conditions where digisign_id is saved but envelope creation fails
+    // Envelope is fully prepared as draft, save IDs/URL to database
     // DigiSign provides direct envelope URL in selfcare
     const contractUrl = `https://app.digisign.org/selfcare/envelope/${envelopeId}`;
 
@@ -616,11 +1097,11 @@ serve(async (req) => {
       .eq("id", lead_id);
 
     if (updateError) {
-      // Envelope was sent successfully but DB update failed
+      // Envelope draft was created successfully but DB update failed
       // Log this critical error - manual intervention may be needed
-      console.error("CRITICAL: Envelope sent but DB update failed:", updateError);
+      console.error("CRITICAL: Envelope draft created but DB update failed:", updateError);
       console.error(`Envelope ID: ${envelopeId}, Lead ID: ${lead_id}`);
-      // We still return success since the envelope was sent
+      // We still return success since the draft was created
       // The digisign_id can be manually added later
     }
 
@@ -632,8 +1113,8 @@ serve(async (req) => {
       action: "create_contract",
       related_table: "leads",
       related_record_id: leadId,
-      request_payload: { contractData, signatories_count: signatories.length },
-      response_payload: { envelopeId },
+      request_payload: { contractData, templateVariables, signatories_count: signatories.length },
+      response_payload: { envelopeId, templateVariables, google_doc_url: generatedGoogleDocUrl },
       response_status: 200,
       is_success: true,
       triggered_by: userId,
@@ -644,6 +1125,8 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         digisign_id: envelopeId,
+        template_variables: templateVariables,
+        google_doc_url: generatedGoogleDocUrl,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

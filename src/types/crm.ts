@@ -545,6 +545,12 @@ export type LeadSource =
 
 export type LeadOfferType = 'retainer' | 'one_off';
 
+export interface LeadServiceCountryVariant {
+  country_code: string;
+  multiplier: number;
+  price: number;
+}
+
 // Service in a lead offer
 export interface LeadService {
   id: string;
@@ -554,6 +560,8 @@ export interface LeadService {
   price: number;
   currency: string;
   billing_type: 'monthly' | 'one_off';
+  managed_countries?: string[];
+  country_variants?: LeadServiceCountryVariant[];
   // Introductory discount (optional)
   intro_discount_percent?: number | null;
   intro_discount_months?: number | null;
@@ -833,6 +841,9 @@ export interface IssuedInvoice {
   line_items: InvoiceLineItem[];
   total_amount: number;
   currency: string;
+  fakturoid_total_without_vat?: number | null;
+  fakturoid_total_with_vat?: number | null;
+  fakturoid_duzp_date?: string | null;
   
   // Timestamps
   issued_at: string;

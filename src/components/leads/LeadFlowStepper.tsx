@@ -22,6 +22,8 @@ import type { Lead, LeadService } from '@/types/crm';
 interface LeadFlowStepperProps {
   lead: Lead;
   offerUrl?: string | null;
+  hasOfferDraft?: boolean;
+  offerDraftSavedAt?: number | null;
   onSendMeetingRequest: () => void;
   onQuickConfirmMeetingSent: () => void;
   onRequestAccess: () => void;
@@ -30,6 +32,7 @@ interface LeadFlowStepperProps {
   onAddService: () => void;
   onCreateOffer: () => void;
   onSendOffer: () => void;
+  onQuickConfirmOfferSent: () => void;
   onSendOnboarding: () => void;
   onResetOnboarding: () => void;
   onViewOnboardingData: () => void;
@@ -97,6 +100,8 @@ function ServicesInlineList({
 export function LeadFlowStepper({
   lead,
   offerUrl,
+  hasOfferDraft = false,
+  offerDraftSavedAt = null,
   onSendMeetingRequest,
   onQuickConfirmMeetingSent,
   onRequestAccess,
@@ -105,6 +110,7 @@ export function LeadFlowStepper({
   onAddService,
   onCreateOffer,
   onSendOffer,
+  onQuickConfirmOfferSent,
   onSendOnboarding,
   onResetOnboarding,
   onViewOnboardingData,
@@ -115,6 +121,40 @@ export function LeadFlowStepper({
   onRemoveService,
 }: LeadFlowStepperProps) {
   const servicesCount = lead.potential_services?.length || 0;
+  const services = lead.potential_services || [];
+  const currency = lead.currency || 'CZK';
+  const getServiceCountryVariants = (service: LeadService) => {
+    if (!Array.isArray(service.country_variants)) return [];
+    return service.country_variants
+      .filter((variant): variant is { country_code: string; multiplier: number; price: number } => {
+        if (!variant || typeof variant !== 'object') return false;
+        return typeof variant.country_code === 'string' && variant.country_code.trim().length > 0;
+      })
+      .map((variant) => ({
+        country_code: variant.country_code.trim().toUpperCase(),
+        multiplier: Number.isFinite(variant.multiplier) ? variant.multiplier : 0,
+        price: Number.isFinite(variant.price) ? variant.price : 0,
+      }));
+  };
+  const getServiceTotalPrice = (service: LeadService) => {
+    const variantsTotal = getServiceCountryVariants(service).reduce((sum, variant) => sum + (variant.price || 0), 0);
+    return (service.price || 0) + variantsTotal;
+  };
+  const monthlyTotal = services
+    .filter((service) => (service.billing_type || 'monthly') === 'monthly')
+    .reduce((sum, service) => sum + getServiceTotalPrice(service), 0);
+  const oneOffTotal = services
+    .filter((service) => service.billing_type === 'one_off')
+    .reduce((sum, service) => sum + getServiceTotalPrice(service), 0);
+  const contractBillingAddress = [
+    lead.billing_street,
+    lead.billing_city,
+    lead.billing_zip,
+    lead.billing_country,
+  ]
+    .filter(Boolean)
+    .join(', ');
+  const contractInvoiceEmail = lead.billing_email || null;
   const hasOffer = !!offerUrl;
   const canConvert = !lead.converted_to_client_id && !['won', 'lost'].includes(lead.stage);
 
@@ -189,28 +229,45 @@ export function LeadFlowStepper({
           { label: 'Vytvořit nabídku', onClick: onCreateOffer, variant: 'outline' as const },
         ]),
       ],
-      customContent: offerUrl ? (
-        <a
-          href={offerUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
-        >
-          <ExternalLink className="h-3 w-3" />
-          Zobrazit nabídku
-        </a>
-      ) : undefined,
+      customContent: (
+        <div className="mt-1 space-y-1">
+          {offerUrl && (
+            <a
+              href={offerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Zobrazit nabídku
+            </a>
+          )}
+          {hasOfferDraft && (
+            <div className="text-xs text-amber-700 dark:text-amber-400">
+              ✍️ Rozpracovaný draft nabídky
+              {offerDraftSavedAt ? ` • ${formatDate(new Date(offerDraftSavedAt).toISOString())}` : ''}
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       id: 'offer-sent',
       label: 'Nabídka odeslána',
       isComplete: !!lead.offer_sent_at,
       completedAt: lead.offer_sent_at,
-      actions: hasOffer && !lead.offer_sent_at ? [{
-        label: 'Odeslat nabídku',
-        onClick: onSendOffer,
-        variant: 'outline',
-      }] : lead.offer_sent_at ? [{
+      actions: hasOffer && !lead.offer_sent_at ? [
+        {
+          label: 'Odeslat nabídku',
+          onClick: onSendOffer,
+          variant: 'outline',
+        },
+        {
+          label: '✓ Označit ručně',
+          onClick: onQuickConfirmOfferSent,
+          variant: 'ghost',
+        },
+      ] : lead.offer_sent_at ? [{
         label: 'Odeslat znovu',
         onClick: onSendOffer,
         variant: 'ghost',
@@ -219,8 +276,8 @@ export function LeadFlowStepper({
     {
       id: 'onboarding-sent',
       label: 'Onboarding formulář',
-      isComplete: !!lead.onboarding_form_sent_at,
-      completedAt: lead.onboarding_form_sent_at,
+      isComplete: !!lead.onboarding_form_completed_at,
+      completedAt: lead.onboarding_form_completed_at,
       detail: lead.onboarding_form_completed_at 
         ? `Vyplněn ${formatDate(lead.onboarding_form_completed_at)}` 
         : lead.onboarding_form_sent_at 
@@ -285,6 +342,31 @@ export function LeadFlowStepper({
         onClick: onSendContract,
         variant: 'ghost',
       }] : undefined,
+      customContent: (
+        <div className="mt-2 rounded-md border bg-muted/30 p-2.5 text-[11px] text-muted-foreground space-y-1">
+          <p className="font-medium text-foreground">Náhled dat do smlouvy</p>
+          <p>
+            Fakturační údaje: {contractBillingAddress || 'chybí'}
+          </p>
+          <p>
+            Fakturační e-mail: {contractInvoiceEmail || 'chybí'}
+          </p>
+          <p>
+            Služby: {services.length > 0
+              ? services.map((service) => {
+                const variants = getServiceCountryVariants(service);
+                return `${service.name}${variants.length > 0
+                  ? ` + ${variants.map((variant) => variant.country_code).join(', ')}`
+                  : ''} (${getServiceTotalPrice(service).toLocaleString('cs-CZ')} ${service.currency || currency}${(service.billing_type || 'monthly') === 'monthly' ? '/měs' : ''})`;
+              }).join(', ')
+              : 'chybí'}
+          </p>
+          <p>
+            Cena: {monthlyTotal.toLocaleString('cs-CZ')} {currency}/měs
+            {oneOffTotal > 0 ? ` + ${oneOffTotal.toLocaleString('cs-CZ')} ${currency} jednorázově` : ''}
+          </p>
+        </div>
+      ),
     },
     {
       id: 'converted',

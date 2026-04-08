@@ -15,10 +15,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Building2, MapPin, CheckCircle2, AlertTriangle, Search, Plus, X, PenLine, Users, CalendarIcon, FileText, Zap, MessageSquare, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useAresLookup } from '@/hooks/useAresLookup';
 import { cn } from '@/lib/utils';
-import socialsLogo from '@/assets/socials-logo.png';
+import socialsLogo from '@/assets/socials-logo.svg';
 import { LeadService } from '@/types/crm';
 import { toast } from 'sonner';
 import { isValidUrlInput, normalizeUrlProtocol } from '@/lib/validation';
@@ -145,6 +146,34 @@ const onboardingSchema = z.object({
   path: ['projectContacts']
 });
 
+const INDUSTRY_OPTIONS = [
+  { value: 'ecommerce', label: 'Ecommerce' },
+  { value: 'lead_generation', label: 'Lead generation' },
+  { value: 'other', label: 'Jiné' },
+] as const;
+
+type IndustryOptionValue = (typeof INDUSTRY_OPTIONS)[number]['value'];
+
+const normalizeIndustryValue = (value: string | null | undefined): IndustryOptionValue | '' => {
+  const normalized = String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+
+  if (!normalized) return '';
+  if (normalized === 'ecommerce' || normalized === 'e-commerce') return 'ecommerce';
+  if (normalized === 'lead generation' || normalized === 'lead_generation') return 'lead_generation';
+  if (normalized === 'jine' || normalized === 'jina' || normalized === 'other') return 'other';
+  return '';
+};
+
+const industryValueToLabel = (value: string | null | undefined): string | null => {
+  if (!value) return null;
+  const option = INDUSTRY_OPTIONS.find((item) => item.value === value);
+  return option?.label ?? null;
+};
+
 type OnboardingFormData = z.infer<typeof onboardingSchema>;
 
 export default function OnboardingForm() {
@@ -232,7 +261,7 @@ export default function OnboardingForm() {
           ico: fetchedLead.ico,
           dic: fetchedLead.dic || '',
           website: fetchedLead.website || '',
-          industry: fetchedLead.industry || '',
+          industry: normalizeIndustryValue(fetchedLead.industry),
           billing_street: fetchedLead.billing_street || '',
           billing_city: fetchedLead.billing_city || '',
           billing_zip: fetchedLead.billing_zip || '',
@@ -318,7 +347,7 @@ export default function OnboardingForm() {
           ico: data.ico,
           dic: data.dic || null,
           website: data.website || null,
-          industry: data.industry || null,
+          industry: industryValueToLabel(data.industry) || null,
           billing_street: data.billing_street || null,
           billing_city: data.billing_city || null,
           billing_zip: data.billing_zip || null,
@@ -667,7 +696,7 @@ export default function OnboardingForm() {
       <div className="flex-1 flex items-start justify-center px-4 py-8">
         <div className="w-full max-w-2xl">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 onboarding-form">
               <div
                 key={currentStep}
                 className="animate-in fade-in-0 slide-in-from-bottom-4 duration-300"
@@ -783,9 +812,20 @@ export default function OnboardingForm() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Obor</FormLabel>
-                        <FormControl>
-                          <Input placeholder="E-commerce, B2B, ..." {...field} />
-                        </FormControl>
+                        <Select value={field.value || ''} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Vyberte obor" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {INDUSTRY_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1156,12 +1196,12 @@ export default function OnboardingForm() {
                                 !field.value && "text-muted-foreground"
                               )}
                             >
+                              <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
                               {field.value ? (
                                 format(field.value, "d. MMMM yyyy", { locale: cs })
                               ) : (
                                 <span>Vyberte datum zahájení...</span>
                               )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>
                         </PopoverTrigger>

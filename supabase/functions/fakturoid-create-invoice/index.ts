@@ -220,6 +220,9 @@ serve(async (req) => {
         invoice_number: fakturoidNumber,
         fakturoid_id: String(fakturoidInvoice.id),
         fakturoid_url: fakturoidInvoiceUrl,
+        fakturoid_total_without_vat: Number(invoice.total_amount || 0),
+        fakturoid_total_with_vat: Number(invoice.total_amount || 0),
+        fakturoid_duzp_date: duzpFormatted,
       })
       .eq("id", invoice_id);
 

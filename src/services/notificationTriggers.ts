@@ -14,8 +14,8 @@ export async function notifyNewLead(leadId: string, companyName: string) {
     message: `Nový lead: ${companyName}`,
     entityType: 'lead',
     entityId: leadId,
-    link: '/leads',
-    metadata: { company_name: companyName },
+    link: `/leads?openLead=${leadId}`,
+    metadata: { lead_id: leadId, company_name: companyName },
   });
 }
 
@@ -25,8 +25,8 @@ export async function notifyFormCompleted(leadId: string, companyName: string) {
       type: 'form_completed',
       title: '📋 Formulář vyplněn',
       message: `${companyName} vyplnil onboarding formulář.`,
-      link: '/leads',
-      metadata: { company_name: companyName },
+      link: `/leads?openLead=${leadId}`,
+      metadata: { lead_id: leadId, company_name: companyName },
     }),
     notifyAdmins({
       type: 'form_completed',
@@ -34,8 +34,8 @@ export async function notifyFormCompleted(leadId: string, companyName: string) {
       message: `${companyName} vyplnil onboarding formulář.`,
       entityType: 'lead',
       entityId: leadId,
-      link: '/leads',
-      metadata: { company_name: companyName },
+      link: `/leads?openLead=${leadId}`,
+      metadata: { lead_id: leadId, company_name: companyName },
     }),
   ]);
 }
@@ -45,8 +45,8 @@ export async function notifyAccessGranted(leadId: string, companyName: string, p
     type: 'access_granted',
     title: '🔑 Přístupy nasdíleny',
     message: `${companyName} nasdílel přístupy${platforms.length > 0 ? `: ${platforms.join(', ')}` : ''}.`,
-    link: '/leads',
-    metadata: { company_name: companyName, platforms },
+    link: `/leads?openLead=${leadId}`,
+    metadata: { lead_id: leadId, company_name: companyName, platforms },
   });
 }
 
@@ -57,8 +57,8 @@ export async function notifyOfferSent(leadId: string, companyName: string) {
     message: `Nabídka pro ${companyName} byla odeslána.`,
     entityType: 'lead',
     entityId: leadId,
-    link: '/leads',
-    metadata: { company_name: companyName },
+    link: `/leads?openLead=${leadId}`,
+    metadata: { lead_id: leadId, company_name: companyName },
   });
 }
 
@@ -67,8 +67,8 @@ export async function notifyOfferViewed(leadId: string, companyName: string) {
     type: 'offer_viewed',
     title: '👀 Nabídka zobrazena',
     message: `${companyName} si prohlédl nabídku.`,
-    link: '/leads',
-    metadata: { company_name: companyName },
+    link: `/leads?openLead=${leadId}`,
+    metadata: { lead_id: leadId, company_name: companyName },
   });
 }
 
@@ -78,8 +78,8 @@ export async function notifyContractSigned(leadId: string, companyName: string) 
       type: 'contract_signed',
       title: '✅ Smlouva podepsána',
       message: `${companyName} podepsal smlouvu.`,
-      link: '/leads',
-      metadata: { company_name: companyName },
+      link: `/leads?openLead=${leadId}`,
+      metadata: { lead_id: leadId, company_name: companyName },
     }),
     notifyAdmins({
       type: 'contract_signed',
@@ -87,8 +87,8 @@ export async function notifyContractSigned(leadId: string, companyName: string) 
       message: `${companyName} podepsal smlouvu.`,
       entityType: 'lead',
       entityId: leadId,
-      link: '/leads',
-      metadata: { company_name: companyName },
+      link: `/leads?openLead=${leadId}`,
+      metadata: { lead_id: leadId, company_name: companyName },
     }),
   ]);
 }
@@ -101,7 +101,7 @@ export async function notifyLeadConverted(leadId: string, companyName: string, e
     entityType: 'lead',
     entityId: leadId,
     link: engagementId ? `/engagements?highlight=${engagementId}` : '/leads',
-    metadata: { company_name: companyName, engagement_id: engagementId },
+    metadata: { lead_id: leadId, company_name: companyName, engagement_id: engagementId },
   });
 }
 
@@ -112,8 +112,8 @@ export async function notifyLeadLost(leadId: string, companyName: string, reason
     message: `${companyName} byl ztracen${reason ? `: ${reason}` : ''}.`,
     entityType: 'lead',
     entityId: leadId,
-    link: '/leads',
-    metadata: { company_name: companyName, reason },
+    link: `/leads?openLead=${leadId}`,
+    metadata: { lead_id: leadId, company_name: companyName, reason },
   });
 }
 
@@ -151,7 +151,7 @@ export async function notifyExtraWorkCreated(extraWorkId: string, name: string, 
     message: `${name} pro ${clientName} (${amount.toLocaleString('cs-CZ')} Kč).`,
     entityType: 'extra_work',
     entityId: extraWorkId,
-    link: '/extra-work',
+    link: `/extra-work?highlight=${extraWorkId}`,
     metadata: { name, client_name: clientName, amount },
   });
 }
@@ -164,7 +164,7 @@ export async function notifyExtraWorkApproved(extraWorkId: string, name: string,
     message: `Vícepráce "${name}" byla schválena.`,
     entityType: 'extra_work',
     entityId: extraWorkId,
-    link: '/extra-work',
+    link: `/extra-work?highlight=${extraWorkId}`,
     metadata: { name },
   });
 }
@@ -176,7 +176,7 @@ export async function notifyExtraWorkReadyToInvoice(extraWorkId: string, name: s
     message: `${name} pro ${clientName} připravena k fakturaci.`,
     entityType: 'extra_work',
     entityId: extraWorkId,
-    link: '/extra-work',
+    link: `/extra-work?highlight=${extraWorkId}`,
     metadata: { name, client_name: clientName },
   });
 }
@@ -248,7 +248,7 @@ export async function notifyApplicantOnboardingCompleted(applicantId: string, ap
     message: `${applicantName} (${position}) dokončil onboarding.`,
     entityType: 'applicant',
     entityId: applicantId,
-    link: '/recruitment',
+    link: `/recruitment?highlight=${applicantId}`,
     metadata: { applicant_name: applicantName, position },
   });
 }

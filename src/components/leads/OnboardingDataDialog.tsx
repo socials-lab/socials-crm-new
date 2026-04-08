@@ -30,7 +30,7 @@ interface OnboardingDataDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lead: Lead;
-  onSave: (updates: Partial<Lead>) => void;
+  onSave: (updates: Partial<Lead>) => Promise<void>;
 }
 
 export function OnboardingDataDialog({ open, onOpenChange, lead, onSave }: OnboardingDataDialogProps) {
@@ -66,21 +66,26 @@ export function OnboardingDataDialog({ open, onOpenChange, lead, onSave }: Onboa
     if (!open) setIsEditing(false);
   }, [open]);
 
-  const handleSave = () => {
-    onSave({
-      onboarding_signatories: signatories as unknown as Lead['onboarding_signatories'],
-      onboarding_project_contacts: contacts as unknown as Lead['onboarding_project_contacts'],
-      onboarding_start_date: startDate || null,
-      billing_street: billingStreet || null,
-      billing_city: billingCity || null,
-      billing_zip: billingZip || null,
-      billing_country: billingCountry || null,
-      billing_email: billingEmail || null,
-      ico: ico || null,
-      dic: dic || null,
-    });
-    setIsEditing(false);
-    toast.success('Onboarding data uložena');
+  const handleSave = async () => {
+    try {
+      await onSave({
+        onboarding_signatories: signatories as unknown as Lead['onboarding_signatories'],
+        onboarding_project_contacts: contacts as unknown as Lead['onboarding_project_contacts'],
+        onboarding_start_date: startDate || null,
+        billing_street: billingStreet || null,
+        billing_city: billingCity || null,
+        billing_zip: billingZip || null,
+        billing_country: billingCountry || null,
+        billing_email: billingEmail || null,
+        ico: ico || null,
+        dic: dic || null,
+      });
+      setIsEditing(false);
+      toast.success('Onboarding data uložena');
+    } catch (error) {
+      console.error('Failed to save onboarding data:', error);
+      toast.error('Nepodařilo se uložit onboarding data');
+    }
   };
 
   // Read directly from lead prop (always fresh)
@@ -95,7 +100,19 @@ export function OnboardingDataDialog({ open, onOpenChange, lead, onSave }: Onboa
   const lBillingCountry = lead.billing_country || '';
   const lBillingEmail = lead.billing_email || '';
 
-  const hasData = lead.onboarding_form_completed_at || lSignatories.length > 0 || lContacts.length > 0 || lStartDate || lIco || lDic || lBillingStreet || lBillingCity || lBillingEmail;
+  const hasData =
+    lead.onboarding_form_completed_at ||
+    lSignatories.length > 0 ||
+    lContacts.length > 0 ||
+    lStartDate ||
+    lIco ||
+    lDic ||
+    lBillingStreet ||
+    lBillingCity ||
+    lBillingEmail ||
+    !!lead.company_name ||
+    !!lead.website ||
+    !!lead.industry;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -194,7 +211,7 @@ export function OnboardingDataDialog({ open, onOpenChange, lead, onSave }: Onboa
             </div>
           </div>
         ) : (
-          /* ===== READ MODE — reads directly from lead prop ===== */
+          /* ===== READ MODE — step-by-step onboarding summary ===== */
           <div className="space-y-5 pt-2">
             {lead.onboarding_form_completed_at && (
               <div className="flex items-center gap-2">
@@ -206,17 +223,31 @@ export function OnboardingDataDialog({ open, onOpenChange, lead, onSave }: Onboa
             )}
 
             <div className="space-y-2">
-              <h4 className="text-sm font-medium">Fakturační údaje</h4>
-              <div className="text-sm space-y-1 text-muted-foreground">
-                {lIco && <p>IČO: <span className="text-foreground">{lIco}</span>{lDic && <> • DIČ: <span className="text-foreground">{lDic}</span></>}</p>}
-                {lBillingStreet && <p>{lBillingStreet}{lBillingCity && `, ${lBillingCity}`}{lBillingZip && ` ${lBillingZip}`}{lBillingCountry && `, ${lBillingCountry}`}</p>}
-                {lBillingEmail && <p>Email: <span className="text-foreground">{lBillingEmail}</span></p>}
-                {!lIco && !lBillingStreet && !lBillingEmail && <p className="italic">Nevyplněno</p>}
+              <h4 className="text-sm font-medium">Krok 1: Firemní údaje</h4>
+              <div className="rounded border bg-muted/30 p-3 text-sm space-y-1">
+                <p>Název společnosti: <span className="text-foreground">{lead.company_name || <span className="italic text-muted-foreground">Nevyplněno</span>}</span></p>
+                <p>IČO: <span className="text-foreground">{lIco || <span className="italic text-muted-foreground">Nevyplněno</span>}</span></p>
+                <p>DIČ: <span className="text-foreground">{lDic || <span className="italic text-muted-foreground">Nevyplněno</span>}</span></p>
+                <p>Web: <span className="text-foreground">{lead.website || <span className="italic text-muted-foreground">Nevyplněno</span>}</span></p>
+                <p>Obor: <span className="text-foreground">{lead.industry || <span className="italic text-muted-foreground">Nevyplněno</span>}</span></p>
               </div>
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-sm font-medium">Statutární zástupci</h4>
+              <h4 className="text-sm font-medium">Krok 2: Fakturační adresa</h4>
+              <div className="text-sm space-y-1 text-muted-foreground">
+                <div className="rounded border bg-muted/30 p-3 space-y-1">
+                  <p>Ulice a číslo: <span className="text-foreground">{lBillingStreet || <span className="italic text-muted-foreground">Nevyplněno</span>}</span></p>
+                  <p>Město: <span className="text-foreground">{lBillingCity || <span className="italic text-muted-foreground">Nevyplněno</span>}</span></p>
+                  <p>PSČ: <span className="text-foreground">{lBillingZip || <span className="italic text-muted-foreground">Nevyplněno</span>}</span></p>
+                  <p>Země: <span className="text-foreground">{lBillingCountry || <span className="italic text-muted-foreground">Nevyplněno</span>}</span></p>
+                  <p>Fakturační e-mail: <span className="text-foreground">{lBillingEmail || <span className="italic text-muted-foreground">Nevyplněno</span>}</span></p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Krok 3: Osoby pro podpis smlouvy</h4>
               {lSignatories.length === 0 && <p className="text-sm text-muted-foreground italic">Nevyplněno</p>}
               {lSignatories.map((s, i) => (
                 <div key={i} className="p-2 rounded border bg-muted/30">
@@ -227,7 +258,7 @@ export function OnboardingDataDialog({ open, onOpenChange, lead, onSave }: Onboa
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-sm font-medium">Projektové kontakty</h4>
+              <h4 className="text-sm font-medium">Krok 4: Kontakty pro projekt</h4>
               {lContacts.length === 0 && <p className="text-sm text-muted-foreground italic">Nevyplněno</p>}
               {lContacts.map((c, i) => (
                 <div key={i} className="p-2 rounded border bg-muted/30">
@@ -238,10 +269,21 @@ export function OnboardingDataDialog({ open, onOpenChange, lead, onSave }: Onboa
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-sm font-medium">Datum zahájení spolupráce</h4>
+              <h4 className="text-sm font-medium">Krok 5: Datum zahájení spolupráce</h4>
               <p className="text-sm text-muted-foreground">
                 {lStartDate ? new Date(lStartDate + 'T00:00:00').toLocaleDateString('cs-CZ') : <span className="italic">Nevyplněno</span>}
               </p>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Krok 6: Souhrn a potvrzení</h4>
+              <div className="rounded border bg-muted/30 p-3 text-sm text-muted-foreground">
+                {lead.onboarding_form_completed_at ? (
+                  <p>Objednávka byla klientem potvrzena při odeslání formuláře.</p>
+                ) : (
+                  <p className="italic">Formulář ještě nebyl finálně odeslán.</p>
+                )}
+              </div>
             </div>
           </div>
         )}

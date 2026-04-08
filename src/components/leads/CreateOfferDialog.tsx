@@ -27,6 +27,12 @@ import { getRewardsFromServiceConfig, getServiceRewardRecommendation } from '@/c
 import { useAuth } from '@/hooks/useAuth';
 import { buildAppUrl } from '@/utils/appUrl';
 import {
+  clearOfferDraftRef,
+  getOfferDraftKey,
+  notifyOfferDraftChanged,
+  setOfferDraftRef,
+} from '@/utils/offerDraft';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -136,6 +142,55 @@ interface CreateOfferDialogProps {
   existingOffer?: PublicOffer;
 }
 
+interface OfferDraftData {
+  auditSummary: string;
+  auditHtml: string;
+  recommendationIntro: string;
+  customNote: string;
+  loomUrl: string;
+  validUntil: string;
+  portfolioLinks: PortfolioLink[];
+  monthlyDiscountPercent: number;
+  discountScope: 'core_only' | 'all_services';
+  introDiscountPercent: number;
+  introDiscountMonths: number;
+  cbCredits: number;
+  cbPricePerCredit: number;
+  editableServices: PublicOfferService[];
+  rewardOverrides: Record<string, { role: string; reward: number; rewardType?: string }[]>;
+  savedAt: number;
+}
+
+function stripImagesFromHtml(html: string): string {
+  return html.replace(/<img\b[^>]*>/gi, '');
+}
+
+function saveOfferDraft(key: string, data: OfferDraftData): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (error) {
+    console.error('Failed to auto-save offer draft:', error);
+  }
+}
+
+function loadOfferDraft(key: string): OfferDraftData | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as OfferDraftData;
+  } catch {
+    return null;
+  }
+}
+
+function clearOfferDraft(key: string): void {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // noop
+  }
+}
+
 function generateToken(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
@@ -184,6 +239,32 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
   
   // Editable services state
   const [editableServices, setEditableServices] = useState<PublicOfferService[]>([]);
+  const [restoredDraftAt, setRestoredDraftAt] = useState<number | null>(null);
+
+  const draftScopeKey = useMemo(() => (offerForEdit ? `offer-${offerForEdit.id}` : `lead-${lead.id}`), [offerForEdit, lead.id]);
+  const draftKey = useMemo(() => getOfferDraftKey(draftScopeKey), [draftScopeKey]);
+
+  const applyDraft = useCallback((draft: OfferDraftData) => {
+    setAuditSummary(draft.auditSummary || '');
+    setAuditHtml(draft.auditHtml || '');
+    setRecommendationIntro(draft.recommendationIntro || '');
+    setCustomNote(draft.customNote || '');
+    setLoomUrl(draft.loomUrl || '');
+    setValidUntil(draft.validUntil || '');
+    setPortfolioLinks(Array.isArray(draft.portfolioLinks) && draft.portfolioLinks.length > 0
+      ? draft.portfolioLinks
+      : DEFAULT_PORTFOLIO_OPTIONS.map((p, idx) => ({ ...p, id: `portfolio-${idx}` }))
+    );
+    setMonthlyDiscountPercent(Number.isFinite(draft.monthlyDiscountPercent) ? draft.monthlyDiscountPercent : 0);
+    setDiscountScope(draft.discountScope === 'all_services' ? 'all_services' : 'core_only');
+    setIntroDiscountPercent(Number.isFinite(draft.introDiscountPercent) ? draft.introDiscountPercent : 0);
+    setIntroDiscountMonths(Number.isFinite(draft.introDiscountMonths) ? draft.introDiscountMonths : 3);
+    setCbCredits(Number.isFinite(draft.cbCredits) ? Math.max(1, draft.cbCredits) : 30);
+    setCbPricePerCredit(Number.isFinite(draft.cbPricePerCredit) ? Math.max(0, draft.cbPricePerCredit) : 400);
+    setEditableServices(Array.isArray(draft.editableServices) ? draft.editableServices : []);
+    setRewardOverrides(draft.rewardOverrides && typeof draft.rewardOverrides === 'object' ? draft.rewardOverrides : {});
+    setRestoredDraftAt(typeof draft.savedAt === 'number' ? draft.savedAt : Date.now());
+  }, []);
 
   // Get current user's colleague record
   const currentColleague = colleagues.find((c) => c.profile_id === user?.id && c.status === 'active');
@@ -233,14 +314,15 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
   useEffect(() => {
     if (!open) {
       initializedFormKeyRef.current = '';
+      setRestoredDraftAt(null);
       return;
     }
     if (isLoadingExistingOffer) return;
 
     const initKey = offerForEdit ? `offer:${offerForEdit.id}` : `lead:${lead.id}`;
     if (initializedFormKeyRef.current === initKey) return;
-    
-    // Edit mode: populate from existing offer
+
+    // Edit mode: always load from existing offer, ignore any stale draft
     if (offerForEdit) {
       setAuditSummary(offerForEdit.audit_summary || '');
       setAuditHtml(offerForEdit.audit_html || '');
@@ -260,6 +342,14 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       return;
     }
     
+    // Create mode only: restore autosaved draft if available
+    const savedDraft = loadOfferDraft(draftKey);
+    if (savedDraft) {
+      applyDraft(savedDraft);
+      initializedFormKeyRef.current = initKey;
+      return;
+    }
+
     // If lead already has potential_services, use those
     if (lead.potential_services && lead.potential_services.length > 0) {
       const initialServices: PublicOfferService[] = lead.potential_services.map(ls => {
@@ -321,7 +411,103 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       setEditableServices(suggested);
     }
     initializedFormKeyRef.current = initKey;
-  }, [open, lead, lead.potential_services, services, offerForEdit, isLoadingExistingOffer]);
+  }, [open, lead, lead.potential_services, services, offerForEdit, isLoadingExistingOffer, draftKey, applyDraft]);
+
+  useEffect(() => {
+    if (!open || !initializedFormKeyRef.current || createdOfferUrl) return;
+    const timer = setTimeout(() => {
+      const draftToSave: OfferDraftData = {
+        auditSummary,
+        auditHtml: stripImagesFromHtml(auditHtml || ''),
+        recommendationIntro,
+        customNote,
+        loomUrl,
+        validUntil,
+        portfolioLinks,
+        monthlyDiscountPercent,
+        discountScope,
+        introDiscountPercent,
+        introDiscountMonths,
+        cbCredits,
+        cbPricePerCredit,
+        editableServices,
+        rewardOverrides,
+        savedAt: Date.now(),
+      };
+      saveOfferDraft(draftKey, draftToSave);
+      setOfferDraftRef(lead.id, draftKey);
+      notifyOfferDraftChanged(lead.id);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [
+    open,
+    createdOfferUrl,
+    draftKey,
+    auditSummary,
+    auditHtml,
+    recommendationIntro,
+    customNote,
+    loomUrl,
+    validUntil,
+    portfolioLinks,
+    monthlyDiscountPercent,
+    discountScope,
+    introDiscountPercent,
+    introDiscountMonths,
+    cbCredits,
+    cbPricePerCredit,
+    editableServices,
+    rewardOverrides,
+  ]);
+
+  useEffect(() => {
+    if (!open || !initializedFormKeyRef.current || createdOfferUrl) return;
+    const handleBeforeUnload = () => {
+      saveOfferDraft(draftKey, {
+        auditSummary,
+        auditHtml: stripImagesFromHtml(auditHtml || ''),
+        recommendationIntro,
+        customNote,
+        loomUrl,
+        validUntil,
+        portfolioLinks,
+        monthlyDiscountPercent,
+        discountScope,
+        introDiscountPercent,
+        introDiscountMonths,
+        cbCredits,
+        cbPricePerCredit,
+        editableServices,
+        rewardOverrides,
+        savedAt: Date.now(),
+      });
+      setOfferDraftRef(lead.id, draftKey);
+      notifyOfferDraftChanged(lead.id);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [
+    open,
+    createdOfferUrl,
+    draftKey,
+    auditSummary,
+    auditHtml,
+    recommendationIntro,
+    customNote,
+    loomUrl,
+    validUntil,
+    portfolioLinks,
+    monthlyDiscountPercent,
+    discountScope,
+    introDiscountPercent,
+    introDiscountMonths,
+    cbCredits,
+    cbPricePerCredit,
+    editableServices,
+    rewardOverrides,
+  ]);
 
   // Initialize reward overrides from catalog when services change
   useEffect(() => {
@@ -485,6 +671,9 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
         });
 
         const offerUrl = buildAppUrl(`/offer/${offerForEdit.token}`);
+        clearOfferDraft(draftKey);
+        clearOfferDraftRef(lead.id);
+        notifyOfferDraftChanged(lead.id);
         setCreatedOfferUrl(offerUrl);
         toast.success('Nabídka byla aktualizována!');
         const syncData = {
@@ -523,6 +712,9 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
           });
 
           const existingOfferUrl = buildAppUrl(`/offer/${existingOfferForLead.token}`);
+          clearOfferDraft(draftKey);
+          clearOfferDraftRef(lead.id);
+          notifyOfferDraftChanged(lead.id);
           setCreatedOfferUrl(existingOfferUrl);
           toast.success('Nabídka byla aktualizována!');
           const syncData = {
@@ -599,6 +791,9 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
         };
 
         await addPublicOffer(newOffer);
+        clearOfferDraft(draftKey);
+        clearOfferDraftRef(lead.id);
+        notifyOfferDraftChanged(lead.id);
         setCreatedOfferUrl(offerUrl);
         toast.success('Nabídka byla vytvořena!');
         const syncData = {
@@ -706,6 +901,11 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                 {/* Audit summary - Co jsme zjistili */}
                 <div className="space-y-2">
                   <Label>🔍 Co jsme zjistili (volitelné)</Label>
+                  {restoredDraftAt && (
+                    <p className="text-xs text-emerald-600">
+                      Obnoven rozpracovaný draft ({new Date(restoredDraftAt).toLocaleString('cs-CZ')}).
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground">Popis zjištění z auditu. Můžete vkládat text, odrážky i screenshoty (Ctrl+V nebo přetažením).</p>
                   <AuditEditor
                     content={auditHtml || auditSummary}

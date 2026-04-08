@@ -37,20 +37,93 @@ type NotificationRecord = {
   title: string;
   message: string;
   link: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string | null;
 };
 
+const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
+  new_lead: "Nový lead",
+  form_completed: "Vyplněný formulář",
+  contract_signed: "Podepsaná smlouva",
+  lead_converted: "Lead převeden",
+  access_granted: "Přístupy přijaty",
+  offer_sent: "Nabídka odeslána",
+  colleague_birthday: "Narozeniny kolegy",
+  new_feedback_idea: "Nový feedback nápad",
+};
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function humanDate(isoValue: string | null): string {
+  if (!isoValue) return "—";
+  const date = new Date(isoValue);
+  if (!Number.isFinite(date.getTime())) return isoValue;
+  return date.toLocaleString("cs-CZ", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function buildSummaryRows(notification: NotificationRecord): Array<{ label: string; value: string }> {
+  const rows: Array<{ label: string; value: string }> = [
+    { label: "Typ", value: NOTIFICATION_TYPE_LABELS[notification.type] || notification.type },
+    { label: "Vytvořeno", value: humanDate(notification.created_at) },
+  ];
+
+  const metadata =
+    notification.metadata && typeof notification.metadata === "object" && !Array.isArray(notification.metadata)
+      ? notification.metadata
+      : {};
+  const metadataLabelMap: Record<string, string> = {
+    company_name: "Firma",
+    lead_id: "Lead ID",
+    client_id: "Client ID",
+    engagement_id: "Zakázka ID",
+    colleague_id: "Kolega ID",
+  };
+
+  for (const [key, rawValue] of Object.entries(metadata)) {
+    if (rawValue === null || rawValue === undefined) continue;
+    if (typeof rawValue === "object") continue;
+    const label = metadataLabelMap[key];
+    if (!label) continue;
+    rows.push({ label, value: String(rawValue) });
+  }
+
+  if (notification.link) {
+    rows.push({ label: "CRM odkaz", value: notification.link });
+  }
+
+  return rows;
+}
+
 function buildEmailHtml(
-  title: string,
-  message: string,
-  type: string,
-  link: string | null,
+  notification: NotificationRecord,
+  linkUrl: string,
   appUrl: string,
 ): string {
-  const config = NOTIFICATION_EMAIL_CONFIG[type] || {
+  const config = NOTIFICATION_EMAIL_CONFIG[notification.type] || {
     emoji: "🔔",
     color: "#6b7280",
   };
-  const fullLink = link ? `${appUrl}${link}` : appUrl;
+  const summaryRows = buildSummaryRows(notification)
+    .map((row) => `
+      <tr>
+        <td style="padding:8px 0;color:#71717a;font-size:12px;width:120px;">${escapeHtml(row.label)}</td>
+        <td style="padding:8px 0;color:#18181b;font-size:13px;font-weight:500;">${escapeHtml(row.value)}</td>
+      </tr>
+    `)
+    .join("");
 
   return `
 <!DOCTYPE html>
@@ -59,31 +132,35 @@ function buildEmailHtml(
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:32px 16px;">
     <tr>
       <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 6px 24px rgba(15,23,42,0.08);border:1px solid #e4e4e7;">
           <tr>
-            <td style="background-color:${config.color};padding:16px 24px;">
-              <span style="font-size:24px;">${config.emoji}</span>
-              <span style="color:#ffffff;font-size:16px;font-weight:600;margin-left:8px;vertical-align:middle;">${title}</span>
+            <td style="background:linear-gradient(90deg, ${config.color} 0%, #111827 100%);padding:18px 24px;">
+              <span style="font-size:22px;">${config.emoji}</span>
+              <span style="color:#ffffff;font-size:16px;font-weight:700;margin-left:8px;vertical-align:middle;">Socials CRM</span>
             </td>
           </tr>
           <tr>
             <td style="padding:24px;">
-              <p style="margin:0 0 20px;color:#27272a;font-size:15px;line-height:1.6;">
-                ${message}
+              <h2 style="margin:0 0 10px;color:#111827;font-size:20px;line-height:1.3;">${escapeHtml(notification.title)}</h2>
+              <p style="margin:0 0 20px;color:#374151;font-size:15px;line-height:1.6;">
+                ${escapeHtml(notification.message)}
               </p>
-              <a href="${fullLink}" style="display:inline-block;background-color:${config.color};color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:500;">
-                Zobrazit v aplikaci
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;margin-bottom:18px;">
+                ${summaryRows}
+              </table>
+              <a href="${escapeHtml(linkUrl)}" style="display:inline-block;background-color:${config.color};color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:8px;font-size:14px;font-weight:600;">
+                Otevřít detail v CRM
               </a>
             </td>
           </tr>
           <tr>
-            <td style="padding:16px 24px;border-top:1px solid #e4e4e7;">
-              <p style="margin:0;color:#a1a1aa;font-size:12px;">
-                Toto je automatická notifikace ze Socials CRM.
+            <td style="padding:14px 24px;border-top:1px solid #e4e4e7;background:#fafafa;">
+              <p style="margin:0;color:#6b7280;font-size:12px;">
+                Automatická notifikace ze Socials CRM • ${escapeHtml(appUrl)}
               </p>
             </td>
           </tr>
@@ -160,7 +237,7 @@ serve(async (req) => {
 
     const { data, error } = await supabaseAdmin
       .from("notifications")
-      .select("id,user_id,type,title,message,link")
+      .select("id,user_id,type,title,message,link,metadata,created_at")
       .eq("id", body.notification_id)
       .maybeSingle();
 
@@ -222,66 +299,85 @@ serve(async (req) => {
     const title = notification.title;
     const message = notification.message;
     const link = notification.link;
+    const createdAt = notification.created_at;
+
+    let routedEmails: string[] = [];
+    let includeRoutedEmails = false;
+    try {
+      const { data: routeRow } = await supabaseAdmin
+        .from("notification_email_routes")
+        .select("recipient_emails, is_enabled")
+        .eq("notification_type", type)
+        .maybeSingle<{ recipient_emails: string[] | null; is_enabled: boolean | null }>();
+
+      routedEmails = (routeRow?.is_enabled === false ? [] : (routeRow?.recipient_emails || []))
+        .map((email) => String(email || "").trim().toLowerCase())
+        .filter((email) => email.length > 0);
+
+      // Prevent duplicate route sends for multi-recipient notification inserts.
+      if (routedEmails.length > 0 && createdAt) {
+        const { data: firstRow } = await supabaseAdmin
+          .from("notifications")
+          .select("id")
+          .eq("type", type)
+          .eq("title", title)
+          .eq("message", message)
+          .eq("created_at", createdAt)
+          .order("id", { ascending: true })
+          .limit(1)
+          .maybeSingle<{ id: string }>();
+        includeRoutedEmails = firstRow?.id === notification.id;
+      }
+    } catch (routeError) {
+      console.error("Failed to evaluate notification email routes:", routeError);
+    }
 
     const {
       data: { user },
       error: userError,
     } = await supabaseAdmin.auth.admin.getUserById(user_id);
 
-    if (userError || !user?.email) {
-      if (body.notification_id) {
-        await markDelivery(
-          supabaseAdmin,
-          body.notification_id,
-          "failed",
-          "user_not_found",
-          userError?.message || "User email not found",
-        );
+    let userEmail: string | null = null;
+    if (!userError && user?.email) {
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("email_notification_level")
+        .eq("id", user_id)
+        .single();
+
+      const level = profile?.email_notification_level || "none";
+      if (
+        level === "all" ||
+        (level === "important" && IMPORTANT_TYPES.includes(type))
+      ) {
+        userEmail = user.email.trim().toLowerCase();
       }
-      return new Response(
-        JSON.stringify({ error: "User email not found" }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
     }
 
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("email_notification_level")
-      .eq("id", user_id)
-      .single();
+    const recipients = Array.from(
+      new Set([
+        ...(userEmail ? [userEmail] : []),
+        ...(includeRoutedEmails ? routedEmails : []),
+      ]),
+    );
 
-    const level = profile?.email_notification_level || "none";
-
-    if (level === "none") {
+    if (recipients.length === 0) {
       if (body.notification_id) {
-        await markDelivery(supabaseAdmin, body.notification_id, "skipped", "disabled");
+        await markDelivery(supabaseAdmin, body.notification_id, "skipped", "no_recipients");
       }
       return new Response(
-        JSON.stringify({ skipped: true, reason: "disabled" }),
+        JSON.stringify({ skipped: true, reason: "no_recipients" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    if (level === "important" && !IMPORTANT_TYPES.includes(type)) {
-      if (body.notification_id) {
-        await markDelivery(
-          supabaseAdmin,
-          body.notification_id,
-          "skipped",
-          "not_important",
-        );
-      }
-      return new Response(
-        JSON.stringify({ skipped: true, reason: "not_important" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    const appUrl = Deno.env.get("APP_URL") || "https://crm.socials.cz";
-    const html = buildEmailHtml(title, message, type, link, appUrl);
+    const appUrl = (Deno.env.get("APP_URL") || "https://crm.socials.cz").replace(/\/+$/, "");
+    const linkUrl = link
+      ? (link.startsWith("http://") || link.startsWith("https://")
+          ? link
+          : `${appUrl}${link.startsWith("/") ? "" : "/"}${link}`)
+      : appUrl;
+    const html = buildEmailHtml(notification, linkUrl, appUrl);
     const subject = `${NOTIFICATION_EMAIL_CONFIG[type]?.emoji || "🔔"} ${title}`;
 
     const transporter = nodemailer.createTransport({
@@ -296,7 +392,8 @@ serve(async (req) => {
 
     const info = await transporter.sendMail({
       from: `Socials CRM <${SMTP_USER}>`,
-      to: user.email,
+      to: recipients[0],
+      bcc: recipients.length > 1 ? recipients.slice(1).join(", ") : undefined,
       subject,
       html,
     });
@@ -306,7 +403,7 @@ serve(async (req) => {
     }
 
     console.log(
-      `Notification email sent to ${user.email}: ${info.messageId} (type: ${type})`,
+      `Notification email sent to ${recipients.join(", ")}: ${info.messageId} (type: ${type})`,
     );
 
     return new Response(

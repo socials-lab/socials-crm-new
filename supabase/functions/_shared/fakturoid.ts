@@ -33,11 +33,14 @@ export interface FakturoidInvoiceListItem extends FakturoidInvoice {
   status?: string;
   currency?: string;
   issued_on?: string;
+  taxable_fulfillment_due?: string;
   due_on?: string;
   paid_at?: string;
   paid_on?: string;
   subject_id?: number;
   total?: number | string;
+  total_without_vat?: number | string;
+  total_vat?: number | string;
   total_with_vat?: number | string;
   native_total?: number | string;
 }

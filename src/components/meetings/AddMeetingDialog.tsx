@@ -308,12 +308,12 @@ export function AddMeetingDialog() {
                               !field.value && 'text-muted-foreground'
                             )}
                           >
+                            <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
                             {field.value ? (
                               format(field.value, 'PPP', { locale: cs })
                             ) : (
                               <span>Vyberte datum</span>
                             )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
                         </FormControl>
                       </PopoverTrigger>

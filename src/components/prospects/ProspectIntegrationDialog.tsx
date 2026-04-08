@@ -5,21 +5,43 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Copy, Check, Code, Globe, FlaskConical, Loader2 } from 'lucide-react';
+import { Copy, Check, Globe, FlaskConical, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { INTERACTION_TYPE_LABELS } from '@/types/prospect';
-import type { ProspectInteractionType } from '@/types/prospect';
+import { Textarea } from '@/components/ui/textarea';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  throw new Error('Missing Supabase environment variables for prospect integration.');
+if (!SUPABASE_URL) {
+  throw new Error('Missing Supabase environment variable VITE_SUPABASE_URL for prospect integration.');
 }
 
-const WEBHOOK_URL = `${SUPABASE_URL}/functions/v1/prospect-webhook`;
-const ANON_KEY = SUPABASE_ANON_KEY;
+const WEBHOOK_URL = `${SUPABASE_URL}/functions/v1/prospect-crm-sync`;
+const WEBHOOK_SECRET_PLACEHOLDER = 'YOUR_PROSPECT_SYNC_WEBHOOK_SECRET';
+
+type ExternalEventType =
+  | 'webinar_registration'
+  | 'webinar_attended'
+  | 'lead_magnet_registration'
+  | 'lead_magnet_download'
+  | 'satisfaction_survey_submitted'
+  | 'custom';
+
+const EVENT_TYPE_LABELS: Record<ExternalEventType, string> = {
+  webinar_registration: 'Registrace na webinář',
+  webinar_attended: 'Účast na webináři',
+  lead_magnet_registration: 'Registrace na lead magnet',
+  lead_magnet_download: 'Stažení lead magnetu',
+  satisfaction_survey_submitted: 'Vyplněný dotazník spokojenosti',
+  custom: 'Vlastní událost',
+};
+const EVENT_TYPE_OPTIONS: Array<{ value: ExternalEventType; label: string }> = [
+  { value: 'webinar_registration', label: EVENT_TYPE_LABELS.webinar_registration },
+  { value: 'webinar_attended', label: EVENT_TYPE_LABELS.webinar_attended },
+  { value: 'lead_magnet_registration', label: EVENT_TYPE_LABELS.lead_magnet_registration },
+  { value: 'lead_magnet_download', label: EVENT_TYPE_LABELS.lead_magnet_download },
+  { value: 'satisfaction_survey_submitted', label: EVENT_TYPE_LABELS.satisfaction_survey_submitted },
+  { value: 'custom', label: EVENT_TYPE_LABELS.custom },
+];
 
 interface Props {
   open: boolean;
@@ -60,110 +82,54 @@ function CodeBlock({ code, label }: { code: string; label?: string }) {
 }
 
 export function ProspectIntegrationDialog({ open, onOpenChange }: Props) {
-  const [interactionType, setInteractionType] = useState<ProspectInteractionType>('webinar_registration');
-  const [interactionTitle, setInteractionTitle] = useState('');
+  const [eventType, setEventType] = useState<ExternalEventType>('webinar_registration');
+  const [eventTitle, setEventTitle] = useState('');
+  const [testSecret, setTestSecret] = useState('');
 
   // Test tab state
   const [testName, setTestName] = useState('');
   const [testEmail, setTestEmail] = useState('');
   const [testing, setTesting] = useState(false);
 
-  const titlePlaceholder = interactionType === 'webinar_registration' || interactionType === 'webinar_attended'
+  const titlePlaceholder = eventType === 'webinar_registration' || eventType === 'webinar_attended'
     ? 'Např. Webinář: Facebook Ads 2026'
-    : interactionType === 'lead_magnet_download'
+    : eventType === 'lead_magnet_registration' || eventType === 'lead_magnet_download'
       ? 'Např. E-book: 10 tipů pro PPC'
+      : eventType === 'satisfaction_survey_submitted'
+        ? 'Např. Dotazník Q2 2026'
       : 'Název aktivity';
-
-  const htmlSnippet = `<!-- Socials CRM — Formulář pro zájemce -->
-<form id="prospect-form" style="max-width:400px;font-family:sans-serif;">
-  <div style="margin-bottom:12px;">
-    <label for="pf-name" style="display:block;margin-bottom:4px;font-size:14px;">Jméno *</label>
-    <input id="pf-name" name="name" required
-      style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;" />
-  </div>
-  <div style="margin-bottom:12px;">
-    <label for="pf-email" style="display:block;margin-bottom:4px;font-size:14px;">E-mail *</label>
-    <input id="pf-email" name="email" type="email" required
-      style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;" />
-  </div>
-  <div style="margin-bottom:12px;">
-    <label for="pf-phone" style="display:block;margin-bottom:4px;font-size:14px;">Telefon</label>
-    <input id="pf-phone" name="phone" type="tel"
-      style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;" />
-  </div>
-  <div style="margin-bottom:12px;">
-    <label for="pf-company" style="display:block;margin-bottom:4px;font-size:14px;">Firma</label>
-    <input id="pf-company" name="company"
-      style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;" />
-  </div>
-  <button type="submit"
-    style="background:#000;color:#fff;padding:10px 24px;border:none;border-radius:4px;cursor:pointer;font-size:14px;">
-    Odeslat
-  </button>
-  <p id="pf-msg" style="margin-top:8px;font-size:13px;"></p>
-</form>
-
-<script>
-document.getElementById('prospect-form').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const msg = document.getElementById('pf-msg');
-  msg.textContent = 'Odesílám...';
-  try {
-    const res = await fetch('${WEBHOOK_URL}', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${ANON_KEY}'
-      },
-      body: JSON.stringify({
-        name: document.getElementById('pf-name').value,
-        email: document.getElementById('pf-email').value,
-        phone: document.getElementById('pf-phone').value || null,
-        company: document.getElementById('pf-company').value || null,
-        interaction_type: '${interactionType}',
-        interaction_title: '${interactionTitle || titlePlaceholder}'
-      })
-    });
-    if (res.ok) {
-      msg.textContent = 'Děkujeme za registraci!';
-      msg.style.color = 'green';
-      e.target.reset();
-    } else {
-      msg.textContent = 'Chyba při odesílání.';
-      msg.style.color = 'red';
-    }
-  } catch {
-    msg.textContent = 'Chyba sítě.';
-    msg.style.color = 'red';
-  }
-});
-</script>`;
 
   const curlSnippet = `curl -X POST '${WEBHOOK_URL}' \\
   -H 'Content-Type: application/json' \\
-  -H 'Authorization: Bearer ${ANON_KEY}' \\
+  -H 'x-webhook-secret: ${WEBHOOK_SECRET_PLACEHOLDER}' \\
   -d '{
     "name": "Jan Novák",
     "email": "jan@firma.cz",
     "phone": "+420123456789",
     "company": "Firma s.r.o.",
-    "interaction_type": "${interactionType}",
-    "interaction_title": "${interactionTitle || titlePlaceholder}"
+    "event_type": "${eventType}",
+    "event_title": "${eventTitle || titlePlaceholder}",
+    "source_system": "webinar-platform",
+    "external_contact_id": "ext-123",
+    "metadata": { "campaign": "spring-2026" }
   }'`;
 
   const fetchSnippet = `const response = await fetch('${WEBHOOK_URL}', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': 'Bearer ${ANON_KEY}'
+    'x-webhook-secret': '${WEBHOOK_SECRET_PLACEHOLDER}'
   },
   body: JSON.stringify({
     name: 'Jan Novák',
     email: 'jan@firma.cz',
     phone: '+420123456789',
     company: 'Firma s.r.o.',
-    interaction_type: '${interactionType}',
-    interaction_title: '${interactionTitle || titlePlaceholder}'
+    event_type: '${eventType}',
+    event_title: '${eventTitle || titlePlaceholder}',
+    source_system: 'webinar-platform',
+    external_contact_id: 'ext-123',
+    metadata: { campaign: 'spring-2026' }
   })
 });
 
@@ -175,14 +141,16 @@ console.log(data);`;
     email: 'jan@firma.cz',
     phone: '+420123456789',
     company: 'Firma s.r.o.',
-    interaction_type: interactionType,
-    interaction_title: interactionTitle || titlePlaceholder,
+    event_type: eventType,
+    event_title: eventTitle || titlePlaceholder,
+    source_system: 'landing-page',
+    external_contact_id: 'ext-123',
     metadata: { source: 'landing-page' }
   }, null, 2);
 
   const handleTest = async () => {
-    if (!testName || !testEmail || !interactionTitle) {
-      toast.error('Vyplňte jméno, e-mail a název zdroje');
+    if (!testName || !testEmail || !eventTitle || !testSecret) {
+      toast.error('Vyplňte jméno, e-mail, název události a webhook secret');
       return;
     }
     setTesting(true);
@@ -191,13 +159,14 @@ console.log(data);`;
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${ANON_KEY}`
+          'x-webhook-secret': testSecret
         },
         body: JSON.stringify({
           name: testName,
           email: testEmail,
-          interaction_type: interactionType,
-          interaction_title: interactionTitle,
+          event_type: eventType,
+          event_title: eventTitle,
+          source_system: 'manual-test',
         })
       });
       const data = await res.json();
@@ -219,47 +188,48 @@ console.log(data);`;
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" aria-describedby={undefined}>
         <DialogHeader>
-          <DialogTitle>Napojení landing pages</DialogTitle>
+          <DialogTitle>Napojení landing pages (univerzální webhook)</DialogTitle>
           <DialogDescription>
-            Vyplňte zdroj (typ a název), vygeneruje se kód pro napojení formuláře na vaší landing page.
+            Jeden endpoint pro registraci i aktualizaci kontaktu podle e-mailu. Funguje pro webináře, lead magnety i dotazníky.
           </DialogDescription>
         </DialogHeader>
 
         {/* Source config — always visible */}
         <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
-          <p className="text-sm font-medium">Zdroj kontaktu</p>
+          <p className="text-sm font-medium">Konfigurace události</p>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Typ zdroje</Label>
-              <Select value={interactionType} onValueChange={v => setInteractionType(v as ProspectInteractionType)}>
+              <Label className="text-xs">Typ události</Label>
+              <Select value={eventType} onValueChange={v => setEventType(v as ExternalEventType)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {(Object.entries(INTERACTION_TYPE_LABELS) as [ProspectInteractionType, string][]).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                <SelectContent className="z-[200]">
+                  {EVENT_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Název zdroje *</Label>
+              <Label className="text-xs">Název události *</Label>
               <Input
-                value={interactionTitle}
-                onChange={e => setInteractionTitle(e.target.value)}
+                value={eventTitle}
+                onChange={e => setEventTitle(e.target.value)}
                 placeholder={titlePlaceholder}
               />
             </div>
           </div>
-          {!interactionTitle && (
-            <p className="text-xs text-amber-600 dark:text-amber-400">⚠ Vyplňte název zdroje pro vygenerování kódu</p>
+          {!eventTitle && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">⚠ Vyplňte název události pro vygenerování kódu</p>
           )}
+          <Textarea
+            readOnly
+            className="text-xs bg-background"
+            value={`Upsert chování:\n- pokud e-mail existuje => aktualizuje se existující zájemce\n- pokud e-mail neexistuje => vytvoří se nový zájemce\n- vždy se přidá nová interakce do historie`}
+          />
         </div>
 
-        <Tabs defaultValue="form" className="mt-2">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="form" className="gap-1.5">
-              <Code className="h-3.5 w-3.5" />
-              HTML formulář
-            </TabsTrigger>
+        <Tabs defaultValue="api" className="mt-2">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="api" className="gap-1.5">
               <Globe className="h-3.5 w-3.5" />
               Webhook API
@@ -270,20 +240,13 @@ console.log(data);`;
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="form" className="space-y-4 mt-4">
-            <p className="text-sm text-muted-foreground">
-              Zkopírujte tento kód a dejte ho AI (nebo vložte přímo do landing page). Obsahuje formulář i odesílací logiku.
-            </p>
-            <CodeBlock code={htmlSnippet} label="HTML + JavaScript snippet" />
-          </TabsContent>
-
           <TabsContent value="api" className="space-y-4 mt-4">
             <p className="text-sm text-muted-foreground">
               Webhook URL a příklady pro vlastní napojení. Zkopírujte a předejte AI pro napojení formuláře.
             </p>
 
             <CodeBlock code={WEBHOOK_URL} label="Webhook URL" />
-            <CodeBlock code={`Authorization: Bearer ${ANON_KEY}`} label="Authorization header" />
+            <CodeBlock code={`x-webhook-secret: ${WEBHOOK_SECRET_PLACEHOLDER}`} label="Authorization header" />
             <CodeBlock code={payloadExample} label="JSON payload" />
             <CodeBlock code={curlSnippet} label="cURL příklad" />
             <CodeBlock code={fetchSnippet} label="JavaScript fetch příklad" />
@@ -304,8 +267,17 @@ console.log(data);`;
                 <Input value={testEmail} onChange={e => setTestEmail(e.target.value)} placeholder="jan@firma.cz" type="email" />
               </div>
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Webhook secret *</Label>
+              <Input
+                value={testSecret}
+                onChange={e => setTestSecret(e.target.value)}
+                type="password"
+                placeholder="PROSPECT_SYNC_WEBHOOK_SECRET"
+              />
+            </div>
 
-            <Button onClick={handleTest} disabled={testing || !interactionTitle} className="w-full">
+            <Button onClick={handleTest} disabled={testing || !eventTitle || !testSecret} className="w-full">
               {testing && <Loader2 className="h-4 w-4 animate-spin" />}
               {testing ? 'Odesílám...' : 'Odeslat testovací data'}
             </Button>

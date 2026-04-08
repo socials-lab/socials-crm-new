@@ -20,6 +20,7 @@ interface ImportRequest {
   only_active_clients?: boolean;
   include_all_fakturoid_account?: boolean;
   limit_per_client?: number;
+  target_invoice_number?: string;
 }
 
 interface ClientRow {
@@ -44,6 +45,12 @@ interface InvoiceRow {
   invoice_number: string;
   fakturoid_id: string | null;
   fakturoid_url: string | null;
+  total_amount: number | null;
+  fakturoid_total_without_vat: number | null;
+  fakturoid_total_with_vat: number | null;
+  fakturoid_duzp_date: string | null;
+  currency: string | null;
+  issued_at: string | null;
   status: string | null;
   paid_at: string | null;
 }
@@ -53,6 +60,14 @@ interface UserRoleRow {
   role: string | null;
   is_super_admin: boolean | null;
   is_active: boolean | null;
+}
+
+interface SyncedInvoiceInfo {
+  invoice_number: string;
+  fakturoid_id: string;
+  total_amount: number;
+  currency: string;
+  action: "inserted" | "updated" | "skipped";
 }
 
 function getErrorMessage(error: unknown): string {
@@ -112,10 +127,19 @@ function toIssuedAtTimestamp(value: string | null | undefined): string {
   return `${dateOnly}T12:00:00.000Z`;
 }
 
-function parseAmount(invoice: FakturoidInvoiceListItem): number {
-  const raw = invoice.total_with_vat ?? invoice.total ?? invoice.native_total ?? 0;
+function parseNumeric(raw: unknown): number | null {
   const parsed = typeof raw === "number" ? raw : Number(raw);
-  return Number.isFinite(parsed) ? parsed : 0;
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseInvoiceTotals(invoice: FakturoidInvoiceListItem): { withoutVat: number; withVat: number } {
+  const totalWithoutVat = parseNumeric(invoice.total_without_vat ?? invoice.total ?? invoice.native_total);
+  const totalWithVat = parseNumeric(invoice.total_with_vat ?? invoice.total ?? invoice.native_total);
+  const fallback = totalWithoutVat ?? totalWithVat ?? 0;
+  return {
+    withoutVat: totalWithoutVat ?? fallback,
+    withVat: totalWithVat ?? fallback,
+  };
 }
 
 function mapPaymentStatus(rawStatus: string | undefined): string {
@@ -183,7 +207,8 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({})) as ImportRequest;
     const dryRun = body.dry_run === true;
     const onlyActiveClients = body.only_active_clients !== false;
-    const includeAllFakturoidAccount = body.include_all_fakturoid_account === true;
+    const targetInvoiceNumber = String(body.target_invoice_number || "").trim();
+    const includeAllFakturoidAccount = body.include_all_fakturoid_account === true || targetInvoiceNumber.length > 0;
     const limitPerClient = Math.max(1, Math.min(body.limit_per_client ?? 500, 2000));
 
     let clientsQuery = supabaseAdmin
@@ -230,7 +255,7 @@ serve(async (req) => {
 
     const existingInvoicesQuery = supabaseAdmin
       .from("issued_invoices")
-      .select("id, invoice_number, fakturoid_id, fakturoid_url, status, paid_at");
+      .select("id, invoice_number, fakturoid_id, fakturoid_url, total_amount, fakturoid_total_without_vat, fakturoid_total_with_vat, fakturoid_duzp_date, currency, issued_at, status, paid_at");
     const { data: existingInvoices, error: existingInvoicesError } = includeAllFakturoidAccount
       ? await existingInvoicesQuery
       : await existingInvoicesQuery.in("client_id", clientIds);
@@ -260,6 +285,7 @@ serve(async (req) => {
     let skipped = 0;
     let fakturoidInvoicesFetched = 0;
     const errors: Array<{ client_id: string; invoice_number?: string; message: string }> = [];
+    const syncedInvoices: SyncedInvoiceInfo[] = [];
 
     const subjectNameCache = new Map<number, string>();
 
@@ -267,9 +293,12 @@ serve(async (req) => {
       const allInvoices = await listAllInvoices(accessToken, accountSlug, {
         maxPages: 5000,
       });
-      fakturoidInvoicesFetched = allInvoices.length;
+      const filteredInvoices = targetInvoiceNumber
+        ? allInvoices.filter((inv) => String(inv.number || "").trim() === targetInvoiceNumber)
+        : allInvoices;
+      fakturoidInvoicesFetched = filteredInvoices.length;
 
-      for (const fakturoidInvoice of allInvoices) {
+      for (const fakturoidInvoice of filteredInvoices) {
         try {
           const invoiceNumber = String(fakturoidInvoice.number || "").trim();
           if (!invoiceNumber) {
@@ -284,6 +313,11 @@ serve(async (req) => {
           const fakturoidUrl = fakturoidInvoice.public_html_url
             || fakturoidInvoice.html_url
             || `https://app.fakturoid.cz/${accountSlug}/invoices/${fakturoidId}`;
+          const totals = parseInvoiceTotals(fakturoidInvoice);
+          const totalAmount = totals.withoutVat;
+          const totalWithVat = totals.withVat;
+          const invoiceCurrency = (fakturoidInvoice.currency || "CZK").toUpperCase();
+          const duzpDate = toDateOnly(fakturoidInvoice.taxable_fulfillment_due || fakturoidInvoice.issued_on);
           const subjectId = parseSubjectId(fakturoidInvoice.subject_id);
           const mappedClient = subjectId ? bySubjectId.get(subjectId) ?? null : null;
 
@@ -294,6 +328,14 @@ serve(async (req) => {
             if (existing.fakturoid_url !== fakturoidUrl) updatePayload.fakturoid_url = fakturoidUrl;
             if ((existing.status || "") !== invoiceStatus) updatePayload.status = invoiceStatus;
             if ((existing.paid_at || null) !== paidAt) updatePayload.paid_at = paidAt;
+            if (Number(existing.total_amount ?? 0) !== totalAmount) updatePayload.total_amount = totalAmount;
+            if (Number(existing.fakturoid_total_without_vat ?? 0) !== totalAmount) updatePayload.fakturoid_total_without_vat = totalAmount;
+            if (Number(existing.fakturoid_total_with_vat ?? 0) !== totalWithVat) updatePayload.fakturoid_total_with_vat = totalWithVat;
+            if ((existing.fakturoid_duzp_date || null) !== duzpDate) updatePayload.fakturoid_duzp_date = duzpDate;
+            if (String(existing.currency || "CZK").toUpperCase() !== invoiceCurrency) updatePayload.currency = invoiceCurrency;
+            if (issuedOn && toDateOnly(existing.issued_at) !== issuedOn) {
+              updatePayload.issued_at = toIssuedAtTimestamp(issuedOn);
+            }
 
             const canSyncInvoiceNumber =
               existing.invoice_number !== invoiceNumber &&
@@ -304,6 +346,13 @@ serve(async (req) => {
 
             if (Object.keys(updatePayload).length === 0) {
               skipped += 1;
+              syncedInvoices.push({
+                invoice_number: invoiceNumber,
+                fakturoid_id: fakturoidId,
+                total_amount: totalAmount,
+                currency: invoiceCurrency,
+                action: "skipped",
+              });
               continue;
             }
 
@@ -315,6 +364,13 @@ serve(async (req) => {
               if (updateError) throw updateError;
             }
             updated += 1;
+            syncedInvoices.push({
+              invoice_number: invoiceNumber,
+              fakturoid_id: fakturoidId,
+              total_amount: totalAmount,
+              currency: invoiceCurrency,
+              action: "updated",
+            });
             continue;
           }
 
@@ -356,8 +412,11 @@ serve(async (req) => {
             fakturoid_id: fakturoidId,
             fakturoid_url: fakturoidUrl,
             line_items: [],
-            total_amount: parseAmount(fakturoidInvoice),
-            currency: (fakturoidInvoice.currency || "CZK").toUpperCase(),
+            total_amount: totalAmount,
+            fakturoid_total_without_vat: totalAmount,
+            fakturoid_total_with_vat: totalWithVat,
+            fakturoid_duzp_date: duzpDate,
+            currency: invoiceCurrency,
             issued_at: issuedAt,
             status: invoiceStatus,
             paid_at: paidAt,
@@ -370,13 +429,48 @@ serve(async (req) => {
             if (insertError) {
               const message = getErrorMessage(insertError);
               if (message.toLowerCase().includes("duplicate key value")) {
-                skipped += 1;
-                continue;
+                  // Fallback: record already exists but wasn't matched in preload map
+                  // (historical inconsistencies). Force-sync financial/status fields.
+                  const { error: fallbackUpdateError } = await supabaseAdmin
+                    .from("issued_invoices")
+                    .update({
+                      fakturoid_id: fakturoidId,
+                      fakturoid_url: fakturoidUrl,
+                      total_amount: totalAmount,
+                      fakturoid_total_without_vat: totalAmount,
+                      fakturoid_total_with_vat: totalWithVat,
+                      fakturoid_duzp_date: duzpDate,
+                      currency: invoiceCurrency,
+                      issued_at: issuedAt,
+                      status: invoiceStatus,
+                      paid_at: paidAt,
+                    })
+                    .or(`invoice_number.eq.${invoiceNumber},fakturoid_id.eq.${fakturoidId}`);
+                  if (fallbackUpdateError) {
+                    skipped += 1;
+                    continue;
+                  }
+                  updated += 1;
+                  syncedInvoices.push({
+                    invoice_number: invoiceNumber,
+                    fakturoid_id: fakturoidId,
+                    total_amount: totalAmount,
+                    currency: invoiceCurrency,
+                    action: "updated",
+                  });
+                  continue;
               }
               throw insertError;
             }
           }
           inserted += 1;
+          syncedInvoices.push({
+            invoice_number: invoiceNumber,
+            fakturoid_id: fakturoidId,
+            total_amount: totalAmount,
+            currency: invoiceCurrency,
+            action: "inserted",
+          });
         } catch (invoiceError) {
           errors.push({
             client_id: "all-fakturoid",
@@ -401,6 +495,7 @@ serve(async (req) => {
 
         const trimmedInvoices = fakturoidInvoices
           .filter((invoice) => invoice.number && String(invoice.number).trim().length > 0)
+          .filter((invoice) => !targetInvoiceNumber || String(invoice.number).trim() === targetInvoiceNumber)
           .slice(0, limitPerClient);
 
         for (const fakturoidInvoice of trimmedInvoices) {
@@ -413,6 +508,11 @@ serve(async (req) => {
             const fakturoidUrl = fakturoidInvoice.public_html_url
               || fakturoidInvoice.html_url
               || `https://app.fakturoid.cz/${accountSlug}/invoices/${fakturoidId}`;
+            const totals = parseInvoiceTotals(fakturoidInvoice);
+            const totalAmount = totals.withoutVat;
+            const totalWithVat = totals.withVat;
+            const invoiceCurrency = (fakturoidInvoice.currency || "CZK").toUpperCase();
+            const duzpDate = toDateOnly(fakturoidInvoice.taxable_fulfillment_due || fakturoidInvoice.issued_on);
 
             const existing = existingByFakturoidId.get(fakturoidId) || existingByInvoiceNumber.get(invoiceNumber) || null;
             if (existing) {
@@ -421,6 +521,14 @@ serve(async (req) => {
               if (existing.fakturoid_url !== fakturoidUrl) updatePayload.fakturoid_url = fakturoidUrl;
               if ((existing.status || "") !== invoiceStatus) updatePayload.status = invoiceStatus;
               if ((existing.paid_at || null) !== paidAt) updatePayload.paid_at = paidAt;
+              if (Number(existing.total_amount ?? 0) !== totalAmount) updatePayload.total_amount = totalAmount;
+              if (Number(existing.fakturoid_total_without_vat ?? 0) !== totalAmount) updatePayload.fakturoid_total_without_vat = totalAmount;
+              if (Number(existing.fakturoid_total_with_vat ?? 0) !== totalWithVat) updatePayload.fakturoid_total_with_vat = totalWithVat;
+              if ((existing.fakturoid_duzp_date || null) !== duzpDate) updatePayload.fakturoid_duzp_date = duzpDate;
+              if (String(existing.currency || "CZK").toUpperCase() !== invoiceCurrency) updatePayload.currency = invoiceCurrency;
+              if (issuedOn && toDateOnly(existing.issued_at) !== issuedOn) {
+                updatePayload.issued_at = toIssuedAtTimestamp(issuedOn);
+              }
 
               const canSyncInvoiceNumber =
                 existing.invoice_number !== invoiceNumber &&
@@ -431,6 +539,13 @@ serve(async (req) => {
 
               if (Object.keys(updatePayload).length === 0) {
                 skipped += 1;
+                syncedInvoices.push({
+                  invoice_number: invoiceNumber,
+                  fakturoid_id: fakturoidId,
+                  total_amount: totalAmount,
+                  currency: invoiceCurrency,
+                  action: "skipped",
+                });
                 continue;
               }
 
@@ -442,6 +557,13 @@ serve(async (req) => {
                 if (updateError) throw updateError;
               }
               updated += 1;
+              syncedInvoices.push({
+                invoice_number: invoiceNumber,
+                fakturoid_id: fakturoidId,
+                total_amount: totalAmount,
+                currency: invoiceCurrency,
+                action: "updated",
+              });
               continue;
             }
 
@@ -466,8 +588,11 @@ serve(async (req) => {
               fakturoid_id: fakturoidId,
               fakturoid_url: fakturoidUrl,
               line_items: [],
-              total_amount: parseAmount(fakturoidInvoice),
-              currency: (fakturoidInvoice.currency || "CZK").toUpperCase(),
+              total_amount: totalAmount,
+              fakturoid_total_without_vat: totalAmount,
+              fakturoid_total_with_vat: totalWithVat,
+              fakturoid_duzp_date: duzpDate,
+              currency: invoiceCurrency,
               issued_at: issuedAt,
               status: invoiceStatus,
               paid_at: paidAt,
@@ -481,13 +606,47 @@ serve(async (req) => {
                 const message = getErrorMessage(insertError);
                 // Duplicate means another invoice already exists with same number/id in CRM.
                 if (message.toLowerCase().includes("duplicate key value")) {
-                  skipped += 1;
+                  // Fallback: force-sync existing row by invoice number/Fakturoid ID.
+                  const { error: fallbackUpdateError } = await supabaseAdmin
+                    .from("issued_invoices")
+                    .update({
+                      fakturoid_id: fakturoidId,
+                      fakturoid_url: fakturoidUrl,
+                      total_amount: totalAmount,
+                      fakturoid_total_without_vat: totalAmount,
+                      fakturoid_total_with_vat: totalWithVat,
+                      fakturoid_duzp_date: duzpDate,
+                      currency: invoiceCurrency,
+                      issued_at: issuedAt,
+                      status: invoiceStatus,
+                      paid_at: paidAt,
+                    })
+                    .or(`invoice_number.eq.${invoiceNumber},fakturoid_id.eq.${fakturoidId}`);
+                  if (fallbackUpdateError) {
+                    skipped += 1;
+                    continue;
+                  }
+                  updated += 1;
+                  syncedInvoices.push({
+                    invoice_number: invoiceNumber,
+                    fakturoid_id: fakturoidId,
+                    total_amount: totalAmount,
+                    currency: invoiceCurrency,
+                    action: "updated",
+                  });
                   continue;
                 }
                 throw insertError;
               }
             }
             inserted += 1;
+            syncedInvoices.push({
+              invoice_number: invoiceNumber,
+              fakturoid_id: fakturoidId,
+              total_amount: totalAmount,
+              currency: invoiceCurrency,
+              action: "inserted",
+            });
           } catch (invoiceError) {
             errors.push({
               client_id: client.id,
@@ -511,10 +670,12 @@ serve(async (req) => {
         dry_run: dryRun,
         processed_clients: typedClients.length,
         include_all_fakturoid_account: includeAllFakturoidAccount,
+        target_invoice_number: targetInvoiceNumber || null,
         fakturoid_invoices_fetched: fakturoidInvoicesFetched,
         inserted,
         updated,
         skipped,
+        synced_invoices: syncedInvoices,
         errors,
         duration_ms: Date.now() - startedAt,
       }),

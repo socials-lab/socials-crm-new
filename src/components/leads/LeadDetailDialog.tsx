@@ -75,6 +75,7 @@ import { toast } from 'sonner';
 import { fetchAresData } from '@/utils/aresUtils';
 import { useVatReliability } from '@/hooks/useVatReliability';
 import { getLeadOfferUrl } from '@/utils/offerUrl';
+import { getOfferDraftInfoForLead, subscribeOfferDraftChanged } from '@/utils/offerDraft';
 
 interface LeadDetailDialogProps {
   lead: Lead | null;
@@ -148,9 +149,24 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
   const [emailRecipients, setEmailRecipients] = useState('');
   const [isLoadingAres, setIsLoadingAres] = useState(false);
   const [pendingIcoChange, setPendingIcoChange] = useState<string | null>(null);
+  const [offerDraftInfo, setOfferDraftInfo] = useState<{ hasDraft: boolean; savedAt: number | null }>({
+    hasDraft: false,
+    savedAt: null,
+  });
   const isProcessingWarning = useRef(false);
 
   const lead = leadProp?.id ? getLeadById(leadProp.id) ?? leadProp : leadProp;
+
+  useEffect(() => {
+    if (!lead?.id || !open) return;
+    setOfferDraftInfo(getOfferDraftInfoForLead(lead.id));
+
+    return subscribeOfferDraftChanged((changedLeadId) => {
+      if (!changedLeadId || changedLeadId === lead.id) {
+        setOfferDraftInfo(getOfferDraftInfoForLead(lead.id));
+      }
+    });
+  }, [lead?.id, open]);
   
   // VAT reliability check
   const { data: vatData, isLoading: isLoadingVat } = useVatReliability(lead?.dic);
@@ -165,6 +181,17 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
       updateLead(lead.id, { vat_payer_status: vatData.vatStatus });
     }
   }, [vatData?.vatStatus, lead?.id, lead?.vat_payer_status, updateLead]);
+
+  const persistLeadUpdate = useCallback(async (data: Partial<Lead>, successMessage: string) => {
+    if (!lead?.id) return;
+    try {
+      await updateLead(lead.id, data);
+      toast.success(successMessage);
+    } catch (error) {
+      console.error('Failed to persist lead update:', error);
+      toast.error('Nepodařilo se uložit změnu');
+    }
+  }, [lead?.id, updateLead]);
 
   if (!lead) return null;
 
@@ -859,15 +886,21 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                   <LeadFlowStepper
                     lead={lead}
                     offerUrl={resolvedOfferUrl}
+                    hasOfferDraft={offerDraftInfo.hasDraft}
+                    offerDraftSavedAt={offerDraftInfo.savedAt}
                     onSendMeetingRequest={() => setIsMeetingRequestOpen(true)}
                     onQuickConfirmMeetingSent={() => {
-                      updateLead(lead.id, { meeting_request_sent_at: new Date().toISOString() });
-                      toast.success('✓ Žádost o schůzku označena jako odeslaná');
+                      void persistLeadUpdate(
+                        { meeting_request_sent_at: new Date().toISOString() },
+                        '✓ Žádost o schůzku označena jako odeslaná',
+                      );
                     }}
                     onRequestAccess={() => setIsRequestAccessOpen(true)}
                     onQuickConfirmAccessSent={() => {
-                      updateLead(lead.id, { access_request_sent_at: new Date().toISOString(), stage: 'waiting_access' as LeadStage });
-                      toast.success('✓ Žádost o přístupy označena jako odeslaná');
+                      void persistLeadUpdate(
+                        { access_request_sent_at: new Date().toISOString(), stage: 'waiting_access' as LeadStage },
+                        '✓ Žádost o přístupy označena jako odeslaná',
+                      );
                     }}
                     onMarkAccessReceived={() => {
                       updateLead(lead.id, { access_received_at: new Date().toISOString(), stage: 'access_received' as LeadStage });
@@ -876,6 +909,15 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                     onAddService={() => setIsAddServiceOpen(true)}
                     onCreateOffer={() => setIsCreateOfferOpen(true)}
                     onSendOffer={() => setIsSendOfferOpen(true)}
+                    onQuickConfirmOfferSent={() => {
+                      void persistLeadUpdate(
+                        {
+                          offer_sent_at: new Date().toISOString(),
+                          stage: 'offer_sent' as LeadStage,
+                        },
+                        '📤 Nabídka byla označena jako odeslaná',
+                      );
+                    }}
                     onSendOnboarding={() => setIsOnboardingFormOpen(true)}
                     onResetOnboarding={() => setIsResetOnboardingOpen(true)}
                     onViewOnboardingData={() => setIsOnboardingDataOpen(true)}
@@ -1133,16 +1175,19 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
             const syncedServices: LeadService[] = syncData.services.map(s => {
               const catalogService = services.find(cs => cs.id === s.service_id);
               const isCB = catalogService?.code === 'CREATIVE_BOOST';
+              const baseServicePrice = isCB && syncData.cbCredits && syncData.cbPricePerCredit
+                ? syncData.cbCredits * syncData.cbPricePerCredit
+                : s.price;
               return {
                 id: s.id,
                 service_id: s.service_id,
                 name: s.name,
                 selected_tier: s.selected_tier,
-                price: isCB && syncData.cbCredits && syncData.cbPricePerCredit
-                  ? syncData.cbCredits * syncData.cbPricePerCredit
-                  : s.price,
+                price: baseServicePrice,
                 currency: s.currency,
                 billing_type: s.billing_type,
+                managed_countries: s.managed_countries,
+                country_variants: s.country_variants,
                 intro_discount_percent: syncData.introDiscountPercent && s.billing_type === 'monthly'
                   ? syncData.introDiscountPercent : null,
                 intro_discount_months: syncData.introDiscountMonths && s.billing_type === 'monthly'
@@ -1152,7 +1197,10 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
               };
             });
             updateData.potential_services = syncedServices;
-            updateData.estimated_price = syncedServices.reduce((sum, s) => sum + s.price, 0);
+            updateData.estimated_price = syncedServices.reduce(
+              (sum, service) => sum + service.price + (service.country_variants || []).reduce((variantsSum, variant) => variantsSum + (variant.price || 0), 0),
+              0,
+            );
           }
           updateLead(lead.id, updateData);
         }}
@@ -1171,14 +1219,16 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
         open={isContractDialogOpen}
         onOpenChange={setIsContractDialogOpen}
         lead={lead}
+        onSaveContractUrl={async (contractUrl) => {
+          await updateLead(lead.id, { contract_url: contractUrl });
+        }}
         onSend={(data) => {
           updateLead(lead.id, {
             contract_url: data.contract_url,
             digisign_envelope_id: data.digisign_envelope_id,
             digisign_document_url: data.digisign_document_url,
-            contract_sent_at: data.contract_sent_at,
           });
-          toast.success('📄 Smlouva připravena a odeslána via DigiSign');
+          toast.success('📄 Smlouva připravena jako draft v DigiSign');
         }}
       />
     </>

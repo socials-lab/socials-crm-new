@@ -251,17 +251,25 @@ const ONBOARDING_STEPS = [
   },
 ];
 
-function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferService; showTypeLabel?: boolean }) {
+function ServiceCard({ service, showTypeLabel = false, isDark = false }: { service: PublicOfferService; showTypeLabel?: boolean; isDark?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showDetailedSections, setShowDetailedSections] = useState(false);
 
   const hasDeliverables = service.deliverables && service.deliverables.length > 0;
   const hasRequirements = service.requirements && service.requirements.length > 0;
   const hasDetailedSections = service.detailed_sections && service.detailed_sections.length > 0;
-  const hasDetails = hasDeliverables || service.offer_description || service.frequency || service.start_timeline;
   const hasCountryVariants = service.country_variants && service.country_variants.length > 0;
+  const hasDetails = hasDeliverables || service.offer_description || service.frequency || service.start_timeline || hasCountryVariants;
+  const mainCountryCode = (service.managed_countries && service.managed_countries[0]) || 'CZ';
+  const basePrice = service.price;
+  const variantsTotal = (service.country_variants || []).reduce((sum: number, variant: CountryVariant) => sum + variant.price, 0);
+  const serviceTotalPrice = basePrice + variantsTotal;
+  const baseOriginalPrice = service.original_price ?? service.price;
+  const serviceTotalOriginalPrice = baseOriginalPrice + variantsTotal;
+  const hasServiceDiscount = serviceTotalOriginalPrice > serviceTotalPrice;
+  const serviceDiscountAmount = Math.max(0, serviceTotalOriginalPrice - serviceTotalPrice);
   const countryFlags = [
-    ...(service.managed_countries || []),
+    mainCountryCode,
     ...(service.country_variants || []).map(v => v.country_code),
   ];
 
@@ -328,8 +336,13 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                   {/* Desktop price inline */}
                   <div className="hidden md:flex items-center gap-3">
                     <div className="text-right whitespace-nowrap">
+                      {hasServiceDiscount && (
+                        <div className="text-xs text-muted-foreground/80 line-through">
+                          {serviceTotalOriginalPrice.toLocaleString('cs-CZ')} {service.currency}
+                        </div>
+                      )}
                       <span className="font-bold text-lg text-[#94e700]">
-                        {service.price.toLocaleString('cs-CZ')} {service.currency}
+                        {serviceTotalPrice === 0 ? `Zdarma` : `${serviceTotalPrice.toLocaleString('cs-CZ')} ${service.currency}`}
                       </span>
                       {service.billing_type === 'monthly' && (
                         <span className="text-xs text-muted-foreground/70 ml-1">/měs</span>
@@ -351,8 +364,13 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                 {/* Mobile: price row */}
                 <div className="flex md:hidden items-center justify-between mt-2.5">
                   <div className="whitespace-nowrap">
+                    {hasServiceDiscount && (
+                      <div className="text-[11px] text-muted-foreground/80 line-through">
+                        {serviceTotalOriginalPrice.toLocaleString('cs-CZ')} {service.currency}
+                      </div>
+                    )}
                     <span className="font-bold text-base text-[#94e700]">
-                      {service.price.toLocaleString('cs-CZ')} {service.currency}
+                      {serviceTotalPrice === 0 ? `Zdarma` : `${serviceTotalPrice.toLocaleString('cs-CZ')} ${service.currency}`}
                     </span>
                     {service.billing_type === 'monthly' && (
                       <span className="text-xs text-muted-foreground/70 ml-1">/měs</span>
@@ -365,6 +383,22 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                     )}
                   </div>
                 </div>
+                {hasServiceDiscount && (
+                  <div className="mt-2">
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[11px]",
+                        isDark
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                          : "border-emerald-300 bg-emerald-50 text-emerald-800",
+                      )}
+                    >
+                      Sleva {serviceDiscountAmount.toLocaleString('cs-CZ')} {service.currency}
+                      {service.discount_reason ? ` · ${service.discount_reason}` : ''}
+                    </Badge>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -374,17 +408,22 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
           <CollapsibleContent>
             <div className="px-5 md:px-6 pb-6 space-y-4">
               {(hasDeliverables || descriptionLines.length > 0) && (
-                <div className="p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                <div
+                  className={cn(
+                    "p-4 rounded-lg border",
+                    isDark ? "bg-emerald-500/5 border-emerald-500/10" : "bg-emerald-50 border-emerald-200",
+                  )}
+                >
                   <div className="flex items-center gap-2 mb-3">
-                    <Package className="h-4 w-4 text-emerald-400" />
-                    <p className="text-sm font-semibold text-emerald-300">Co dostanete:</p>
+                    <Package className={cn("h-4 w-4", isDark ? "text-emerald-400" : "text-emerald-700")} />
+                    <p className={cn("text-sm font-semibold", isDark ? "text-emerald-300" : "text-emerald-900")}>Co dostanete:</p>
                   </div>
                   <ul className="space-y-2">
                     {(hasDeliverables ? service.deliverables! : descriptionLines).map((item, idx) => {
                       const cleanItem = item.replace(/^[-•*]\s*/, '');
                       return (
-                        <li key={idx} className="flex items-start gap-2 text-sm text-emerald-200/80">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                        <li key={idx} className={cn("flex items-start gap-2 text-sm", isDark ? "text-emerald-200/80" : "text-emerald-900")}>
+                          <CheckCircle2 className={cn("h-4 w-4 shrink-0 mt-0.5", isDark ? "text-emerald-400" : "text-emerald-600")} />
                           <span>{cleanItem}</span>
                         </li>
                       );
@@ -418,15 +457,20 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
               )}
 
               {hasRequirements && (
-                <div className="p-4 rounded-lg bg-amber-500/5 border border-amber-500/10">
+                <div
+                  className={cn(
+                    "p-4 rounded-lg border",
+                    isDark ? "bg-amber-500/5 border-amber-500/10" : "bg-amber-50 border-amber-200",
+                  )}
+                >
                   <div className="flex items-center gap-2 mb-3">
-                    <ClipboardList className="h-4 w-4 text-amber-400" />
-                    <p className="text-sm font-semibold text-amber-300">Co od vás budeme potřebovat:</p>
+                    <ClipboardList className={cn("h-4 w-4", isDark ? "text-amber-400" : "text-amber-700")} />
+                    <p className={cn("text-sm font-semibold", isDark ? "text-amber-300" : "text-amber-900")}>Co od vás budeme potřebovat:</p>
                   </div>
                   <ul className="space-y-2">
                     {service.requirements!.map((req, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-sm text-amber-200/80">
-                        <span className="text-amber-400">•</span>
+                      <li key={idx} className={cn("flex items-start gap-2 text-sm", isDark ? "text-amber-200/80" : "text-amber-900")}>
+                        <span className={cn(isDark ? "text-amber-400" : "text-amber-600")}>•</span>
                         <span>{req}</span>
                       </li>
                     ))}
@@ -442,6 +486,16 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                     <p className="text-sm font-semibold">Jazykové mutace:</p>
                   </div>
                   <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{getCountryFlag(mainCountryCode)}</span>
+                        <span>Hlavní trh: {getCountryName(mainCountryCode)}</span>
+                      </div>
+                      <span className="font-semibold">
+                        {basePrice.toLocaleString('cs-CZ')} {service.currency}
+                        {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground/70">/měs</span>}
+                      </span>
+                    </div>
                     {service.country_variants!.map((variant, vIdx) => (
                       <div key={vIdx} className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
@@ -455,6 +509,13 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                         </span>
                       </div>
                     ))}
+                    <div className="pt-2 border-t border-foreground/[0.1] flex items-center justify-between text-sm font-semibold">
+                      <span>Celkem</span>
+                      <span className="text-[#94e700]">
+                        {serviceTotalPrice.toLocaleString('cs-CZ')} {service.currency}
+                        {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground/70">/měs</span>}
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -478,7 +539,7 @@ function ServiceCard({ service, showTypeLabel = false }: { service: PublicOfferS
                           <ul className="space-y-1.5 ml-6">
                             {section.items.map((item, iIdx) => (
                               <li key={iIdx} className="flex items-start gap-2 text-sm text-muted-foreground">
-                                <span className="shrink-0 mt-1.5 w-1 h-1 rounded-full bg-white/30" />
+                                <span className={cn("shrink-0 mt-1.5 w-1 h-1 rounded-full", isDark ? "bg-white/30" : "bg-foreground/40")} />
                                 <span>{item}</span>
                               </li>
                             ))}
@@ -880,7 +941,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(true);
   const [showOfferHistory, setShowOfferHistory] = useState(false);
   const loomEmbedUrl = toLoomEmbedUrl(offer?.loom_url);
 
@@ -967,6 +1028,10 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
     const variantsTotal = (service.country_variants || []).reduce((sum: number, variant: CountryVariant) => sum + variant.price, 0);
     return service.price + variantsTotal;
   };
+  const getServiceMonthlyOriginalPrice = (service: PublicOfferService) => {
+    const variantsTotal = (service.country_variants || []).reduce((sum: number, variant: CountryVariant) => sum + variant.price, 0);
+    return (service.original_price ?? service.price) + variantsTotal;
+  };
 
   const coreMonthly = offer.services
     .filter(s => s.billing_type === 'monthly' && s.service_type === 'core')
@@ -975,6 +1040,10 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
     .filter(s => s.billing_type === 'monthly' && s.service_type !== 'core')
     .reduce((sum, s) => sum + getServiceMonthlyPrice(s), 0);
   const totalMonthly = coreMonthly + addonMonthly;
+  const totalMonthlyBeforeServiceDiscount = offer.services
+    .filter(s => s.billing_type === 'monthly')
+    .reduce((sum, s) => sum + getServiceMonthlyOriginalPrice(s), 0);
+  const monthlyServiceDiscount = Math.max(0, totalMonthlyBeforeServiceDiscount - totalMonthly);
   const totalOneOff = offer.services
     .filter(s => s.billing_type === 'one_off')
     .reduce((sum, s) => sum + getServiceMonthlyPrice(s), 0);
@@ -1281,7 +1350,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
               return (
                 <div className="space-y-3">
                   {offer.services.map((service, idx) => (
-                    <ServiceCard key={service.id || idx} service={service} />
+                    <ServiceCard key={service.id || idx} service={service} isDark={isDark} />
                   ))}
                 </div>
               );
@@ -1302,7 +1371,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                     </div>
                     <div className="space-y-4">
                       {coreServices.map((service, idx) => (
-                        <ServiceCard key={service.id || idx} service={service} />
+                        <ServiceCard key={service.id || idx} service={service} isDark={isDark} />
                       ))}
                     </div>
                   </div>
@@ -1321,7 +1390,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                     </div>
                     <div className="space-y-4">
                       {addonServices.map((service, idx) => (
-                        <ServiceCard key={service.id || idx} service={service} />
+                        <ServiceCard key={service.id || idx} service={service} isDark={isDark} />
                       ))}
                     </div>
                   </div>
@@ -1340,7 +1409,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                     </div>
                     <div className="space-y-4">
                       {oneOffServices.map((service, idx) => (
-                        <ServiceCard key={service.id || idx} service={service} />
+                        <ServiceCard key={service.id || idx} service={service} isDark={isDark} />
                       ))}
                     </div>
                   </div>
@@ -1349,7 +1418,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 {otherServices.length > 0 && (
                   <div className="space-y-4">
                     {otherServices.map((service, idx) => (
-                      <ServiceCard key={service.id || idx} service={service} />
+                      <ServiceCard key={service.id || idx} service={service} isDark={isDark} />
                     ))}
                   </div>
                 )}
@@ -1396,6 +1465,11 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                   <span className="text-base text-muted-foreground font-medium">Měsíční cena</span>
                   <div className="text-right flex flex-wrap items-baseline justify-end gap-x-2">
+                    {monthlyServiceDiscount > 0 && (
+                      <span className="text-sm text-muted-foreground/70 line-through">
+                        {totalMonthlyBeforeServiceDiscount.toLocaleString('cs-CZ')} {offer.currency}
+                      </span>
+                    )}
                     {bundlePercent > 0 && (
                       <span className="text-sm text-muted-foreground/70 line-through">
                         {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
@@ -1407,6 +1481,17 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                     <span className="text-sm text-muted-foreground/70">/měsíc</span>
                   </div>
                 </div>
+
+                {monthlyServiceDiscount > 0 && (
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 text-sm bg-emerald-500/10 rounded-lg px-4 py-2.5 border border-emerald-500/20">
+                    <span className="text-emerald-500 font-medium">
+                      💸 Individuální slevy na službách (včetně položek zdarma)
+                    </span>
+                    <span className="font-bold text-emerald-500 whitespace-nowrap">
+                      -{monthlyServiceDiscount.toLocaleString('cs-CZ')} {offer.currency}/měs
+                    </span>
+                  </div>
+                )}
                 
                 {/* Bundle discount badge */}
                 {bundlePercent > 0 && (

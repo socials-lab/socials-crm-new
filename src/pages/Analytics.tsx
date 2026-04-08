@@ -20,7 +20,6 @@ import { useUpsellApprovals } from '@/hooks/useUpsellApprovals';
 import { useUserRole } from '@/hooks/useUserRole';
 import { buildColleagueInvoiceData } from '@/components/colleagues/TeamInvoicingOverview';
 import { canonicalizeAssignmentRole } from '@/lib/assignmentRoles';
-import { getEngagementMonthlyRevenue } from '@/utils/engagementRevenueUtils';
 import { getExchangeRate, getExchangeRateForDate } from '@/lib/currency';
 
 import { format, subMonths, startOfMonth, endOfMonth, differenceInDays } from 'date-fns';
@@ -170,6 +169,33 @@ export default function Analytics() {
     () => getMonthKeysBetween(comparisonStart, comparisonEnd),
     [comparisonStart, comparisonEnd]
   );
+  const currentPeriodMonthKeySet = useMemo(
+    () => new Set(currentPeriodMonthKeys.map((key) => toYearMonthKey(key.year, key.month))),
+    [currentPeriodMonthKeys]
+  );
+  const comparisonPeriodMonthKeySet = useMemo(
+    () => new Set(comparisonPeriodMonthKeys.map((key) => toYearMonthKey(key.year, key.month))),
+    [comparisonPeriodMonthKeys]
+  );
+
+  const getInvoiceDuzpYearMonth = (invoice: (typeof issuedInvoices)[number]): YearMonthKey => {
+    const raw = invoice.fakturoid_duzp_date || invoice.issued_at;
+    if (raw) {
+      const parsed = new Date(raw);
+      if (Number.isFinite(parsed.getTime())) {
+        return { year: parsed.getFullYear(), month: parsed.getMonth() + 1 };
+      }
+    }
+    return { year: invoice.year, month: invoice.month };
+  };
+
+  const getInvoiceDuzpMonthKey = (invoice: (typeof issuedInvoices)[number]): string => {
+    const { year, month } = getInvoiceDuzpYearMonth(invoice);
+    return toYearMonthKey(year, month);
+  };
+
+  const getInvoiceAmountWithoutVat = (invoice: (typeof issuedInvoices)[number]): number =>
+    Number(invoice.fakturoid_total_without_vat ?? invoice.total_amount ?? 0);
 
   const financeRateMonthKeys = useMemo(() => {
     const unique = new Map<string, YearMonthKey>();
@@ -202,14 +228,70 @@ export default function Analytics() {
     staleTime: 1000 * 60 * 30,
   });
 
+  const canonicalFakturoidIssuedInvoices = useMemo(() => {
+    const crmClientIds = new Set(clients.map((client) => client.id));
+    const latestInvoicesByExternalKey = new Map<string, (typeof issuedInvoices)[number]>();
+    issuedInvoices.forEach((invoice) => {
+      const externalKey = invoice.fakturoid_id
+        ? `f-${invoice.fakturoid_id}`
+        : `n-${invoice.invoice_number}`;
+      const existing = latestInvoicesByExternalKey.get(externalKey);
+      if (!existing) {
+        latestInvoicesByExternalKey.set(externalKey, invoice);
+        return;
+      }
+      const existingTime = new Date(existing.created_at || existing.issued_at).getTime();
+      const invoiceTime = new Date(invoice.created_at || invoice.issued_at).getTime();
+      if (!Number.isFinite(existingTime) || (Number.isFinite(invoiceTime) && invoiceTime > existingTime)) {
+        latestInvoicesByExternalKey.set(externalKey, invoice);
+      }
+    });
+    return Array.from(latestInvoicesByExternalKey.values())
+      .filter((invoice) => Boolean(invoice.fakturoid_id || invoice.fakturoid_url))
+      // Keep analytics scoped to CRM clients only (exclude unrelated account-wide imports).
+      .filter((invoice) => Boolean(invoice.client_id) && crmClientIds.has(invoice.client_id));
+  }, [issuedInvoices, clients]);
+
+  // Match "Fakturace" semantics:
+  // - only invoices that are issued and delivered to Fakturoid
+  // - exactly one invoice per engagement+year+month (latest wins)
+  const canonicalRevenueInvoices = useMemo(() => {
+    const byEngagementMonth = new Map<string, (typeof issuedInvoices)[number]>();
+    const hasEngagement = (engagementId: string | null | undefined) =>
+      !!engagementId && engagements.some((eng) => eng.id === engagementId);
+
+    canonicalFakturoidIssuedInvoices.forEach((invoice) => {
+      if (!hasEngagement(invoice.engagement_id)) return;
+      const normalizedStatus = String(invoice.status || '').toLowerCase();
+      const isCancelled = normalizedStatus === 'cancelled' || normalizedStatus === 'storno' || normalizedStatus === 'canceled';
+      if (isCancelled) return;
+
+      const key = `${invoice.engagement_id}::${getInvoiceDuzpMonthKey(invoice)}`;
+      const existing = byEngagementMonth.get(key);
+      if (!existing) {
+        byEngagementMonth.set(key, invoice);
+        return;
+      }
+
+      const existingTime = new Date(existing.created_at || existing.issued_at).getTime();
+      const currentTime = new Date(invoice.created_at || invoice.issued_at).getTime();
+      if (!Number.isFinite(existingTime) || (Number.isFinite(currentTime) && currentTime > existingTime)) {
+        byEngagementMonth.set(key, invoice);
+      }
+    });
+
+    return Array.from(byEngagementMonth.values());
+  }, [canonicalFakturoidIssuedInvoices, engagements, getInvoiceDuzpMonthKey]);
+
   const allTimeRateMonthKeys = useMemo(() => {
     const unique = new Map<string, YearMonthKey>();
     issuedInvoices.forEach((invoice) => {
       if ((invoice.currency || '').toUpperCase() !== 'EUR') return;
-      unique.set(toYearMonthKey(invoice.year, invoice.month), { year: invoice.year, month: invoice.month });
+      const duzp = getInvoiceDuzpYearMonth(invoice);
+      unique.set(toYearMonthKey(duzp.year, duzp.month), duzp);
     });
     return Array.from(unique.values());
-  }, [issuedInvoices]);
+  }, [issuedInvoices, getInvoiceDuzpYearMonth]);
 
   const { data: eurToCzkAllTimeRatesByMonth = {} } = useQuery({
     queryKey: ['analytics', 'eur-to-czk-all-time-by-month', allTimeRateMonthKeys],
@@ -256,18 +338,39 @@ export default function Analytics() {
       return e.status === 'active' && start <= periodEnd && (!end || end >= periodStart);
     });
 
-    // MRR calculation
-    const mrr = activeEngs.reduce(
-      (sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []),
-      0,
+    const convertToCzk = (amount: number, currency: string, year: number, month: number) => {
+      const normalizedCurrency = (currency || 'CZK').toUpperCase();
+      if (normalizedCurrency === 'CZK') return amount;
+      if (normalizedCurrency === 'EUR') {
+        const rate =
+          eurToCzkCurrent?.rate ??
+          eurToCzkRatesByMonth[toYearMonthKey(year, month)] ??
+          1;
+        return amount * rate;
+      }
+      return amount;
+    };
+
+    const periodInvoicesAll = canonicalRevenueInvoices
+      .filter((invoice) => currentPeriodMonthKeySet.has(getInvoiceDuzpMonthKey(invoice)));
+    const prevPeriodInvoicesAll = canonicalRevenueInvoices
+      .filter((invoice) => comparisonPeriodMonthKeySet.has(getInvoiceDuzpMonthKey(invoice)));
+
+    // Keep KPI names unchanged, but source them from real issued invoices.
+    const mrr = periodInvoicesAll.reduce(
+      (sum, invoice) => {
+        const duzp = getInvoiceDuzpYearMonth(invoice);
+        return sum + convertToCzk(getInvoiceAmountWithoutVat(invoice), invoice.currency, duzp.year, duzp.month);
+      },
+      0
     );
-    const prevMrr = engagements
-      .filter(e => {
-        const start = new Date(e.start_date);
-        const end = e.end_date ? new Date(e.end_date) : null;
-        return e.status === 'active' && start <= prevPeriodEnd && (!end || end >= prevPeriodStart);
-      })
-      .reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []), 0);
+    const prevMrr = prevPeriodInvoicesAll.reduce(
+      (sum, invoice) => {
+        const duzp = getInvoiceDuzpYearMonth(invoice);
+        return sum + convertToCzk(getInvoiceAmountWithoutVat(invoice), invoice.currency, duzp.year, duzp.month);
+      },
+      0
+    );
 
     // Average margin
     const metrics = engagementMetrics.filter((m) =>
@@ -283,13 +386,15 @@ export default function Analytics() {
       const monthStart = startOfMonth(date);
       const monthEnd = endOfMonth(date);
       
-      const monthMrr = engagements
-        .filter(e => {
-          const start = new Date(e.start_date);
-          const end = e.end_date ? new Date(e.end_date) : null;
-          return e.status === 'active' && start <= monthEnd && (!end || end >= monthStart);
+      const monthMrr = canonicalRevenueInvoices
+        .filter((invoice) => {
+          const duzp = getInvoiceDuzpYearMonth(invoice);
+          return duzp.year === date.getFullYear() && duzp.month === (date.getMonth() + 1);
         })
-        .reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []), 0);
+        .reduce((sum, invoice) => {
+          const duzp = getInvoiceDuzpYearMonth(invoice);
+          return sum + convertToCzk(getInvoiceAmountWithoutVat(invoice), invoice.currency, duzp.year, duzp.month);
+        }, 0);
 
       return {
         month: format(date, 'MMM', { locale: cs }),
@@ -297,31 +402,56 @@ export default function Analytics() {
       };
     });
 
-    // Revenue breakdown - calculate from actual data
-    const retainerRevenue = activeEngs
-      .filter(e => e.type === 'retainer')
-      .reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []), 0);
-    
-    const oneOffRevenue = activeEngs
-      .filter(e => e.type === 'one_off')
-      .reduce((sum, e) => sum + e.one_off_fee, 0);
-    
-    const periodExtraWorks = extraWorks.filter(ew => {
-      const date = new Date(ew.work_date);
-      return date >= periodStart && date <= periodEnd && ew.status === 'invoiced';
+    // Revenue breakdown from issued invoice line items.
+    let retainerRevenue = 0;
+    let extraWorkRevenue = 0;
+    let oneOffRevenue = 0;
+    let creativeBoostRevenue = 0;
+    let otherInvoiceRevenue = 0;
+
+    periodInvoicesAll.forEach((invoice) => {
+      const lineItems = Array.isArray(invoice.line_items) ? invoice.line_items : [];
+      if (lineItems.length === 0) {
+        const duzp = getInvoiceDuzpYearMonth(invoice);
+        otherInvoiceRevenue += convertToCzk(getInvoiceAmountWithoutVat(invoice), invoice.currency, duzp.year, duzp.month);
+        return;
+      }
+
+      lineItems.forEach((item) => {
+        const duzp = getInvoiceDuzpYearMonth(invoice);
+        const amountCzk = convertToCzk(
+          Number(item.final_amount || 0),
+          item.currency || invoice.currency,
+          duzp.year,
+          duzp.month
+        );
+        switch (item.source) {
+          case 'engagement':
+            retainerRevenue += amountCzk;
+            break;
+          case 'extra_work':
+            extraWorkRevenue += amountCzk;
+            break;
+          case 'creative_boost':
+            creativeBoostRevenue += amountCzk;
+            break;
+          case 'one_off':
+          case 'manual':
+            oneOffRevenue += amountCzk;
+            break;
+          default:
+            otherInvoiceRevenue += amountCzk;
+            break;
+        }
+      });
     });
-    const extraWorkRevenue = periodExtraWorks.reduce((sum, ew) => sum + ew.amount, 0);
-    
-    const creativeBoostRevenue = currentPeriodMonthKeys.reduce((sum, key) => {
-      const cbSummaries = getClientMonthSummaries(key.year, key.month);
-      return sum + cbSummaries.reduce((monthSum, summary) => monthSum + summary.estimatedInvoice, 0);
-    }, 0);
-    
+
     const revenueBreakdown = [
       { name: 'Retainery', value: retainerRevenue },
       { name: 'Vícepráce', value: extraWorkRevenue },
       { name: 'Jednorázové', value: oneOffRevenue },
       { name: 'Creative Boost', value: creativeBoostRevenue },
+      { name: 'Ostatní faktury', value: otherInvoiceRevenue },
     ].filter(item => item.value > 0); // Only show non-zero items
 
     // Alerts
@@ -365,7 +495,7 @@ export default function Analytics() {
         pendingExtraWork,
       },
     };
-  }, [comparisonEnd, comparisonStart, currentPeriodMonthKeys, periodEnd, periodStart, clients, engagements, engagementMetrics, engagementServices, getClientById, extraWorks, leads, getClientMonthSummaries]);
+  }, [comparisonEnd, comparisonPeriodMonthKeySet, comparisonStart, currentPeriodMonthKeySet, currentPeriodMonthKeys, periodEnd, periodStart, clients, engagements, engagementMetrics, getClientById, leads, canonicalRevenueInvoices, eurToCzkCurrent, eurToCzkRatesByMonth]);
 
   // =====================================================
   // LEADS DATA
@@ -624,18 +754,39 @@ export default function Analytics() {
       return e.status === 'active' && start <= periodEnd && (!end || end >= periodStart);
     });
 
-    // Total invoicing
-    const totalInvoicing = activeEngs.reduce(
-      (sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []),
-      0,
+    const convertToCzk = (amount: number, currency: string, year: number, month: number) => {
+      const normalizedCurrency = (currency || 'CZK').toUpperCase();
+      if (normalizedCurrency === 'CZK') return amount;
+      if (normalizedCurrency === 'EUR') {
+        const rate =
+          eurToCzkCurrent?.rate ??
+          eurToCzkRatesByMonth[toYearMonthKey(year, month)] ??
+          1;
+        return amount * rate;
+      }
+      return amount;
+    };
+
+    const periodInvoicesAll = canonicalRevenueInvoices
+      .filter((invoice) => currentPeriodMonthKeySet.has(getInvoiceDuzpMonthKey(invoice)));
+    const prevPeriodInvoicesAll = canonicalRevenueInvoices
+      .filter((invoice) => comparisonPeriodMonthKeySet.has(getInvoiceDuzpMonthKey(invoice)));
+
+    // Total invoicing from real issued invoices
+    const totalInvoicing = periodInvoicesAll.reduce(
+      (sum, invoice) => {
+        const duzp = getInvoiceDuzpYearMonth(invoice);
+        return sum + convertToCzk(getInvoiceAmountWithoutVat(invoice), invoice.currency, duzp.year, duzp.month);
+      },
+      0
     );
-    const prevInvoicing = engagements
-      .filter(e => {
-        const start = new Date(e.start_date);
-        const end = e.end_date ? new Date(e.end_date) : null;
-        return e.status === 'active' && start <= prevPeriodEnd && (!end || end >= prevPeriodStart);
-      })
-      .reduce((sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []), 0);
+    const prevInvoicing = prevPeriodInvoicesAll.reduce(
+      (sum, invoice) => {
+        const duzp = getInvoiceDuzpYearMonth(invoice);
+        return sum + convertToCzk(getInvoiceAmountWithoutVat(invoice), invoice.currency, duzp.year, duzp.month);
+      },
+      0
+    );
     const invoicingChange = prevInvoicing > 0 
       ? ((totalInvoicing - prevInvoicing) / prevInvoicing) * 100 
       : 0;
@@ -674,11 +825,15 @@ export default function Analytics() {
     // Top clients by revenue
     const topClientsByRevenue = activeClientsForPeriod
       .map(c => {
-        const clientEngs = activeEngs.filter(e => e.client_id === c.id);
-        const revenue = clientEngs.reduce(
-          (sum, e) => sum + getEngagementMonthlyRevenue(e.id, e.monthly_fee, engagementServices || []),
-          0,
-        );
+        const revenue = periodInvoicesAll
+          .filter((invoice) => invoice.client_id === c.id)
+          .reduce(
+            (sum, invoice) => {
+              const duzp = getInvoiceDuzpYearMonth(invoice);
+              return sum + convertToCzk(getInvoiceAmountWithoutVat(invoice), invoice.currency, duzp.year, duzp.month);
+            },
+            0
+          );
         return { name: c.brand_name, revenue };
       })
       .sort((a, b) => b.revenue - a.revenue)
@@ -722,7 +877,7 @@ export default function Analytics() {
       topClientsByMargin,
       clientsByTier,
     };
-  }, [comparisonEnd, comparisonStart, currentPeriodMonthKeys, periodEnd, periodStart, clients, engagements, engagementMetrics, engagementServices]);
+  }, [comparisonEnd, comparisonPeriodMonthKeySet, comparisonStart, currentPeriodMonthKeySet, currentPeriodMonthKeys, periodEnd, periodStart, clients, engagements, engagementMetrics, canonicalRevenueInvoices, eurToCzkCurrent, eurToCzkRatesByMonth]);
 
   // =====================================================
   // FINANCE DATA
@@ -748,43 +903,25 @@ export default function Analytics() {
       return amount;
     };
 
-    const latestInvoicesByExternalKey = new Map<string, (typeof issuedInvoices)[number]>();
-    issuedInvoices.forEach((invoice) => {
-      const externalKey = invoice.fakturoid_id
-        ? `f-${invoice.fakturoid_id}`
-        : `n-${invoice.invoice_number}`;
-      const existing = latestInvoicesByExternalKey.get(externalKey);
-      if (!existing) {
-        latestInvoicesByExternalKey.set(externalKey, invoice);
-        return;
-      }
-      const existingTime = new Date(existing.created_at || existing.issued_at).getTime();
-      const invoiceTime = new Date(invoice.created_at || invoice.issued_at).getTime();
-      if (!Number.isFinite(existingTime) || (Number.isFinite(invoiceTime) && invoiceTime > existingTime)) {
-        latestInvoicesByExternalKey.set(externalKey, invoice);
-      }
-    });
-
-    const canonicalIssuedInvoices = Array.from(latestInvoicesByExternalKey.values());
-    const canonicalFakturoidInvoices = canonicalIssuedInvoices.filter((invoice) => Boolean(invoice.fakturoid_id || invoice.fakturoid_url));
-
-    const hasMappedEngagement = (invoice: (typeof issuedInvoices)[number]) =>
-      !!invoice.engagement_id && engagements.some((engagement) => engagement.id === invoice.engagement_id);
-
-    // Keep totals aligned with "Finance > Faktury" (all issued invoices from CRM, deduped by external key).
-    const periodInvoicesAll = canonicalFakturoidInvoices
-      .filter((invoice) => currentPeriodMonthKeySet.has(toYearMonthKey(invoice.year, invoice.month)));
-    const prevPeriodInvoicesAll = canonicalFakturoidInvoices
-      .filter((invoice) => comparisonPeriodMonthKeySet.has(toYearMonthKey(invoice.year, invoice.month)));
-    // Margin table requires a concrete engagement mapping.
-    const periodInvoices = periodInvoicesAll.filter(hasMappedEngagement);
+    // Keep totals aligned with "Fakturace" (issued + delivered, latest per engagement-month).
+    const periodInvoicesAll = canonicalRevenueInvoices
+      .filter((invoice) => currentPeriodMonthKeySet.has(getInvoiceDuzpMonthKey(invoice)));
+    const prevPeriodInvoicesAll = canonicalRevenueInvoices
+      .filter((invoice) => comparisonPeriodMonthKeySet.has(getInvoiceDuzpMonthKey(invoice)));
+    const periodInvoices = periodInvoicesAll;
 
     const totalInvoicing = periodInvoicesAll.reduce(
-      (sum, invoice) => sum + convertToCzk(invoice.total_amount, invoice.currency, invoice.year, invoice.month),
+      (sum, invoice) => {
+        const duzp = getInvoiceDuzpYearMonth(invoice);
+        return sum + convertToCzk(getInvoiceAmountWithoutVat(invoice), invoice.currency, duzp.year, duzp.month);
+      },
       0,
     );
     const prevInvoicing = prevPeriodInvoicesAll.reduce(
-      (sum, invoice) => sum + convertToCzk(invoice.total_amount, invoice.currency, invoice.year, invoice.month),
+      (sum, invoice) => {
+        const duzp = getInvoiceDuzpYearMonth(invoice);
+        return sum + convertToCzk(getInvoiceAmountWithoutVat(invoice), invoice.currency, duzp.year, duzp.month);
+      },
       0,
     );
     const invoicingChange = prevInvoicing > 0
@@ -795,9 +932,11 @@ export default function Analytics() {
     const engagementRevenueTotals = new Map<string, number>();
     const engagementEurRevenueTotals = new Map<string, number>();
     periodInvoices.forEach((invoice) => {
-      const monthKey = toYearMonthKey(invoice.year, invoice.month);
+      const duzp = getInvoiceDuzpYearMonth(invoice);
+      const monthKey = toYearMonthKey(duzp.year, duzp.month);
       const engagementMonthKey = `${invoice.engagement_id}::${monthKey}`;
-      const convertedAmount = convertToCzk(invoice.total_amount, invoice.currency, invoice.year, invoice.month);
+      const netAmount = getInvoiceAmountWithoutVat(invoice);
+      const convertedAmount = convertToCzk(netAmount, invoice.currency, duzp.year, duzp.month);
       engagementRevenueByMonth.set(
         engagementMonthKey,
         (engagementRevenueByMonth.get(engagementMonthKey) || 0) + convertedAmount,
@@ -809,7 +948,7 @@ export default function Analytics() {
       if ((invoice.currency || '').toUpperCase() === 'EUR') {
         engagementEurRevenueTotals.set(
           invoice.engagement_id,
-          (engagementEurRevenueTotals.get(invoice.engagement_id) || 0) + invoice.total_amount,
+          (engagementEurRevenueTotals.get(invoice.engagement_id) || 0) + netAmount,
         );
       }
     });
@@ -1149,17 +1288,23 @@ export default function Analytics() {
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
 
-      const monthInvoices = canonicalFakturoidInvoices
-        .filter((invoice) => invoice.year === year && invoice.month === month)
-        .filter(hasMappedEngagement);
+      const monthInvoices = canonicalRevenueInvoices
+        .filter((invoice) => {
+          const duzp = getInvoiceDuzpYearMonth(invoice);
+          return duzp.year === year && duzp.month === month;
+        });
       const monthRevenue = monthInvoices.reduce(
-        (sum, invoice) => sum + convertToCzk(invoice.total_amount, invoice.currency, invoice.year, invoice.month),
+        (sum, invoice) => {
+          const duzp = getInvoiceDuzpYearMonth(invoice);
+          return sum + convertToCzk(getInvoiceAmountWithoutVat(invoice), invoice.currency, duzp.year, duzp.month);
+        },
         0,
       );
 
       const monthEngagementRevenue = new Map<string, number>();
       monthInvoices.forEach((invoice) => {
-        const convertedAmount = convertToCzk(invoice.total_amount, invoice.currency, invoice.year, invoice.month);
+        const duzp = getInvoiceDuzpYearMonth(invoice);
+        const convertedAmount = convertToCzk(getInvoiceAmountWithoutVat(invoice), invoice.currency, duzp.year, duzp.month);
         monthEngagementRevenue.set(
           invoice.engagement_id,
           (monthEngagementRevenue.get(invoice.engagement_id) || 0) + convertedAmount,
@@ -1393,7 +1538,9 @@ export default function Analytics() {
 
       const legalClientName = invoice.client_id ? (getClientById(invoice.client_id)?.name || null) : null;
       const clientName = (invoice.client_name || legalClientName || 'Neznámý klient').trim();
-      const converted = convertToCzkAllTime(invoice.total_amount, invoice.currency, invoice.year, invoice.month);
+      const duzp = getInvoiceDuzpYearMonth(invoice);
+      const netAmount = getInvoiceAmountWithoutVat(invoice);
+      const converted = convertToCzkAllTime(netAmount, invoice.currency, duzp.year, duzp.month);
       const existing = paidClientMap.get(clientKey) || {
         clientId: clientKey,
         clientName,
@@ -1406,7 +1553,7 @@ export default function Analytics() {
       existing.paidTotalCzk += converted;
       existing.paidInvoiceCount += 1;
       if ((invoice.currency || '').toUpperCase() === 'EUR') {
-        existing.paidTotalEurOriginal += invoice.total_amount;
+        existing.paidTotalEurOriginal += netAmount;
       }
       if (invoice.paid_at) {
         if (!existing.lastPaidAt || new Date(invoice.paid_at).getTime() > new Date(existing.lastPaidAt).getTime()) {
@@ -1421,15 +1568,17 @@ export default function Analytics() {
     );
 
     const firstInvoiceDate = longTermScopeInvoices.reduce<string | null>((minDate, invoice) => {
-      if (!invoice.issued_at) return minDate;
-      if (!minDate) return invoice.issued_at;
-      return new Date(invoice.issued_at).getTime() < new Date(minDate).getTime() ? invoice.issued_at : minDate;
+      const invoiceDate = invoice.fakturoid_duzp_date || invoice.issued_at;
+      if (!invoiceDate) return minDate;
+      if (!minDate) return invoiceDate;
+      return new Date(invoiceDate).getTime() < new Date(minDate).getTime() ? invoiceDate : minDate;
     }, null);
 
     const lastInvoiceDate = longTermScopeInvoices.reduce<string | null>((maxDate, invoice) => {
-      if (!invoice.issued_at) return maxDate;
-      if (!maxDate) return invoice.issued_at;
-      return new Date(invoice.issued_at).getTime() > new Date(maxDate).getTime() ? invoice.issued_at : maxDate;
+      const invoiceDate = invoice.fakturoid_duzp_date || invoice.issued_at;
+      if (!invoiceDate) return maxDate;
+      if (!maxDate) return invoiceDate;
+      return new Date(invoiceDate).getTime() > new Date(maxDate).getTime() ? invoiceDate : maxDate;
     }, null);
 
     const LONG_TERM_ASSUMED_MARGIN = 0.63;
@@ -1447,7 +1596,8 @@ export default function Analytics() {
 
       const legalClientName = invoice.client_id ? (getClientById(invoice.client_id)?.name || null) : null;
       const clientName = (invoice.client_name || legalClientName || 'Neznámý klient').trim();
-      const converted = convertToCzkAllTime(invoice.total_amount, invoice.currency, invoice.year, invoice.month);
+      const duzp = getInvoiceDuzpYearMonth(invoice);
+      const converted = convertToCzkAllTime(getInvoiceAmountWithoutVat(invoice), invoice.currency, duzp.year, duzp.month);
       const existing = clientTotalsFromAllInvoices.get(clientKey) || {
         clientName,
         totalCzk: 0,
@@ -1456,12 +1606,13 @@ export default function Analytics() {
       };
       if (!existing.clientName && clientName) existing.clientName = clientName;
       existing.totalCzk += converted;
-      if (invoice.issued_at) {
-        if (!existing.firstIssuedAt || new Date(invoice.issued_at).getTime() < new Date(existing.firstIssuedAt).getTime()) {
-          existing.firstIssuedAt = invoice.issued_at;
+      const invoiceDate = invoice.fakturoid_duzp_date || invoice.issued_at;
+      if (invoiceDate) {
+        if (!existing.firstIssuedAt || new Date(invoiceDate).getTime() < new Date(existing.firstIssuedAt).getTime()) {
+          existing.firstIssuedAt = invoiceDate;
         }
-        if (!existing.lastIssuedAt || new Date(invoice.issued_at).getTime() > new Date(existing.lastIssuedAt).getTime()) {
-          existing.lastIssuedAt = invoice.issued_at;
+        if (!existing.lastIssuedAt || new Date(invoiceDate).getTime() > new Date(existing.lastIssuedAt).getTime()) {
+          existing.lastIssuedAt = invoiceDate;
         }
       }
       clientTotalsFromAllInvoices.set(clientKey, existing);

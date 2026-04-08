@@ -95,6 +95,9 @@ verify_jwt = false
 [functions.prospect-webhook]
 verify_jwt = false
 
+[functions.prospect-crm-sync]
+verify_jwt = false
+
 [functions.fakturoid-webhook]
 verify_jwt = false
 
@@ -117,6 +120,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-notification-email]
+verify_jwt = false
+
+[functions.notification-email-routing]
 verify_jwt = false
 
 [functions.sync-meta-ad-spend]

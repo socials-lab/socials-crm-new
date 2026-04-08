@@ -101,7 +101,7 @@ export function EmailTagInput({
           }}
           onBlur={commitInput}
           placeholder={value.length === 0 ? placeholder : 'Add another email'}
-          className="h-7 min-w-[160px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          className="h-7 min-w-[160px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
           disabled={disabled}
         />
       </div>

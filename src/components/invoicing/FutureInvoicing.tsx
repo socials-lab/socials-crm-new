@@ -91,6 +91,26 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   const [issuedInvoiceProblemByGeneratedId, setIssuedInvoiceProblemByGeneratedId] = useState<Map<string, boolean>>(new Map());
   const [savingDraft, setSavingDraft] = useState(false);
 
+  const latestIssuedInvoiceByGeneratedId = useMemo(() => {
+    const byGeneratedId = new Map<string, (typeof issuedInvoices)[number]>();
+    issuedInvoices
+      .filter(inv => inv.year === year && inv.month === month)
+      .forEach((inv) => {
+        const generatedId = `inv-${inv.engagement_id}-${year}-${month}`;
+        const existing = byGeneratedId.get(generatedId);
+        if (!existing) {
+          byGeneratedId.set(generatedId, inv);
+          return;
+        }
+        const existingTime = new Date(existing.created_at ?? existing.issued_at).getTime();
+        const nextTime = new Date(inv.created_at ?? inv.issued_at).getTime();
+        if (!Number.isFinite(existingTime) || (Number.isFinite(nextTime) && nextTime > existingTime)) {
+          byGeneratedId.set(generatedId, inv);
+        }
+      });
+    return byGeneratedId;
+  }, [issuedInvoices, year, month]);
+
   // Clear draft state when year/month changes and reload from localStorage
   useEffect(() => {
     try {
@@ -457,6 +477,21 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
     return generatedInvoices;
   }, [invoices, generatedInvoices]);
 
+  const displayInvoices = useMemo(() => {
+    return currentInvoices.map((invoice) => {
+      const issued = latestIssuedInvoiceByGeneratedId.get(invoice.id);
+      if (!issued) return invoice;
+
+      const hasIssuedLineItems = Array.isArray(issued.line_items) && issued.line_items.length > 0;
+      return {
+        ...invoice,
+        total_amount: Number(issued.total_amount ?? invoice.total_amount),
+        currency: issued.currency || invoice.currency,
+        line_items: hasIssuedLineItems ? issued.line_items : invoice.line_items,
+      };
+    });
+  }, [currentInvoices, latestIssuedInvoiceByGeneratedId]);
+
   const handleUpdateLineItem = (invoiceId: string, lineItemId: string, updates: Partial<InvoiceLineItem>) => {
     setInvoices(prev => {
       const base = prev.length > 0 ? prev : generatedInvoices;
@@ -782,8 +817,8 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
     });
   };
 
-  const totalAmount = currentInvoices.reduce((sum, inv) => sum + inv.total_amount, 0);
-  const totalItems = currentInvoices.reduce((sum, inv) => sum + inv.line_items.length, 0);
+  const totalAmount = displayInvoices.reduce((sum, inv) => sum + inv.total_amount, 0);
+  const totalItems = displayInvoices.reduce((sum, inv) => sum + inv.line_items.length, 0);
 
   // Helper to format amounts grouped by currency
   const formatAmountsByCurrency = (invoiceList: MonthlyEngagementInvoice[]) => {
@@ -806,12 +841,12 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   };
 
   // Calculate issued statistics
-  const issuedInvoicesInPeriod = currentInvoices.filter(inv => issuedInvoiceIds.has(inv.id));
+  const issuedInvoicesInPeriod = displayInvoices.filter(inv => issuedInvoiceIds.has(inv.id));
   const issuedAmount = issuedInvoicesInPeriod.reduce((sum, inv) => sum + inv.total_amount, 0);
-  const pendingInvoices = currentInvoices.filter(inv => !issuedInvoiceIds.has(inv.id));
+  const pendingInvoices = displayInvoices.filter(inv => !issuedInvoiceIds.has(inv.id));
   const deliveredInvoiceIds = useMemo(() => {
     const ids = new Set<string>();
-    currentInvoices.forEach((invoice) => {
+    displayInvoices.forEach((invoice) => {
       const delivered = issuedInvoiceDeliveryByGeneratedId.get(invoice.id) ?? false;
       const hasProblem = issuedInvoiceProblemByGeneratedId.get(invoice.id) ?? false;
       if (delivered && !hasProblem) {
@@ -819,8 +854,8 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
       }
     });
     return ids;
-  }, [currentInvoices, issuedInvoiceDeliveryByGeneratedId, issuedInvoiceProblemByGeneratedId]);
-  const deliveredInvoicesInPeriod = currentInvoices.filter(inv => deliveredInvoiceIds.has(inv.id));
+  }, [displayInvoices, issuedInvoiceDeliveryByGeneratedId, issuedInvoiceProblemByGeneratedId]);
+  const deliveredInvoicesInPeriod = displayInvoices.filter(inv => deliveredInvoiceIds.has(inv.id));
 
   // Helper to check if invoice is fully approved
   const isInvoiceApproved = (invoice: MonthlyEngagementInvoice) => 
@@ -1058,7 +1093,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
 
       {/* Engagement invoice cards */}
       <div className="space-y-4">
-        {currentInvoices.map(invoice => (
+        {displayInvoices.map(invoice => (
           <EngagementInvoiceCard
             key={invoice.id}
             invoice={invoice}

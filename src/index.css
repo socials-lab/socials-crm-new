@@ -189,6 +189,11 @@
 }
 
 @layer utilities {
+  .onboarding-form input::placeholder,
+  .onboarding-form textarea::placeholder {
+    color: hsl(var(--muted-foreground) / 0.4);
+  }
+
   .scrollbar-thin {
     scrollbar-width: thin;
   }
