@@ -15,6 +15,11 @@ interface EditableOfferServiceCardProps {
   service: PublicOfferService;
   onUpdate: (updatedService: PublicOfferService) => void;
   onRemove: () => void;
+  isCreativeBoost?: boolean;
+  creativeBoostCredits?: number;
+  creativeBoostPricePerCredit?: number;
+  onCreativeBoostCreditsChange?: (value: number) => void;
+  onCreativeBoostPricePerCreditChange?: (value: number) => void;
 }
 
 const tierLabels: Record<string, { label: string; color: string }> = {
@@ -23,7 +28,16 @@ const tierLabels: Record<string, { label: string; color: string }> = {
   elite: { label: 'Elite', color: 'bg-amber-100 text-amber-800' },
 };
 
-export function EditableOfferServiceCard({ service, onUpdate, onRemove }: EditableOfferServiceCardProps) {
+export function EditableOfferServiceCard({
+  service,
+  onUpdate,
+  onRemove,
+  isCreativeBoost = false,
+  creativeBoostCredits = 30,
+  creativeBoostPricePerCredit = 400,
+  onCreativeBoostCreditsChange,
+  onCreativeBoostPricePerCreditChange,
+}: EditableOfferServiceCardProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [isDeliverablesOpen, setIsDeliverablesOpen] = useState(false);
   const [isDetailedSectionsOpen, setIsDetailedSectionsOpen] = useState(false);
@@ -32,7 +46,8 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
   
   const hasDiscount = service.original_price && service.original_price > service.price;
   const discountAmount = hasDiscount ? (service.original_price! - service.price) : 0;
-  const basePrice = service.price;
+  const creativeBoostBasePrice = Math.max(0, creativeBoostCredits * creativeBoostPricePerCredit);
+  const basePrice = isCreativeBoost ? creativeBoostBasePrice : service.price;
   const variants = service.country_variants || [];
   const variantsTotal = variants.reduce((sum, variant) => sum + variant.price, 0);
   const finalServicePrice = basePrice + variantsTotal;
@@ -263,52 +278,87 @@ export function EditableOfferServiceCard({ service, onUpdate, onRemove }: Editab
                 <span>Cena</span>
               </div>
               
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Původní cena</Label>
-                  <div className="flex items-center gap-1">
-                    <Input
-                      type="number"
-                      value={service.original_price || service.price}
-                      onChange={(e) => {
-                        const originalPrice = Number(e.target.value) || 0;
-                        onUpdate({ 
-                          ...service, 
-                          original_price: originalPrice,
-                          price: originalPrice - discountAmount
-                        });
-                      }}
-                      className="h-8 text-sm"
-                    />
-                    <span className="text-xs text-muted-foreground">{service.currency}</span>
+              {isCreativeBoost ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Počet kreditů / měsíc</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={creativeBoostCredits}
+                        onChange={(e) => onCreativeBoostCreditsChange?.(Math.max(1, Number(e.target.value) || 1))}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Cena za kredit</Label>
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          min={0}
+                          value={creativeBoostPricePerCredit}
+                          onChange={(e) => onCreativeBoostPricePerCreditChange?.(Math.max(0, Number(e.target.value) || 0))}
+                          className="h-8 text-sm"
+                        />
+                        <span className="text-xs text-muted-foreground">{service.currency}</span>
+                      </div>
+                    </div>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Cena se počítá automaticky: {creativeBoostCredits} kreditů × {creativeBoostPricePerCredit.toLocaleString('cs-CZ')} {service.currency}
+                  </p>
                 </div>
-                
-                <div className="space-y-1">
-                  <Label className="text-xs">Sleva</Label>
-                  <div className="flex items-center gap-1">
-                    <Input
-                      type="number"
-                      value={discountAmount}
-                      onChange={(e) => handleDiscountChange(e.target.value)}
-                      className="h-8 text-sm"
-                      placeholder="0"
-                    />
-                    <span className="text-xs text-muted-foreground">{service.currency}</span>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Původní cena</Label>
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          value={service.original_price || service.price}
+                          onChange={(e) => {
+                            const originalPrice = Number(e.target.value) || 0;
+                            onUpdate({
+                              ...service,
+                              original_price: originalPrice,
+                              price: originalPrice - discountAmount,
+                            });
+                          }}
+                          className="h-8 text-sm"
+                        />
+                        <span className="text-xs text-muted-foreground">{service.currency}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs">Sleva</Label>
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          value={discountAmount}
+                          onChange={(e) => handleDiscountChange(e.target.value)}
+                          className="h-8 text-sm"
+                          placeholder="0"
+                        />
+                        <span className="text-xs text-muted-foreground">{service.currency}</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-              
-              {hasDiscount && (
-                <div className="space-y-1">
-                  <Label className="text-xs">Důvod slevy</Label>
-                  <Input
-                    value={service.discount_reason || ''}
-                    onChange={(e) => handleDiscountReasonChange(e.target.value)}
-                    placeholder="např. Úvodní sleva, Balíčková cena..."
-                    className="h-8 text-sm"
-                  />
-                </div>
+
+                  {hasDiscount && (
+                    <div className="space-y-1">
+                      <Label className="text-xs">Důvod slevy</Label>
+                      <Input
+                        value={service.discount_reason || ''}
+                        onChange={(e) => handleDiscountReasonChange(e.target.value)}
+                        placeholder="např. Úvodní sleva, Balíčková cena..."
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  )}
+                </>
               )}
               
               <div className="flex items-center justify-between pt-2 border-t">

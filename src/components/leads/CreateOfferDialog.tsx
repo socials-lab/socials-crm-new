@@ -99,6 +99,9 @@ function suggestServiceCodes(lead: Lead): string[] {
 function buildServiceFromCatalog(catalogService: Service, lead: Lead): PublicOfferService {
   const constantDetail = getServiceDetail(catalogService.code);
   const defaultTier = catalogService.service_type === 'core' ? 'growth' : null;
+  const isCreativeBoost = catalogService.code === 'CREATIVE_BOOST';
+  const defaultCreativeBoostCredits = 30;
+  const defaultCreativeBoostPricePerCredit = 400;
   
   let price = catalogService.base_price || 0;
   let originalPrice = price;
@@ -112,6 +115,11 @@ function buildServiceFromCatalog(catalogService: Service, lead: Lead): PublicOff
 
   const description = catalogService.description || constantDetail?.tagline || '';
   const merged = mergeWithDefaults(catalogService.name, null, null, null, null, null);
+
+  if (isCreativeBoost) {
+    price = defaultCreativeBoostCredits * defaultCreativeBoostPricePerCredit;
+    originalPrice = price;
+  }
 
   return {
     id: crypto.randomUUID(),
@@ -132,6 +140,10 @@ function buildServiceFromCatalog(catalogService: Service, lead: Lead): PublicOff
     requirements: merged.requirements,
     start_timeline: '',
     detailed_sections: merged.detailed_sections,
+    ...(isCreativeBoost && {
+      creative_boost_credits: defaultCreativeBoostCredits,
+      creative_boost_price_per_credit: defaultCreativeBoostPricePerCredit,
+    }),
   };
 }
 
@@ -244,6 +256,31 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
   const [editableServices, setEditableServices] = useState<PublicOfferService[]>([]);
   const [restoredDraftAt, setRestoredDraftAt] = useState<number | null>(null);
 
+  const isCreativeBoostService = useCallback((service: PublicOfferService) => {
+    const catalogService = services.find((s) => s.id === service.service_id);
+    return (
+      catalogService?.code === 'CREATIVE_BOOST'
+      || service.name.toLowerCase().includes('creative boost')
+      || service.creative_boost_credits !== null && service.creative_boost_credits !== undefined
+      || service.creative_boost_price_per_credit !== null && service.creative_boost_price_per_credit !== undefined
+    );
+  }, [services]);
+
+  const applyCreativeBoostStateFromServices = useCallback((serviceList: PublicOfferService[]) => {
+    const cbService = serviceList.find(isCreativeBoostService);
+    if (!cbService) return;
+
+    const nextCredits = Number.isFinite(cbService.creative_boost_credits as number) && Number(cbService.creative_boost_credits) > 0
+      ? Number(cbService.creative_boost_credits)
+      : 30;
+    const nextPricePerCredit = Number.isFinite(cbService.creative_boost_price_per_credit as number) && Number(cbService.creative_boost_price_per_credit) >= 0
+      ? Number(cbService.creative_boost_price_per_credit)
+      : (nextCredits > 0 && Number.isFinite(cbService.price) ? Math.round(cbService.price / nextCredits) : 400);
+
+    setCbCredits(nextCredits);
+    setCbPricePerCredit(nextPricePerCredit);
+  }, [isCreativeBoostService]);
+
   const draftScopeKey = useMemo(() => (offerForEdit ? `offer-${offerForEdit.id}` : `lead-${lead.id}`), [offerForEdit, lead.id]);
   const draftKey = useMemo(() => getOfferDraftKey(draftScopeKey), [draftScopeKey]);
 
@@ -336,6 +373,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
       setHideReportingSection(offerForEdit.content_blocks_snapshot?.reporting?.content?.hide_section === true);
       setValidUntil(offerForEdit.valid_until || '');
       setEditableServices(offerForEdit.services);
+      applyCreativeBoostStateFromServices(offerForEdit.services);
       setMonthlyDiscountPercent(offerForEdit.monthly_discount_percent || 0);
       setDiscountScope(offerForEdit.discount_scope || 'core_only');
       setIntroDiscountPercent(offerForEdit.intro_discount_percent || 0);
@@ -398,6 +436,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
         };
       });
       setEditableServices(initialServices);
+      applyCreativeBoostStateFromServices(initialServices);
       initializedFormKeyRef.current = initKey;
       return;
     }
@@ -414,9 +453,43 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
         }
       }
       setEditableServices(suggested);
+      applyCreativeBoostStateFromServices(suggested);
     }
     initializedFormKeyRef.current = initKey;
-  }, [open, lead, lead.potential_services, services, offerForEdit, isLoadingExistingOffer, draftKey, applyDraft]);
+  }, [open, lead, lead.potential_services, services, offerForEdit, isLoadingExistingOffer, draftKey, applyDraft, applyCreativeBoostStateFromServices]);
+
+  useEffect(() => {
+    const computedPrice = Math.max(0, cbCredits * cbPricePerCredit);
+    setEditableServices((prev) => {
+      let changed = false;
+      const next = prev.map((service) => {
+        if (!isCreativeBoostService(service)) return service;
+
+        const nextService: PublicOfferService = {
+          ...service,
+          price: computedPrice,
+          original_price: computedPrice,
+          discount_reason: '',
+          creative_boost_credits: cbCredits,
+          creative_boost_price_per_credit: cbPricePerCredit,
+        };
+
+        if (
+          service.price === nextService.price
+          && (service.original_price ?? null) === (nextService.original_price ?? null)
+          && (service.discount_reason || '') === (nextService.discount_reason || '')
+          && (service.creative_boost_credits ?? null) === (nextService.creative_boost_credits ?? null)
+          && (service.creative_boost_price_per_credit ?? null) === (nextService.creative_boost_price_per_credit ?? null)
+        ) {
+          return service;
+        }
+
+        changed = true;
+        return nextService;
+      });
+      return changed ? next : prev;
+    });
+  }, [cbCredits, cbPricePerCredit, isCreativeBoostService]);
 
   useEffect(() => {
     if (!open || !initializedFormKeyRef.current || createdOfferUrl) return;
@@ -1020,12 +1093,23 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                   <Label className="text-sm font-medium">📦 Služby v nabídce</Label>
                   <div className="space-y-3">
                     {editableServices.map((service, idx) => (
+                      (() => {
+                        const catalogService = services.find((s) => s.id === service.service_id);
+                        const isCreativeBoost = catalogService?.code === 'CREATIVE_BOOST';
+                        return (
                       <EditableOfferServiceCard
                         key={service.id || idx}
                         service={service}
                         onUpdate={(updated) => handleUpdateService(idx, updated)}
                         onRemove={() => handleRemoveService(idx)}
+                        isCreativeBoost={isCreativeBoost}
+                        creativeBoostCredits={cbCredits}
+                        creativeBoostPricePerCredit={cbPricePerCredit}
+                        onCreativeBoostCreditsChange={setCbCredits}
+                        onCreativeBoostPricePerCreditChange={setCbPricePerCredit}
                       />
+                        );
+                      })()
                     ))}
                   </div>
                   
@@ -1083,48 +1167,6 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
                     </div>
                   )}
                   
-                  {/* Creative Boost credit config */}
-                  {editableServices.some(s => {
-                    const cat = services.find(cs => cs.id === s.service_id);
-                    return cat?.code === 'CREATIVE_BOOST';
-                  }) && (
-                    <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">🎨</span>
-                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Creative Boost — nastavení kreditů</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs">Počet kreditů / měsíc</Label>
-                          <Input
-                            type="number"
-                            min={1}
-                            value={cbCredits}
-                            onChange={(e) => setCbCredits(Math.max(1, Number(e.target.value)))}
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Cena za kredit pro klienta</Label>
-                          <div className="flex items-center gap-1">
-                            <Input
-                              type="number"
-                              min={0}
-                              value={cbPricePerCredit}
-                              onChange={(e) => setCbPricePerCredit(Math.max(0, Number(e.target.value)))}
-                              className="h-8 text-sm"
-                            />
-                            <span className="text-xs text-muted-foreground shrink-0">Kč</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Celkem za Creative Boost: <span className="font-semibold">{(cbCredits * cbPricePerCredit).toLocaleString('cs-CZ')} Kč/měs</span>
-                      </div>
-                    </div>
-                  )}
-
-
                   {editableServices.length > 0 && (
                     <div className="rounded-lg border bg-muted/30 space-y-0 overflow-hidden">
                       <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/50">
