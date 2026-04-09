@@ -33,8 +33,6 @@ interface SendContractDialogProps {
   }) => void;
 }
 
-const DEFAULT_GOOGLE_CONTRACT_TEMPLATE_DOC_ID = '1KYziONs6kHi23mo5_LSIMSTopdeqEiSQOrOVEP1HDZo';
-
 export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl, onSend }: SendContractDialogProps) {
   const [copied, setCopied] = useState(false);
   const [showPayload, setShowPayload] = useState(false);
@@ -44,6 +42,7 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
     '';
   const [googleDocsUrl, setGoogleDocsUrl] = useState(getInitialGoogleDocsUrl);
   const lastSavedUrl = useRef(getInitialGoogleDocsUrl());
+  const [googleDocsSavedAt, setGoogleDocsSavedAt] = useState<string | null>(lead.google_docs_contract_saved_at || null);
   const [isSendingToDraft, setIsSendingToDraft] = useState(false);
 
   // Sync URL from lead prop whenever it changes (e.g. after React Query refresh or prop update).
@@ -54,7 +53,8 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
       '';
     setGoogleDocsUrl(freshUrl);
     lastSavedUrl.current = freshUrl;
-  }, [lead.google_docs_contract_url, lead.contract_url]);
+    setGoogleDocsSavedAt(lead.google_docs_contract_saved_at || null);
+  }, [lead.google_docs_contract_url, lead.contract_url, lead.google_docs_contract_saved_at]);
 
   // Auto-save when the dialog opens so URL is always current.
   useEffect(() => {
@@ -65,18 +65,37 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
       '';
     setGoogleDocsUrl(url);
     lastSavedUrl.current = url;
+    setGoogleDocsSavedAt(lead.google_docs_contract_saved_at || null);
+    setHasResetDraft(false);
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGoogleDocsUrlBlur = async () => {
     const trimmed = googleDocsUrl.trim();
     if (trimmed && trimmed.includes('docs.google.com') && trimmed !== lastSavedUrl.current) {
-      lastSavedUrl.current = trimmed;
-      await onSaveContractUrl(trimmed);
+      try {
+        await onSaveContractUrl(trimmed);
+        lastSavedUrl.current = trimmed;
+        const savedAt = new Date().toISOString();
+        setGoogleDocsSavedAt(savedAt);
+      } catch (error) {
+        console.error('Failed to save Google Docs URL:', error);
+        toast.error('Nepodařilo se uložit odkaz na Google Docs');
+      }
     }
   };
+  const googleDocsSavedAtLabel = googleDocsSavedAt
+    ? new Date(googleDocsSavedAt).toLocaleString('cs-CZ', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    : null;
   const [isPreparingContractDoc, setIsPreparingContractDoc] = useState(false);
   const [draftCreated, setDraftCreated] = useState(false);
   const [draftEnvelopeId, setDraftEnvelopeId] = useState<string | null>(null);
+  const [hasResetDraft, setHasResetDraft] = useState(false);
   const { createContract } = useDigiSign();
 
   const leadServices: LeadService[] = Array.isArray(lead.potential_services) ? lead.potential_services : [];
@@ -87,13 +106,21 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
   const currency = lead.currency || 'CZK';
 
   const hasGoogleDocsUrl = googleDocsUrl.trim().length > 0 && googleDocsUrl.includes('docs.google.com');
+  const hasExistingDigisignDraftInCrm = (lead.contract_url || '').includes('app.digisign.org/selfcare/envelopes/');
 
   // Build DigiSign API payload — always as DRAFT
   const digisignPayload = {
     envelope: {
       status: 'draft',
-      email_subject: `Smlouva o spolupráci — ${lead.company_name}`,
-      email_body: `Dobrý den,\n\nv příloze zasíláme smlouvu o spolupráci k podpisu.\n\nDěkujeme,\nTým Socials`,
+      email_subject: `Smlouva o propagaci — ${lead.company_name}`,
+      email_body:
+        `Dobrý den,\n\n` +
+        `posílám Vám smlouvu o propagaci k podpisu.\n\n` +
+        `Pokud budete potřebovat cokoliv upravit nebo vysvětlit, dejte mi prosím vědět.\n\n` +
+        `Děkuji a přeji hezký den,\n` +
+        `Dana Bauerová\n\n` +
+        `dana.bauerova@socials.cz\n` +
+        `Socials.cz`,
       signers: [
         {
           name: lead.contact_name,
@@ -103,7 +130,7 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
         },
       ],
       document: {
-        name: `Smlouva_${lead.company_name.replace(/\s+/g, '_')}.pdf`,
+        name: `${lead.company_name} - Smlouva o propagaci.pdf`,
         source: hasGoogleDocsUrl ? 'google_docs_export' : 'generated',
         google_docs_url: hasGoogleDocsUrl ? googleDocsUrl.trim() : undefined,
         export_format: 'application/pdf',
@@ -173,9 +200,9 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
   const handleOpenGoogleDocs = async () => {
     setIsPreparingContractDoc(true);
     try {
-      const templateId = import.meta.env.VITE_GOOGLE_CONTRACT_TEMPLATE_DOC_ID || DEFAULT_GOOGLE_CONTRACT_TEMPLATE_DOC_ID;
-      const templateUrl = `https://docs.google.com/document/d/${templateId}/edit`;
-      const result = await createContract(lead.id, undefined, templateUrl, true);
+      // Preview flow should always use backend template configuration and create a copy.
+      // Do not pass template URL from frontend (prevents falling back to stale template docs).
+      const result = await createContract(lead.id, undefined, undefined, true);
       if (!result) return;
 
       const generatedGoogleDocUrl =
@@ -190,6 +217,7 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
 
       setGoogleDocsUrl(generatedGoogleDocUrl);
       await onSaveContractUrl(generatedGoogleDocUrl);
+      setGoogleDocsSavedAt(new Date().toISOString());
       window.open(generatedGoogleDocUrl, '_blank');
       toast.success('Smlouva byla připravena, uložena do CRM a otevřena v Google Docs');
     } catch (error) {
@@ -209,7 +237,9 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
     setIsSendingToDraft(true);
 
     try {
-      const result = await createContract(lead.id, undefined, googleDocsUrl.trim());
+      const currentLeadGoogleDocUrl = (lead.google_docs_contract_url || '').trim();
+      const shouldForceNewDraft = hasResetDraft || (currentLeadGoogleDocUrl.length > 0 && googleDocsUrl.trim() !== currentLeadGoogleDocUrl);
+      const result = await createContract(lead.id, undefined, googleDocsUrl.trim(), false, shouldForceNewDraft);
       if (!result) return;
 
       const envelopeId =
@@ -228,20 +258,31 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
         throw new Error('DigiSign returned success without envelope id');
       }
 
+      const digisignDraftUrl =
+        (typeof result === 'object' && result && 'digisign_url' in result && typeof result.digisign_url === 'string')
+          ? result.digisign_url
+          : `https://app.digisign.org/selfcare/envelopes/${envelopeId}/detail`;
       setDraftEnvelopeId(envelopeId);
       setDraftCreated(true);
+      setHasResetDraft(false);
 
-      toast.success('📋 Draft vytvořen v DigiSign — klikněte na odkaz pro dokončení', {
+      toast.success('📋 Smlouva byla odeslána k ruční kontrole Daně Bauerové', {
         duration: 5000,
       });
 
       onSend({
-        contract_url: generatedGoogleDocUrl || googleDocsUrl.trim(),
+        contract_url: digisignDraftUrl,
         digisign_envelope_id: envelopeId,
         digisign_document_url: null,
       });
       if (generatedGoogleDocUrl) {
         setGoogleDocsUrl(generatedGoogleDocUrl);
+        try {
+          await onSaveContractUrl(generatedGoogleDocUrl);
+          setGoogleDocsSavedAt(new Date().toISOString());
+        } catch (error) {
+          console.error('Failed to save generated Google Docs URL:', error);
+        }
       }
     } catch (error) {
       console.error('Failed to create DigiSign draft:', error);
@@ -414,6 +455,19 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
                       className="pl-9 text-sm"
                     />
                   </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={!hasGoogleDocsUrl}
+                    onClick={() => {
+                      window.open(googleDocsUrl.trim(), '_blank', 'noopener,noreferrer');
+                    }}
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Otevřít
+                  </Button>
                 </div>
                 {googleDocsUrl.trim() && !hasGoogleDocsUrl && (
                   <p className="text-[11px] text-destructive flex items-center gap-1">
@@ -422,10 +476,17 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
                   </p>
                 )}
                 {hasGoogleDocsUrl && (
-                  <p className="text-[11px] text-emerald-600 flex items-center gap-1">
-                    <Check className="h-3 w-3" />
-                    Google Doc odkaz rozpoznán
-                  </p>
+                  <div className="space-y-1">
+                    <p className="text-[11px] text-emerald-600 flex items-center gap-1">
+                      <Check className="h-3 w-3" />
+                      Google Doc odkaz rozpoznán
+                    </p>
+                    {googleDocsSavedAtLabel && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Uloženo: {googleDocsSavedAtLabel}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -444,18 +505,19 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
                   <div className="rounded-md border border-emerald-300/40 bg-emerald-500/5 p-3 space-y-2">
                     <p className="text-sm font-medium flex items-center gap-2" style={{ color: 'hsl(var(--success, 142 76% 36%))' }}>
                       <Check className="h-4 w-4" />
-                      Draft smlouvy vytvořen v DigiSign
+                      Smlouva byla odeslána k ruční kontrole Daně Bauerové
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                      Doplňte podpisové archy a odešlete smlouvu k podpisu přímo v DigiSign.
+                      Dana Bauerová provede kontrolu a odešle smlouvu k podpisu přímo v DigiSign.
                     </p>
                   </div>
                   <Button
                     size="sm"
                     className="gap-2 w-full"
                     onClick={() => {
-                      // In production, this would be the real DigiSign envelope URL
-                      const digisignUrl = `https://app.digisign.org/envelope/${draftEnvelopeId}`;
+                      const digisignUrl = draftEnvelopeId
+                        ? `https://app.digisign.org/selfcare/envelopes/${draftEnvelopeId}/detail`
+                        : 'https://app.digisign.org/selfcare';
                       window.open(digisignUrl, '_blank');
                     }}
                   >
@@ -489,6 +551,21 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
                       <Send className="h-4 w-4" />
                       {isSendingToDraft ? 'Vytvářím draft…' : 'Vytvořit draft v DigiSign'}
                     </Button>
+                    {(draftCreated || hasExistingDigisignDraftInCrm) && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setDraftCreated(false);
+                          setDraftEnvelopeId(null);
+                          setHasResetDraft(true);
+                          toast.success('Odeslání bylo resetováno. Můžete vložit jiný odkaz a odeslat znovu.');
+                        }}
+                      >
+                        Resetovat odeslání
+                      </Button>
+                    )}
 
                 {/* Expandable payload preview */}
                 <button

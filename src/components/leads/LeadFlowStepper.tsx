@@ -39,6 +39,8 @@ interface LeadFlowStepperProps {
   onSendContract: () => void;
   onMarkContractSent: () => void;
   onMarkContractSigned: () => void;
+  onCheckDigiSign?: () => void;
+  isCheckingDigiSign?: boolean;
   onConvert: () => void;
   onRemoveService?: (index: number) => void;
 }
@@ -117,6 +119,8 @@ export function LeadFlowStepper({
   onSendContract,
   onMarkContractSent,
   onMarkContractSigned,
+  onCheckDigiSign,
+  isCheckingDigiSign,
   onConvert,
   onRemoveService,
 }: LeadFlowStepperProps) {
@@ -329,42 +333,83 @@ export function LeadFlowStepper({
         label: 'Upravit',
         onClick: onSendContract,
         variant: 'ghost',
-      }] : lead.contract_sent_at && !lead.contract_signed_at ? [{
-        label: 'Potvrdit podpis',
-        onClick: onMarkContractSigned,
-        variant: 'default',
-      }, {
-        label: 'Detail',
-        onClick: onSendContract,
-        variant: 'ghost',
-      }] : lead.contract_signed_at ? [{
+      }] : lead.contract_sent_at && !lead.contract_signed_at ? [
+        ...(lead.digisign_id && onCheckDigiSign ? [{
+          label: isCheckingDigiSign ? 'Kontroluji…' : 'Zkontrolovat v DigiSign',
+          onClick: onCheckDigiSign,
+          variant: 'default' as const,
+        }] : [{
+          label: 'Potvrdit podpis',
+          onClick: onMarkContractSigned,
+          variant: 'default' as const,
+        }]),
+        {
+          label: 'Potvrdit ručně',
+          onClick: onMarkContractSigned,
+          variant: 'ghost' as const,
+        },
+        {
+          label: 'Detail',
+          onClick: onSendContract,
+          variant: 'ghost' as const,
+        },
+      ] : lead.contract_signed_at ? [{
         label: 'Detail smlouvy',
         onClick: onSendContract,
         variant: 'ghost',
       }] : undefined,
       customContent: (
-        <div className="mt-2 rounded-md border bg-muted/30 p-2.5 text-[11px] text-muted-foreground space-y-1">
-          <p className="font-medium text-foreground">Náhled dat do smlouvy</p>
-          <p>
-            Fakturační údaje: {contractBillingAddress || 'chybí'}
-          </p>
-          <p>
-            Fakturační e-mail: {contractInvoiceEmail || 'chybí'}
-          </p>
-          <p>
-            Služby: {services.length > 0
-              ? services.map((service) => {
-                const variants = getServiceCountryVariants(service);
-                return `${service.name}${variants.length > 0
-                  ? ` + ${variants.map((variant) => variant.country_code).join(', ')}`
-                  : ''} (${getServiceTotalPrice(service).toLocaleString('cs-CZ')} ${service.currency || currency}${(service.billing_type || 'monthly') === 'monthly' ? '/měs' : ''})`;
-              }).join(', ')
-              : 'chybí'}
-          </p>
-          <p>
-            Cena: {monthlyTotal.toLocaleString('cs-CZ')} {currency}/měs
-            {oneOffTotal > 0 ? ` + ${oneOffTotal.toLocaleString('cs-CZ')} ${currency} jednorázově` : ''}
-          </p>
+        <div className="mt-2 space-y-2">
+          {(lead.contract_url || lead.signed_contract_url) && (
+            <div className="space-y-1">
+              {lead.signed_contract_url && (
+                <a
+                  href={lead.signed_contract_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-emerald-700 hover:underline dark:text-emerald-400"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  Otevřít podepsanou smlouvu
+                </a>
+              )}
+              {lead.contract_url && (
+                <a
+                  href={lead.contract_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  Otevřít draft smlouvy v DigiSign
+                </a>
+              )}
+            </div>
+          )}
+
+          <div className="rounded-md border bg-muted/30 p-2.5 text-[11px] text-muted-foreground space-y-1">
+            <p className="font-medium text-foreground">Náhled dat do smlouvy</p>
+            <p>
+              Fakturační údaje: {contractBillingAddress || 'chybí'}
+            </p>
+            <p>
+              Fakturační e-mail: {contractInvoiceEmail || 'chybí'}
+            </p>
+            <p>
+              Služby: {services.length > 0
+                ? services.map((service) => {
+                  const variants = getServiceCountryVariants(service);
+                  return `${service.name}${variants.length > 0
+                    ? ` + ${variants.map((variant) => variant.country_code).join(', ')}`
+                    : ''} (${getServiceTotalPrice(service).toLocaleString('cs-CZ')} ${service.currency || currency}${(service.billing_type || 'monthly') === 'monthly' ? '/měs' : ''})`;
+                }).join(', ')
+                : 'chybí'}
+            </p>
+            <p>
+              Cena: {monthlyTotal.toLocaleString('cs-CZ')} {currency}/měs
+              {oneOffTotal > 0 ? ` + ${oneOffTotal.toLocaleString('cs-CZ')} ${currency} jednorázově` : ''}
+            </p>
+          </div>
         </div>
       ),
     },

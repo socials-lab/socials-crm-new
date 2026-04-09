@@ -256,6 +256,7 @@ export interface Engagement {
   // Document links from lead conversion
   offer_url: string | null;
   contract_url: string | null;
+  signed_contract_url: string | null;
   // Success fee for closing the deal
   success_fee_colleague_id: string | null;
   success_fee_percent: number | null;
@@ -683,10 +684,12 @@ export interface Lead {
   
   // Contract tracking (DigiSign)
   google_docs_contract_url: string | null;
+  google_docs_contract_saved_at: string | null;
   contract_url: string | null;
   contract_created_at: string | null;
   contract_sent_at: string | null;
   contract_signed_at: string | null;
+  signed_contract_url: string | null;
   digisign_envelope_id: string | null;
   digisign_document_url: string | null;
   

@@ -60,6 +60,7 @@ import {
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useLeadTransitions } from '@/hooks/useLeadTransitions';
+import { useDigiSign } from '@/hooks/useDigiSign';
 import { ConvertLeadDialog } from './ConvertLeadDialog';
 import { LeadHistoryDialog } from './LeadHistoryDialog';
 import { AddLeadServiceDialog } from './AddLeadServiceDialog';
@@ -112,6 +113,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
   const { updateLeadStage, updateLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
   const { colleagues, services, updateEngagement } = useCRMData();
   const { confirmTransition, isConfirming } = useLeadTransitions();
+  const { checkDigiSignStatus, isLoading: isDigiSignLoading } = useDigiSign();
   const [noteText, setNoteText] = useState('');
   const [isConvertOpen, setIsConvertOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -1245,39 +1247,75 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
                           {lead.contract_signed_at && <CheckCircle2 className="h-4 w-4 text-green-600" />}
                         </div>
                         {lead.contract_signed_at ? (
-                          <p className="text-xs text-green-700">
-                            ✓ Podepsáno {new Date(lead.contract_signed_at).toLocaleDateString('cs-CZ', {
-                              day: 'numeric',
-                              month: 'numeric',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
+                          <div className="space-y-1">
+                            <p className="text-xs text-green-700">
+                              ✓ Podepsáno {new Date(lead.contract_signed_at).toLocaleDateString('cs-CZ', {
+                                day: 'numeric',
+                                month: 'numeric',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                            {lead.signed_contract_url && (
+                              <a
+                                href={lead.signed_contract_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-xs text-primary hover:underline"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                Otevřít podepsanou smlouvu
+                              </a>
+                            )}
+                          </div>
                         ) : (
                           <p className="text-xs text-amber-600">Klient ještě nepodepsal</p>
                         )}
                       </div>
                     </div>
                     {!lead.contract_signed_at && (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => {
-                          updateLead(lead.id, { 
-                            contract_signed_at: new Date().toISOString()
-                          });
-                          // Propagate contract to converted engagement
-                          if (lead.converted_to_engagement_id && lead.contract_url) {
-                            updateEngagement(lead.converted_to_engagement_id, {
-                              contract_url: lead.contract_url
+                      <div className="flex items-center gap-1.5">
+                        {lead.digisign_id && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            disabled={isDigiSignLoading}
+                            onClick={async () => {
+                              const result = await checkDigiSignStatus(lead.id);
+                              if (!result) return;
+                              if (result.is_completed) {
+                                toast.success(`✅ Smlouva je podepsána!${result.propagated_to_engagement ? ' Propsáno i do zakázky.' : ''}`);
+                              } else {
+                                const labels: Record<string, string> = { draft: 'Draft', sent: 'Čeká na podpis', declined: 'Odmítnuto', expired: 'Vypršelo' };
+                                toast.info(`DigiSign: ${labels[result.envelope_status] || result.envelope_status}`);
+                              }
+                            }}
+                          >
+                            {isDigiSignLoading ? '…' : '🔄 Zkontrolovat'}
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const signedUrl = lead.contract_url ? `https://app.digisign.org/selfcare/envelopes/${lead.digisign_id || ''}/detail` : null;
+                            updateLead(lead.id, { 
+                              contract_signed_at: new Date().toISOString(),
+                              signed_contract_url: signedUrl,
                             });
-                          }
-                          toast.success('✅ Smlouva podepsána!' + (lead.converted_to_engagement_id ? ' Odkaz uložen i ke klientovi.' : ''));
-                        }}
-                      >
-                        ✓ Podepsáno
-                      </Button>
+                            if (lead.converted_to_engagement_id) {
+                              updateEngagement(lead.converted_to_engagement_id, {
+                                contract_url: lead.contract_url || undefined,
+                                signed_contract_url: signedUrl || undefined,
+                              });
+                            }
+                            toast.success('✅ Smlouva podepsána!' + (lead.converted_to_engagement_id ? ' Odkaz uložen i ke klientovi.' : ''));
+                          }}
+                        >
+                          ✓ Ručně
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>

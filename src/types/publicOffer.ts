@@ -40,6 +40,7 @@ export interface CountryVariant {
   country_code: string;   // e.g. 'SK', 'DE'
   multiplier: number;     // default 0.5 (50% of base price)
   price: number;          // calculated price = base_price × multiplier
+  original_price?: number; // optional pre-discount price for this market variant
 }
 
 // Structured detail section for "Více informací" expandable

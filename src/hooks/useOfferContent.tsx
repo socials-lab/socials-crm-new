@@ -28,7 +28,7 @@ export const DEFAULT_OFFER_CONTENT: Record<string, Omit<OfferContentBlock, 'id' 
         { stat: '7 let', label: 'na trhu', description: 'Od roku 2018 pomáháme e-shopům růst. Meta, Google, TikTok, Sklik a zlatý Shoptet partner s přímými kontakty na platformy.' },
       ],
       links: [
-        { label: '📈 Případové studie', description: 'Prohlédněte si reálné dopady na tržby klientů', url: 'https://www.socials.cz/pripadove-studie' },
+        { label: '📈 Případové studie', description: 'Prohlédněte si reálné dopady na tržby klientů', url: 'https://socials.cz/#pripadove-studie' },
         { label: '🎙️ Socials Podcast', description: 'Otevřeně mluvíme o marketingu, výkonu a vedení agentury', url: 'https://www.socials.cz/socials-podcast' },
         { label: '⭐ Recenze klientů', description: 'Co o nás říkají naši klienti na Shoptet Partner Portálu', url: 'https://partneri.shoptet.cz/profesionalove/socials-advertising/' },
       ],

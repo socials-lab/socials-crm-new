@@ -14,6 +14,7 @@ export function useDigiSign() {
     templateId?: string,
     googleDocsUrl?: string,
     previewOnly?: boolean,
+    forceNewDraft?: boolean,
   ) => {
     setIsLoading(true);
     setError(null);
@@ -30,6 +31,7 @@ export function useDigiSign() {
         template_id: templateId,
         google_docs_url: googleDocsUrl || null,
         preview_only: previewOnly === true,
+        force_new_draft: forceNewDraft === true,
       };
 
       const { data, error } = await invokeWithTimeout<{ error?: string; success?: boolean; digisign_id?: string; google_doc_url?: string }>(
@@ -131,5 +133,49 @@ export function useDigiSign() {
     }
   };
 
-  return { createContract, getContractStatus, isLoading, error };
+  const checkDigiSignStatus = async (leadId: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const { data: result, error } = await invokeWithTimeout<{
+        success: boolean;
+        envelope_status: string;
+        is_completed: boolean;
+        signed_contract_url: string | null;
+        envelope_detail_url: string;
+        recipients: { name: string; email: string; signedAt: string | null }[];
+        propagated_to_engagement: string | null;
+      }>(
+        'digisign-check-status',
+        {
+          body: { lead_id: leadId },
+          // This check is safe to run with anon fallback if user JWT is stale.
+          authMode: 'optional',
+        },
+        45000
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      if (!result) {
+        throw new Error('DigiSign status check nevrátil data');
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Chyba při kontrole DigiSign';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { createContract, getContractStatus, checkDigiSignStatus, isLoading, error };
 }

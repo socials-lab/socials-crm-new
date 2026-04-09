@@ -265,7 +265,6 @@ const ONBOARDING_STEPS = [
 function ServiceCard({ service, showTypeLabel = false, isDark = false }: { service: PublicOfferService; showTypeLabel?: boolean; isDark?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showDetailedSections, setShowDetailedSections] = useState(false);
-  const [showCreditsPricing, setShowCreditsPricing] = useState(false);
 
   const hasDeliverables = service.deliverables && service.deliverables.length > 0;
   const hasRequirements = service.requirements && service.requirements.length > 0;
@@ -295,12 +294,12 @@ function ServiceCard({ service, showTypeLabel = false, isDark = false }: { servi
       Array.isArray(section.items),
     )
     : [];
-  const creditPricingSections = normalizedDetailedSections.filter((section) =>
-    /hodnota jednotlivých výstupů|expresní dodání/i.test(section.title || ''),
-  );
-  const hasCreativeBoostCreditPricing = isCreativeBoostService && creditPricingSections.length > 0;
   const baseOriginalPrice = service.original_price ?? service.price;
-  const serviceTotalOriginalPrice = baseOriginalPrice + variantsTotal;
+  const variantsOriginalTotal = (service.country_variants || []).reduce(
+    (sum: number, variant: CountryVariant) => sum + (variant.original_price ?? variant.price),
+    0,
+  );
+  const serviceTotalOriginalPrice = baseOriginalPrice + variantsOriginalTotal;
   const hasServiceDiscount = serviceTotalOriginalPrice > serviceTotalPrice;
   const serviceDiscountAmount = Math.max(0, serviceTotalOriginalPrice - serviceTotalPrice);
   const countryFlags = [
@@ -502,34 +501,6 @@ function ServiceCard({ service, showTypeLabel = false, isDark = false }: { servi
                 </div>
               )}
 
-              {hasCreativeBoostCreditPricing && (
-                <Collapsible open={showCreditsPricing} onOpenChange={setShowCreditsPricing}>
-                  <CollapsibleTrigger className="w-full">
-                    <div className="flex items-center justify-center gap-2 py-2 px-4 rounded-lg border border-dashed border-[#94e700]/30 hover:bg-[#94e700]/5 transition-colors text-sm text-muted-foreground hover:text-[#94e700] cursor-pointer">
-                      <span>{showCreditsPricing ? 'Skrýt ceník výstupů (kredity)' : 'Zobrazit ceník výstupů (kredity)'}</span>
-                      <ChevronDown className={cn('h-4 w-4 transition-transform', showCreditsPricing && 'rotate-180')} />
-                    </div>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="mt-4 p-4 rounded-lg bg-foreground/[0.02] border border-foreground/[0.06] space-y-4">
-                      {creditPricingSections.map((section, sectionIndex) => (
-                        <div key={sectionIndex} className="space-y-2">
-                          <h4 className="font-semibold text-sm">{section.emoji} {section.title}</h4>
-                          <ul className="space-y-1.5 ml-6">
-                            {section.items.map((item, itemIndex) => (
-                              <li key={itemIndex} className="flex items-start gap-2 text-sm text-muted-foreground">
-                                <span className={cn("shrink-0 mt-1.5 w-1 h-1 rounded-full", isDark ? "bg-white/30" : "bg-foreground/40")} />
-                                <span>{item}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              )}
-
               {hasRequirements && (
                 <div
                   className={cn(
@@ -565,10 +536,18 @@ function ServiceCard({ service, showTypeLabel = false, isDark = false }: { servi
                         <span className="text-lg">{getCountryFlag(mainCountryCode)}</span>
                         <span>Hlavní trh: {getCountryName(mainCountryCode)}</span>
                       </div>
-                      <span className="font-semibold">
-                        {basePrice.toLocaleString('cs-CZ')} {service.currency}
-                        {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground/70">/měs</span>}
-                      </span>
+                      <div className="text-right">
+                        {baseOriginalPrice > basePrice && (
+                          <div className="text-[11px] text-muted-foreground/80 line-through">
+                            {baseOriginalPrice.toLocaleString('cs-CZ')} {service.currency}
+                            {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground/70">/měs</span>}
+                          </div>
+                        )}
+                        <span className="font-semibold">
+                          {basePrice.toLocaleString('cs-CZ')} {service.currency}
+                          {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground/70">/měs</span>}
+                        </span>
+                      </div>
                     </div>
                     {service.country_variants!.map((variant, vIdx) => (
                       <div key={vIdx} className="flex items-center justify-between text-sm">
@@ -577,18 +556,34 @@ function ServiceCard({ service, showTypeLabel = false, isDark = false }: { servi
                           <span>{getCountryName(variant.country_code)}</span>
                           <span className="text-muted-foreground text-xs">({Math.round(variant.multiplier * 100)} % z ceny)</span>
                         </div>
-                        <span className="font-semibold text-[#94e700]">
-                          +{variant.price.toLocaleString('cs-CZ')} {service.currency}
-                          {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground/70">/měs</span>}
-                        </span>
+                        <div className="text-right">
+                          {(variant.original_price ?? variant.price) > variant.price && (
+                            <div className="text-[11px] text-muted-foreground/80 line-through">
+                              +{(variant.original_price ?? variant.price).toLocaleString('cs-CZ')} {service.currency}
+                              {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground/70">/měs</span>}
+                            </div>
+                          )}
+                          <span className="font-semibold text-[#94e700]">
+                            +{variant.price.toLocaleString('cs-CZ')} {service.currency}
+                            {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground/70">/měs</span>}
+                          </span>
+                        </div>
                       </div>
                     ))}
                     <div className="pt-2 border-t border-foreground/[0.1] flex items-center justify-between text-sm font-semibold">
                       <span>Celkem</span>
-                      <span className="text-[#94e700]">
-                        {serviceTotalPrice.toLocaleString('cs-CZ')} {service.currency}
-                        {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground/70">/měs</span>}
-                      </span>
+                      <div className="text-right">
+                        {hasServiceDiscount && (
+                          <div className="text-[11px] text-muted-foreground/80 line-through">
+                            {serviceTotalOriginalPrice.toLocaleString('cs-CZ')} {service.currency}
+                            {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground/70">/měs</span>}
+                          </div>
+                        )}
+                        <span className="text-[#94e700]">
+                          {serviceTotalPrice.toLocaleString('cs-CZ')} {service.currency}
+                          {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground/70">/měs</span>}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1149,7 +1144,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
     });
   };
   const getServiceMonthlyOriginalPrice = (service: PublicOfferService) => {
-    const variantsTotal = (service.country_variants || []).reduce((sum: number, variant: CountryVariant) => sum + variant.price, 0);
+    const variantsTotal = (service.country_variants || []).reduce((sum: number, variant: CountryVariant) => sum + (variant.original_price ?? variant.price), 0);
     return (service.original_price ?? service.price) + variantsTotal;
   };
 
@@ -1599,7 +1594,13 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
               : afterBundle;
             
             const hasAnyDiscount = bundlePercent > 0 || introPercent > 0;
-            const finalPrice = hasAnyDiscount ? afterBundle : totalMonthly;
+            const finalPrice = introPercent > 0
+              ? afterIntro
+              : hasAnyDiscount
+                ? afterBundle
+                : totalMonthly;
+            const monthlyPriceBeforeAnyDiscount = totalMonthlyBeforeServiceDiscount;
+            const totalMonthlyDiscountAmount = Math.max(0, monthlyPriceBeforeAnyDiscount - finalPrice);
             
             return (
               <div className="space-y-3">
@@ -1607,14 +1608,9 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                   <span className="text-base text-muted-foreground font-medium">Měsíční cena</span>
                   <div className="text-right flex flex-wrap items-baseline justify-end gap-x-2">
-                    {monthlyServiceDiscount > 0 && (
+                    {totalMonthlyDiscountAmount > 0 && (
                       <span className="text-sm text-muted-foreground/70 line-through">
-                        {totalMonthlyBeforeServiceDiscount.toLocaleString('cs-CZ')} {offer.currency}
-                      </span>
-                    )}
-                    {bundlePercent > 0 && (
-                      <span className="text-sm text-muted-foreground/70 line-through">
-                        {totalMonthly.toLocaleString('cs-CZ')} {offer.currency}
+                        {monthlyPriceBeforeAnyDiscount.toLocaleString('cs-CZ')} {offer.currency}
                       </span>
                     )}
                     <span className="text-2xl md:text-4xl font-extrabold text-[#94e700] tracking-tight whitespace-nowrap">
@@ -1624,13 +1620,13 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                   </div>
                 </div>
 
-                {monthlyServiceDiscount > 0 && (
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 text-sm bg-emerald-500/10 rounded-lg px-4 py-2.5 border border-emerald-500/20">
-                    <span className="text-emerald-500 font-medium">
-                      💸 Individuální slevy na službách (včetně položek zdarma)
+                {totalMonthlyDiscountAmount > 0 && (
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 text-sm bg-[#94e700]/10 rounded-lg px-4 py-2.5 border border-[#94e700]/25">
+                    <span className="text-[#94e700] font-medium">
+                      🏷️ Celková sleva měsíčně
                     </span>
-                    <span className="font-bold text-emerald-500 whitespace-nowrap">
-                      -{monthlyServiceDiscount.toLocaleString('cs-CZ')} {offer.currency}/měs
+                    <span className="font-bold text-[#94e700] whitespace-nowrap">
+                      -{totalMonthlyDiscountAmount.toLocaleString('cs-CZ')} {offer.currency}/měs
                     </span>
                   </div>
                 )}
@@ -1697,10 +1693,10 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6">
               {benefitItems.map((item: { icon?: string; title?: string; desc?: string }, i: number) => (
                 <ScrollReveal key={i} delay={i * 100}>
-                  <div className="rounded-xl border border-foreground/[0.06] bg-muted/30 p-5 space-y-2 h-full">
-                    <div className="text-2xl">{item.icon}</div>
+                  <div className="group rounded-xl border border-foreground/[0.06] bg-muted/30 p-5 space-y-2 h-full transition-all duration-300 hover:-translate-y-0.5 hover:border-[#94e700]/35 hover:bg-[#94e700]/[0.06] hover:shadow-[0_0_24px_-12px_rgba(148,231,0,0.45)]">
+                    <div className="text-2xl transition-transform duration-300 group-hover:scale-110">{item.icon}</div>
                     <h3 className="font-semibold text-sm">{item.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed transition-colors duration-300 group-hover:text-foreground/90">{item.desc}</p>
                   </div>
                 </ScrollReveal>
               ))}
@@ -1787,7 +1783,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
         <footer className="pt-8 mt-16 border-t border-foreground/[0.06]">
           <div className="flex flex-col items-center gap-4 text-center">
             <div className="flex flex-wrap items-center justify-center gap-3 text-xs">
-              <a href="https://www.socials.cz/pripadove-studie" target="_blank" rel="noopener noreferrer"
+              <a href="https://socials.cz/#pripadove-studie" target="_blank" rel="noopener noreferrer"
                 className="text-muted-foreground/70 hover:text-[#94e700] transition-colors inline-flex items-center gap-1">
                 Případové studie <ExternalLink className="h-3 w-3" />
               </a>

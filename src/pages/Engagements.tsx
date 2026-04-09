@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isSameMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { Search, Plus, MoreHorizontal, ChevronDown, ChevronUp, Users, Calendar, UserPlus, Trash2, Pencil, User, Check, X, Briefcase, ExternalLink, Monitor, FileText, ChevronLeft, ChevronRight, CalendarOff, AlertTriangle, Receipt, Clock, Loader2, Globe } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, ChevronDown, ChevronUp, Users, Calendar, UserPlus, Trash2, Pencil, User, Check, X, Briefcase, ExternalLink, Monitor, FileText, ChevronLeft, ChevronRight, CalendarOff, AlertTriangle, Receipt, Clock, Loader2, Globe, CheckCircle2 } from 'lucide-react';
 import { getErrorMessage } from '@/lib/errorUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -1419,6 +1419,19 @@ function EngagementsContent() {
                         <FileText className="h-4 w-4 text-muted-foreground" />
                         📎 Smlouva
                       </h4>
+                      {engagement.signed_contract_url && (
+                        <a
+                          href={engagement.signed_contract_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/5 border border-green-500/30 text-sm text-green-700 dark:text-green-400 hover:bg-green-500/10 transition-colors"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Podepsaná smlouva
+                          <ExternalLink className="h-3.5 w-3.5 ml-auto" />
+                        </a>
+                      )}
                       {engagement.contract_url ? (
                         <div className="flex items-center gap-2">
                           <a
@@ -1429,7 +1442,7 @@ function EngagementsContent() {
                             className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background border text-sm text-primary hover:bg-muted transition-colors flex-1"
                           >
                             <FileText className="h-4 w-4" />
-                            Smlouva
+                            {engagement.signed_contract_url ? 'Draft smlouvy (DigiSign)' : 'Smlouva'}
                             <ExternalLink className="h-3.5 w-3.5 ml-auto" />
                           </a>
                           <Button

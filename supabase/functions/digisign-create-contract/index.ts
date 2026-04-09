@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import nodemailer from "npm:nodemailer@6.9.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -57,6 +58,15 @@ interface GoogleServiceAccount {
   client_email: string;
   private_key: string;
   token_uri?: string;
+}
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function parseGoogleDocId(rawUrl: string): string | null {
@@ -220,6 +230,24 @@ async function createEnvelope(token: string, name: string, emailBody: string): P
   return { envelopeId: data.id, selfLink };
 }
 
+function buildDigisignDraftUrl(envelopeId: string, selfLink?: string | null): string {
+  const normalizedIdFromSelfLink = (() => {
+    if (!selfLink) return null;
+    const apiMatch = selfLink.match(/\/api\/envelopes\/([a-zA-Z0-9-]+)/i);
+    if (apiMatch?.[1]) return apiMatch[1];
+    const genericMatch = selfLink.match(/\/envelopes\/([a-zA-Z0-9-]+)/i);
+    if (genericMatch?.[1]) return genericMatch[1];
+    return null;
+  })();
+  const finalEnvelopeId = normalizedIdFromSelfLink || envelopeId;
+  return `https://app.digisign.org/selfcare/envelopes/${finalEnvelopeId}/detail`;
+}
+
+function buildContractTitle(companyName: string | null | undefined): string {
+  const normalizedCompanyName = (companyName || "").trim() || "Klient";
+  return `${normalizedCompanyName} - Smlouva o propagaci`;
+}
+
 // Step 3: Upload PDF file
 async function uploadFile(token: string, pdfBuffer: ArrayBuffer, filename: string): Promise<string> {
   const formData = new FormData();
@@ -349,16 +377,20 @@ async function getGoogleAccessToken(scopes: string[]): Promise<string> {
   if (!serviceAccount) {
     throw new Error("Google Service Account není nakonfigurován");
   }
+  const impersonatedEmail = (Deno.env.get("GOOGLE_DRIVE_IMPERSONATE_EMAIL") || "").trim();
 
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT" };
-  const payload = {
+  const payload: Record<string, string | number> = {
     iss: serviceAccount.client_email,
     scope: scopes.join(" "),
     aud: serviceAccount.token_uri || "https://oauth2.googleapis.com/token",
     exp: now + 3600,
     iat: now,
   };
+  if (impersonatedEmail) {
+    payload.sub = impersonatedEmail;
+  }
 
   const encodedHeader = base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)));
   const encodedPayload = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)));
@@ -448,7 +480,7 @@ async function createAndFillGoogleDocTemplate(
   }
 
   const copyResponse = await fetchWithTimeout(
-    `https://www.googleapis.com/drive/v3/files/${templateDocId}/copy?supportsAllDrives=true`,
+    `https://www.googleapis.com/drive/v3/files/${templateDocId}/copy?supportsAllDrives=true&fields=id,parents`,
     {
       method: "POST",
       headers: {
@@ -484,6 +516,79 @@ async function createAndFillGoogleDocTemplate(
   if (!copiedDocId) {
     throw new Error("Google Docs copy response neobsahuje ID dokumentu");
   }
+  let copiedParents = Array.isArray(copyData?.parents) ? (copyData.parents as string[]) : [];
+  if (copiedParents.length === 0) {
+    const copiedMetaResponse = await fetchWithTimeout(
+      `https://www.googleapis.com/drive/v3/files/${copiedDocId}?supportsAllDrives=true&fields=id,parents`,
+      {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+        },
+      },
+      30000,
+    );
+    if (!copiedMetaResponse.ok) {
+      const body = await copiedMetaResponse.text();
+      throw new Error(`Google Docs copied file metadata fetch failed (${copiedMetaResponse.status}): ${body.slice(0, 220)}`);
+    }
+    const copiedMeta = await copiedMetaResponse.json();
+    copiedParents = Array.isArray(copiedMeta?.parents) ? (copiedMeta.parents as string[]) : [];
+  }
+
+  // Ensure the copy is explicitly placed into the target folder (important for Shared Drives).
+  const primaryTargetParent = targetParents[0];
+  if (primaryTargetParent) {
+    const removeParents = copiedParents
+      .filter((parentId) => typeof parentId === "string" && parentId !== primaryTargetParent)
+      .join(",");
+    const updateUrl = new URL(`https://www.googleapis.com/drive/v3/files/${copiedDocId}`);
+    updateUrl.searchParams.set("supportsAllDrives", "true");
+    updateUrl.searchParams.set("addParents", primaryTargetParent);
+    if (removeParents.length > 0) {
+      updateUrl.searchParams.set("removeParents", removeParents);
+    }
+
+    const moveResponse = await fetchWithTimeout(
+      updateUrl.toString(),
+      {
+        method: "PATCH",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: documentName }),
+      },
+      30000,
+    );
+
+    if (!moveResponse.ok) {
+      const body = await moveResponse.text();
+      throw new Error(`Google Docs move to output folder failed (${moveResponse.status}): ${body.slice(0, 220)}`);
+    }
+
+    const verifyResponse = await fetchWithTimeout(
+      `https://www.googleapis.com/drive/v3/files/${copiedDocId}?supportsAllDrives=true&fields=id,parents,name`,
+      {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+        },
+      },
+      30000,
+    );
+    if (!verifyResponse.ok) {
+      const body = await verifyResponse.text();
+      throw new Error(`Google Docs moved file verification failed (${verifyResponse.status}): ${body.slice(0, 220)}`);
+    }
+    const verifyData = await verifyResponse.json();
+    const verifyParents = Array.isArray(verifyData?.parents) ? (verifyData.parents as string[]) : [];
+    if (!verifyParents.includes(primaryTargetParent)) {
+      throw new Error(
+        `Google Docs copy is not in configured output folder. Expected parent ${primaryTargetParent}, got ${verifyParents.join(",") || "none"}.`
+      );
+    }
+  }
 
   const requests = Object.entries(replacements).map(([placeholder, value]) => ({
     replaceAllText: {
@@ -512,6 +617,8 @@ async function createAndFillGoogleDocTemplate(
     }
   }
 
+  await normalizeAppendixPartyNumbering(copiedDocId, accessToken);
+
   const exportResponse = await fetchWithTimeout(
     `https://www.googleapis.com/drive/v3/files/${copiedDocId}/export?mimeType=application/pdf`,
     {
@@ -535,6 +642,104 @@ async function createAndFillGoogleDocTemplate(
     docUrl: `https://docs.google.com/document/d/${copiedDocId}/edit`,
     pdf,
   };
+}
+
+async function normalizeAppendixPartyNumbering(docId: string, accessToken: string): Promise<void> {
+  const docResponse = await fetchWithTimeout(
+    `https://docs.googleapis.com/v1/documents/${docId}`,
+    {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+      },
+    },
+    30000,
+  );
+
+  if (!docResponse.ok) {
+    const body = await docResponse.text();
+    throw new Error(`Google Docs read for numbering normalization failed (${docResponse.status}): ${body.slice(0, 220)}`);
+  }
+
+  const doc = await docResponse.json();
+  const content = Array.isArray(doc?.body?.content) ? doc.body.content : [];
+
+  type ParagraphInfo = { startIndex: number; text: string };
+  const paragraphs: ParagraphInfo[] = [];
+  for (const item of content) {
+    if (!item?.paragraph || !Array.isArray(item.paragraph.elements)) continue;
+    const startIndex = Number(item.startIndex || 0);
+    let text = "";
+    for (const el of item.paragraph.elements) {
+      if (typeof el?.textRun?.content === "string") {
+        text += el.textRun.content;
+      }
+    }
+    if (startIndex > 0 && text.trim().length > 0) {
+      paragraphs.push({ startIndex, text });
+    }
+  }
+
+  const companyParagraph = paragraphs.find((p) => p.text.includes("Název firmy:"));
+  const socialsParagraph = paragraphs.find((p) => p.text.includes("Socials Advertising s.r.o."));
+  if (!companyParagraph || !socialsParagraph) return;
+
+  const toReplace: Array<{ startIndex: number; newPrefix: string; oldPrefixLength: number }> = [];
+  const companyPrefixMatch = companyParagraph.text.match(/^\s*\d+\)\s*/);
+  const socialsPrefixMatch = socialsParagraph.text.match(/^\s*\d+\)\s*/);
+  if (companyPrefixMatch) {
+    toReplace.push({
+      startIndex: companyParagraph.startIndex,
+      newPrefix: "1)\t",
+      oldPrefixLength: companyPrefixMatch[0].length,
+    });
+  }
+  if (socialsPrefixMatch) {
+    toReplace.push({
+      startIndex: socialsParagraph.startIndex,
+      newPrefix: "2)\t",
+      oldPrefixLength: socialsPrefixMatch[0].length,
+    });
+  }
+  if (toReplace.length === 0) return;
+
+  // Apply from bottom to top so index shifts don't affect subsequent edits.
+  toReplace.sort((a, b) => b.startIndex - a.startIndex);
+  const requests = toReplace.flatMap((item) => ([
+    {
+      deleteContentRange: {
+        range: {
+          startIndex: item.startIndex,
+          endIndex: item.startIndex + item.oldPrefixLength,
+        },
+      },
+    },
+    {
+      insertText: {
+        location: {
+          index: item.startIndex,
+        },
+        text: item.newPrefix,
+      },
+    },
+  ]));
+
+  const normalizeResponse = await fetchWithTimeout(
+    `https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ requests }),
+    },
+    30000,
+  );
+  if (!normalizeResponse.ok) {
+    const body = await normalizeResponse.text();
+    throw new Error(`Google Docs numbering normalization failed (${normalizeResponse.status}): ${body.slice(0, 220)}`);
+  }
 }
 
 async function fillExistingGoogleDocAndExportPdf(
@@ -584,6 +789,8 @@ async function fillExistingGoogleDocAndExportPdf(
       throw new Error(`Google Docs replace (in-place) failed (${batchUpdateResponse.status}): ${body.slice(0, 220)}`);
     }
   }
+
+  await normalizeAppendixPartyNumbering(docId, accessToken);
 
   const exportResponse = await fetchWithTimeout(
     `https://www.googleapis.com/drive/v3/files/${docId}/export?mimeType=application/pdf`,
@@ -635,6 +842,100 @@ async function exportGoogleDocPdf(googleDocsUrl: string): Promise<ArrayBuffer> {
   }
 
   return response.arrayBuffer();
+}
+
+async function sendDigisignReviewEmail(params: {
+  leadId: string;
+  companyName: string;
+  contactName: string | null;
+  monthlyFee: number;
+  setupFee: number;
+  products: string;
+  googleDocUrl: string | null;
+  digisignDraftUrl: string;
+}): Promise<{ sent: boolean; responseText: string }> {
+  const SMTP_USER = Deno.env.get("SMTP_USER");
+  const SMTP_PASS = Deno.env.get("SMTP_PASS");
+  if (!SMTP_USER || !SMTP_PASS) {
+    throw new Error("Missing SMTP credentials for DigiSign review notification email");
+  }
+
+  const appUrl = (Deno.env.get("APP_URL") || "https://crm.socials.cz").replace(/\/+$/, "");
+  const leadUrl = `${appUrl}/leads`;
+  const monthlyLabel = `${Math.round(params.monthlyFee).toLocaleString("cs-CZ")} Kč / měsíc`;
+  const setupLabel = `${Math.round(params.setupFee).toLocaleString("cs-CZ")} Kč`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:24px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:18px 22px;background:#111827;color:#fff;">
+              <div style="font-size:18px;font-weight:700;">📄 Nový DigiSign draft ke kontrole</div>
+              <div style="font-size:13px;opacity:0.9;margin-top:4px;">Prosím zkontroluj a odešli smlouvu v DigiSign.</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 22px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;color:#111827;">
+                <tr><td style="padding:6px 0;color:#71717a;width:180px;">Firma</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(params.companyName)}</td></tr>
+                <tr><td style="padding:6px 0;color:#71717a;">Kontakt</td><td style="padding:6px 0;">${escapeHtml(params.contactName || "—")}</td></tr>
+                <tr><td style="padding:6px 0;color:#71717a;">Měsíční fee</td><td style="padding:6px 0;">${escapeHtml(monthlyLabel)}</td></tr>
+                <tr><td style="padding:6px 0;color:#71717a;">Jednorázově</td><td style="padding:6px 0;">${escapeHtml(setupLabel)}</td></tr>
+                <tr><td style="padding:6px 0;color:#71717a;">Produkty</td><td style="padding:6px 0;">${escapeHtml(params.products || "—")}</td></tr>
+                <tr><td style="padding:6px 0;color:#71717a;">Google Docs</td><td style="padding:6px 0;">${
+                  params.googleDocUrl
+                    ? `<a href="${escapeHtml(params.googleDocUrl)}" style="color:#2563eb;text-decoration:none;">Otevřít dokument</a>`
+                    : "—"
+                }</td></tr>
+              </table>
+
+              <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
+                <a href="${escapeHtml(params.digisignDraftUrl)}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;">
+                  Otevřít draft v DigiSign
+                </a>
+                <a href="${escapeHtml(leadUrl)}" style="display:inline-block;background:#e5e7eb;color:#111827;text-decoration:none;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;">
+                  Otevřít CRM
+                </a>
+              </div>
+
+              <p style="margin-top:16px;color:#6b7280;font-size:12px;">Lead ID: ${escapeHtml(params.leadId)}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS,
+    },
+  });
+
+  const info = await transporter.sendMail({
+    from: `Socials CRM <${SMTP_USER}>`,
+    to: "dana.bauerova@socials.cz",
+    cc: "danny@socials.cz",
+    subject: `Kontrola DigiSign draftu: ${params.companyName}`,
+    html,
+  });
+
+  return { sent: true, responseText: info.messageId || "smtp_sent" };
 }
 
 // Format date in Czech
@@ -720,10 +1021,12 @@ serve(async (req) => {
       lead_id,
       google_docs_url,
       preview_only,
+      force_new_draft,
     }: {
       lead_id: string;
       google_docs_url?: string | null;
       preview_only?: boolean;
+      force_new_draft?: boolean;
     } = await req.json();
     leadId = lead_id;
 
@@ -739,6 +1042,7 @@ serve(async (req) => {
     const DIGISIGN_SECRET_KEY = Deno.env.get("DIGISIGN_SECRET_KEY");
     const PDF_GENERATOR_URL = Deno.env.get("PDF_GENERATOR_URL") || "http://188.245.148.53:8094";
     const isPreviewOnly = preview_only === true;
+    const forceNewDraft = force_new_draft === true;
 
     if (!isPreviewOnly && (!DIGISIGN_ACCESS_KEY || !DIGISIGN_SECRET_KEY)) {
       return new Response(
@@ -770,6 +1074,8 @@ serve(async (req) => {
         onboarding_project_contacts,
         potential_services,
         digisign_id,
+        google_docs_contract_url,
+        google_docs_contract_saved_at,
         contract_url,
         estimated_price
       `)
@@ -783,19 +1089,6 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Lead nenalezen", details: leadError?.message, lead_id }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Idempotency check - prevent duplicate envelope creation
-    if (!isPreviewOnly && lead.digisign_id) {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          already_exists: true,
-          digisign_id: lead.digisign_id,
-          digisign_url: lead.contract_url || null,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -943,42 +1236,152 @@ serve(async (req) => {
     };
     const templateVariables = buildTemplateVariables(contractData);
 
+    // Idempotency check - do not create duplicate envelopes.
+    // Still send review notification email so manual review flow is retriggered.
+    if (!isPreviewOnly && lead.digisign_id && !forceNewDraft) {
+      const existingDigisignUrl = buildDigisignDraftUrl(lead.digisign_id);
+      const providedGoogleDocUrlForEmail =
+        typeof google_docs_url === "string" && google_docs_url.trim().length > 0
+          ? google_docs_url.trim()
+          : null;
+
+      try {
+        const emailResult = await sendDigisignReviewEmail({
+          leadId: lead_id,
+          companyName: lead.company_name || "Neznámá firma",
+          contactName: lead.contact_name || null,
+          monthlyFee,
+          setupFee,
+          products,
+          googleDocUrl: providedGoogleDocUrlForEmail || lead.google_docs_contract_url || null,
+          digisignDraftUrl: existingDigisignUrl,
+        });
+
+        await supabaseAdmin.from("integration_log").insert({
+          service: "digisign",
+          action: "notify_digisign_review_email",
+          related_table: "leads",
+          related_record_id: leadId,
+          request_payload: {
+            to: "dana.bauerova@socials.cz",
+            cc: "danny@socials.cz",
+            company_name: lead.company_name || null,
+            contract_url: existingDigisignUrl,
+            envelope_id: lead.digisign_id,
+            source: "already_exists",
+          },
+          response_payload: { sent: true, response: emailResult.responseText.slice(0, 500) },
+          response_status: 200,
+          is_success: true,
+          triggered_by: userId,
+          duration_ms: Date.now() - startTime,
+        });
+      } catch (emailError) {
+        console.error("Failed to send DigiSign review email for existing draft:", emailError);
+        await supabaseAdmin.from("integration_log").insert({
+          service: "digisign",
+          action: "notify_digisign_review_email",
+          related_table: "leads",
+          related_record_id: leadId,
+          request_payload: {
+            to: "dana.bauerova@socials.cz",
+            cc: "danny@socials.cz",
+            company_name: lead.company_name || null,
+            contract_url: existingDigisignUrl,
+            envelope_id: lead.digisign_id,
+            source: "already_exists",
+          },
+          response_payload: {
+            sent: false,
+            error: emailError instanceof Error ? emailError.message : String(emailError),
+          },
+          response_status: 500,
+          is_success: false,
+          triggered_by: userId,
+          duration_ms: Date.now() - startTime,
+        });
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          already_exists: true,
+          digisign_id: lead.digisign_id,
+          digisign_url: existingDigisignUrl,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Step 1: Generate PDF
-    // Preferred path: copy Google Docs template, replace placeholders, export PDF.
+    // For final DigiSign draft creation, always use the exact Google Docs URL provided by user
+    // (so manual edits like numbering fixes are preserved).
+    // For preview, create a fresh copy from template and prefill placeholders.
     let pdfBuffer: ArrayBuffer;
     let generatedGoogleDocUrl: string | null = null;
+    const configuredTemplateDocId = parseGoogleDocId(Deno.env.get("GOOGLE_CONTRACT_TEMPLATE_DOC_ID") || "");
     const templateDocId =
-      parseGoogleDocId(Deno.env.get("GOOGLE_CONTRACT_TEMPLATE_DOC_ID") || "") ||
+      configuredTemplateDocId ||
       parseGoogleDocId(google_docs_url || "");
     const hasGoogleServiceAccount = !!getGoogleServiceAccount();
+    const providedGoogleDocUrl =
+      typeof google_docs_url === "string" && google_docs_url.trim().length > 0
+        ? google_docs_url.trim()
+        : null;
 
-    if (templateDocId && hasGoogleServiceAccount) {
+    if (isPreviewOnly && !configuredTemplateDocId) {
+      throw new Error("Chybí GOOGLE_CONTRACT_TEMPLATE_DOC_ID pro preview generování smlouvy.");
+    }
+
+    if (!isPreviewOnly && providedGoogleDocUrl) {
+      console.log("Exporting PDF from provided Google Docs URL for DigiSign draft...");
+      pdfBuffer = await exportGoogleDocPdf(providedGoogleDocUrl);
+      generatedGoogleDocUrl = providedGoogleDocUrl;
+    } else if (templateDocId && hasGoogleServiceAccount) {
       try {
         console.log("Creating filled Google Docs copy from template...");
+        const copyDocumentName = ((contractData.company_name || "").trim() || `Lead ${lead_id}`) + " - Smlouva o propagaci";
         const filled = await createAndFillGoogleDocTemplate(
           templateDocId,
-          `Smlouva - ${contractData.company_name} - ${lead_id}`,
+          copyDocumentName,
           templateVariables,
         );
         pdfBuffer = filled.pdf;
         generatedGoogleDocUrl = filled.docUrl;
       } catch (copyError) {
         const msg = copyError instanceof Error ? copyError.message : String(copyError);
-        const requestedDocId = templateDocId || parseGoogleDocId(google_docs_url || "");
-        if (msg.startsWith("GOOGLE_COPY_QUOTA:") && requestedDocId) {
-          console.warn("Google copy quota limitation hit, falling back to in-place template fill", {
+        const serviceAccountEmail = getGoogleServiceAccount()?.client_email || "unknown-service-account";
+        const impersonatedEmail = (Deno.env.get("GOOGLE_DRIVE_IMPERSONATE_EMAIL") || "").trim();
+        const actingAsEmail = impersonatedEmail || serviceAccountEmail;
+        const requestedDocId = parseGoogleDocId(google_docs_url || "");
+        const canUseProvidedDocSafely =
+          !isPreviewOnly &&
+          !!requestedDocId &&
+          requestedDocId !== templateDocId;
+
+        // Safe fallback: if user provided their own Google Doc copy,
+        // fill that document in-place. Never mutate the original template.
+        if (canUseProvidedDocSafely) {
+          console.warn("Template copy failed, using provided non-template Google Doc", {
+            templateDocId,
             requestedDocId,
           });
           const filled = await fillExistingGoogleDocAndExportPdf(requestedDocId, templateVariables);
           pdfBuffer = filled.pdf;
           generatedGoogleDocUrl = filled.docUrl;
         } else {
-          throw copyError;
+          throw new Error(
+            `Nepodařilo se vytvořit kopii Google Docs šablony. Smlouva nesmí zapisovat do originální šablony. ` +
+            `Service account: ${serviceAccountEmail}. Acting as: ${actingAsEmail}. ` +
+            `Vytvořte prosím ručně kopii šablony do své složky, vložte URL kopie do pole v CRM a zkuste to znovu. ` +
+            `Detail: ${msg.slice(0, 320)}`
+          );
         }
       }
-    } else if (google_docs_url && typeof google_docs_url === "string" && google_docs_url.trim().length > 0) {
+    } else if (providedGoogleDocUrl) {
       console.log("Exporting PDF from provided Google Docs URL (no placeholder replacement)...");
-      pdfBuffer = await exportGoogleDocPdf(google_docs_url);
+      pdfBuffer = await exportGoogleDocPdf(providedGoogleDocUrl);
+      generatedGoogleDocUrl = providedGoogleDocUrl;
     } else {
       console.log("Generating PDF from internal template...");
       pdfBuffer = await generateContractPdf(PDF_GENERATOR_URL, contractData);
@@ -992,6 +1395,7 @@ serve(async (req) => {
           .from("leads")
           .update({
             google_docs_contract_url: previewContractUrl,
+            google_docs_contract_saved_at: new Date().toISOString(),
           })
           .eq("id", lead_id);
       }
@@ -1003,7 +1407,7 @@ serve(async (req) => {
         related_table: "leads",
         related_record_id: leadId,
         request_payload: { contractData, templateVariables },
-        response_payload: { google_doc_url: previewContractUrl },
+        response_payload: { google_doc_url: previewContractUrl, template_doc_id_used: configuredTemplateDocId || null },
         response_status: 200,
         is_success: true,
         triggered_by: userId,
@@ -1015,6 +1419,7 @@ serve(async (req) => {
           success: true,
           prepared_only: true,
           google_doc_url: previewContractUrl,
+          template_doc_id_used: configuredTemplateDocId || null,
           template_variables: templateVariables,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -1027,9 +1432,16 @@ serve(async (req) => {
 
 // Step 3: Create envelope
   console.log("Creating envelope...");
-  const envelopeName = `Smlouva o spolupráci - ${lead.company_name}`;
-  const signatureName = 'Socials';
-  const emailBody = `Dobrý den,\n\nprosím o podpis přiložené smlouvy o spolupráci mezi společností ${lead.company_name} a Socials s.r.o.\n\nDěkujeme,\n${signatureName}`;
+  const contractTitle = buildContractTitle(lead.company_name);
+  const envelopeName = contractTitle;
+  const emailBody =
+    `Dobrý den,\n\n` +
+    `posílám Vám smlouvu o propagaci k podpisu.\n\n` +
+    `Pokud budete potřebovat cokoliv upravit nebo vysvětlit, dejte mi prosím vědět.\n\n` +
+    `Děkuji a přeji hezký den,\n` +
+    `Dana Bauerová\n\n` +
+    `dana.bauerova@socials.cz\n` +
+    `Socials.cz`;
   const { envelopeId, selfLink } = await createEnvelope(digisignToken, envelopeName, emailBody);
   console.log(`Envelope created: ${envelopeId}`);
 
@@ -1039,13 +1451,13 @@ serve(async (req) => {
 
     // Step 4: Upload PDF
     console.log("Uploading PDF...");
-    const filename = `smlouva-${lead_id}.pdf`;
+    const filename = `${contractTitle}.pdf`;
     const fileId = await uploadFile(digisignToken, pdfBuffer, filename);
     console.log(`File uploaded: ${fileId}`);
 
     // Step 5: Attach document
     console.log("Attaching document...");
-    await attachDocument(digisignToken, envelopeId, fileId, "Smlouva o spolupráci");
+    await attachDocument(digisignToken, envelopeId, fileId, contractTitle);
     console.log("Document attached");
 
     // Step 6: Add all recipients at once
@@ -1086,13 +1498,17 @@ serve(async (req) => {
 
     // Envelope is fully prepared as draft, save IDs/URL to database
     // DigiSign provides direct envelope URL in selfcare
-    const contractUrl = `https://app.digisign.org/selfcare/envelope/${envelopeId}`;
+    const contractUrl = buildDigisignDraftUrl(envelopeId, selfLink);
 
+    const now = new Date().toISOString();
     const { error: updateError } = await supabaseAdmin
       .from("leads")
       .update({
         digisign_id: envelopeId,
-        contract_created_at: new Date().toISOString(),
+        contract_created_at: now,
+        contract_sent_at: now,
+        google_docs_contract_url: generatedGoogleDocUrl || (google_docs_url || lead.google_docs_contract_url || null),
+        google_docs_contract_saved_at: generatedGoogleDocUrl || google_docs_url ? now : (lead.google_docs_contract_saved_at || null),
         contract_url: contractUrl,
       })
       .eq("id", lead_id);
@@ -1122,10 +1538,64 @@ serve(async (req) => {
       duration_ms: durationMs,
     });
 
+    try {
+      const emailResult = await sendDigisignReviewEmail({
+        leadId: lead_id,
+        companyName: lead.company_name || "Neznámá firma",
+        contactName: lead.contact_name || null,
+        monthlyFee,
+        setupFee,
+        products,
+        googleDocUrl: generatedGoogleDocUrl || providedGoogleDocUrl || lead.google_docs_contract_url || null,
+        digisignDraftUrl: contractUrl,
+      });
+
+      await supabaseAdmin.from("integration_log").insert({
+        service: "digisign",
+        action: "notify_digisign_review_email",
+        related_table: "leads",
+        related_record_id: leadId,
+        request_payload: {
+          to: "dana.bauerova@socials.cz",
+          company_name: lead.company_name || null,
+          contract_url: contractUrl,
+          envelope_id: envelopeId,
+        },
+        response_payload: { sent: true, response: emailResult.responseText.slice(0, 500) },
+        response_status: 200,
+        is_success: true,
+        triggered_by: userId,
+        duration_ms: Date.now() - startTime,
+      });
+    } catch (emailError) {
+      console.error("Failed to send DigiSign review email:", emailError);
+      await supabaseAdmin.from("integration_log").insert({
+        service: "digisign",
+        action: "notify_digisign_review_email",
+        related_table: "leads",
+        related_record_id: leadId,
+        request_payload: {
+          to: "dana.bauerova@socials.cz",
+          company_name: lead.company_name || null,
+          contract_url: contractUrl,
+          envelope_id: envelopeId,
+        },
+        response_payload: {
+          sent: false,
+          error: emailError instanceof Error ? emailError.message : String(emailError),
+        },
+        response_status: 500,
+        is_success: false,
+        triggered_by: userId,
+        duration_ms: Date.now() - startTime,
+      });
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         digisign_id: envelopeId,
+        digisign_url: contractUrl,
         template_variables: templateVariables,
         google_doc_url: generatedGoogleDocUrl,
       }),

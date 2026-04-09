@@ -351,6 +351,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             notice_period_months: toNullableNumber(data.notice_period_months),
             offer_url: offerUrl || null,
             contract_url: lead.contract_url || null,
+            signed_contract_url: lead.signed_contract_url || null,
             managed_countries: [],
             notes: data.engagement_notes || '',
           },

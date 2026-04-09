@@ -76,6 +76,7 @@ import { fetchAresData } from '@/utils/aresUtils';
 import { useVatReliability } from '@/hooks/useVatReliability';
 import { getLeadOfferUrl } from '@/utils/offerUrl';
 import { getOfferDraftInfoForLead, subscribeOfferDraftChanged } from '@/utils/offerDraft';
+import { useDigiSign } from '@/hooks/useDigiSign';
 
 interface LeadDetailDialogProps {
   lead: Lead | null;
@@ -124,6 +125,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
   const { updateLeadStage, updateLead, addNote, getLeadHistory, getLeadById } = useLeadsData();
   const { colleagues, services, engagements, updateEngagement } = useCRMData();
   const { confirmTransition, isConfirming } = useLeadTransitions();
+  const { checkDigiSignStatus, isLoading: isDigiSignLoading } = useDigiSign();
   const [isConvertOpen, setIsConvertOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
@@ -196,16 +198,41 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
   if (!lead) return null;
 
   const handleMarkContractSigned = () => {
-    updateLead(lead.id, { contract_signed_at: new Date().toISOString() });
-    
-    // Propagate contract_url to the converted engagement/client
-    if (lead.converted_to_engagement_id && lead.contract_url) {
-      updateEngagement(lead.converted_to_engagement_id, { 
-        contract_url: lead.contract_url 
+    const signedUrl = lead.digisign_id
+      ? `https://app.digisign.org/selfcare/envelopes/${lead.digisign_id}/detail`
+      : null;
+    updateLead(lead.id, {
+      contract_signed_at: new Date().toISOString(),
+      signed_contract_url: signedUrl,
+    });
+
+    if (lead.converted_to_engagement_id) {
+      updateEngagement(lead.converted_to_engagement_id, {
+        contract_url: lead.contract_url || undefined,
+        signed_contract_url: signedUrl || undefined,
       });
     }
-    
+
     toast.success('✅ Smlouva podepsána! Odkaz uložen k leadu' + (lead.converted_to_engagement_id ? ' i ke klientovi.' : '.'));
+  };
+
+  const handleCheckDigiSign = async () => {
+    const result = await checkDigiSignStatus(lead.id);
+    if (!result) return;
+
+    if (result.is_completed) {
+      toast.success(
+        `✅ Smlouva je podepsána v DigiSign!${result.propagated_to_engagement ? ' Propsáno i do zakázky.' : ''}`,
+      );
+    } else {
+      const statusLabels: Record<string, string> = {
+        draft: 'Draft (nepodepsáno)',
+        sent: 'Odesláno (čeká na podpis)',
+        declined: 'Odmítnuto',
+        expired: 'Vypršelo',
+      };
+      toast.info(`Stav obálky v DigiSign: ${statusLabels[result.envelope_status] || result.envelope_status}`);
+    }
   };
 
   const owner = colleagues.find(c => c.id === lead.owner_id);
@@ -924,6 +951,8 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                     onSendContract={() => setIsContractDialogOpen(true)}
                     onMarkContractSent={() => { updateLead(lead.id, { contract_sent_at: new Date().toISOString() }); toast.success('✉️ Smlouva odeslaná'); }}
                     onMarkContractSigned={handleMarkContractSigned}
+                    onCheckDigiSign={lead.digisign_id ? handleCheckDigiSign : undefined}
+                    isCheckingDigiSign={isDigiSignLoading}
                     onConvert={handleConvertClick}
                     onRemoveService={(index) => {
                       const currentServices = [...(lead.potential_services || [])];
@@ -993,6 +1022,8 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                         }}
                         onMarkContractSent={() => { updateLead(lead.id, { contract_sent_at: new Date().toISOString() }); toast.success('✉️ Smlouva odeslaná'); }}
                         onMarkContractSigned={handleMarkContractSigned}
+                        onCheckDigiSign={lead.digisign_id ? handleCheckDigiSign : undefined}
+                        isCheckingDigiSign={isDigiSignLoading}
                       />
                     </CollapsibleContent>
                   </Collapsible>
@@ -1220,7 +1251,10 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
         onOpenChange={setIsContractDialogOpen}
         lead={lead}
         onSaveContractUrl={async (contractUrl) => {
-          await updateLead(lead.id, { google_docs_contract_url: contractUrl });
+          await updateLead(lead.id, {
+            google_docs_contract_url: contractUrl,
+            google_docs_contract_saved_at: new Date().toISOString(),
+          });
         }}
         onSend={(data) => {
           updateLead(lead.id, {
@@ -1228,7 +1262,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
             digisign_envelope_id: data.digisign_envelope_id,
             digisign_document_url: data.digisign_document_url,
           });
-          toast.success('📄 Smlouva připravena jako draft v DigiSign');
+          toast.success('📄 Smlouva byla odeslána k ruční kontrole Daně Bauerové');
         }}
       />
     </>

@@ -1,12 +1,21 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import nodemailer from "npm:nodemailer@6.9.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, signature",
 };
 
+const DIGISIGN_API_URL = "https://api.digisign.org/api";
+
 const WEBHOOK_TIMESTAMP_TOLERANCE_MS = 5 * 60 * 1000; // 5 minutes
+const SIGNED_CONTRACT_NOTIFY_TO = [
+  "danny@socials.cz",
+  "dana.bauerova@socials.cz",
+  "otas@socials.cz",
+  "david.hala@socials.cz",
+];
 
 // DigiSign webhook payload format per API docs
 interface DigiSignWebhookPayload {
@@ -19,6 +28,106 @@ interface DigiSignWebhookPayload {
   data: {
     status?: string;
   };
+}
+
+function escapeHtml(value: string | null | undefined): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+async function sendContractSignedSummaryEmail(params: {
+  leadId: string;
+  companyName: string | null;
+  envelopeId: string;
+  signedAtIso: string;
+  leadDetailUrl: string;
+  signedContractUrl: string | null;
+  draftUrl: string | null;
+}): Promise<void> {
+  const SMTP_USER = Deno.env.get("SMTP_USER");
+  const SMTP_PASS = Deno.env.get("SMTP_PASS");
+  if (!SMTP_USER || !SMTP_PASS) {
+    throw new Error("Missing SMTP credentials for signed contract notification");
+  }
+
+  const signedAtLabel = new Date(params.signedAtIso).toLocaleString("cs-CZ", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:24px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:18px 22px;background:#065f46;color:#fff;">
+              <div style="font-size:18px;font-weight:700;">✅ Smlouva byla podepsána</div>
+              <div style="font-size:13px;opacity:0.95;margin-top:4px;">DigiSign potvrdil podpis smlouvy a CRM bylo aktualizováno.</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 22px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;color:#111827;">
+                <tr><td style="padding:6px 0;color:#71717a;width:180px;">Firma</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(params.companyName || "Neznámá firma")}</td></tr>
+                <tr><td style="padding:6px 0;color:#71717a;">Lead ID</td><td style="padding:6px 0;">${escapeHtml(params.leadId)}</td></tr>
+                <tr><td style="padding:6px 0;color:#71717a;">DigiSign obálka</td><td style="padding:6px 0;">${escapeHtml(params.envelopeId)}</td></tr>
+                <tr><td style="padding:6px 0;color:#71717a;">Podepsáno</td><td style="padding:6px 0;">${escapeHtml(signedAtLabel)}</td></tr>
+              </table>
+              <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
+                <a href="${escapeHtml(params.leadDetailUrl)}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;">
+                  Otevřít detail leadu v CRM
+                </a>
+                ${
+                  params.signedContractUrl
+                    ? `<a href="${escapeHtml(params.signedContractUrl)}" style="display:inline-block;background:#e5e7eb;color:#111827;text-decoration:none;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;">Otevřít podepsanou smlouvu</a>`
+                    : ""
+                }
+                ${
+                  params.draftUrl
+                    ? `<a href="${escapeHtml(params.draftUrl)}" style="display:inline-block;background:#f3f4f6;color:#111827;text-decoration:none;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;">Otevřít DigiSign draft</a>`
+                    : ""
+                }
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS,
+    },
+  });
+
+  await transporter.sendMail({
+    from: `Socials CRM <${SMTP_USER}>`,
+    to: SIGNED_CONTRACT_NOTIFY_TO.join(", "),
+    subject: `Podepsaná smlouva: ${params.companyName || "Neznámá firma"}`,
+    html,
+  });
 }
 
 // Verify HMAC-SHA256 signature with replay protection
@@ -109,20 +218,33 @@ serve(async (req) => {
     const rawBody = await req.text();
 
     // Verify webhook signature - REQUIRED for security
-    const WEBHOOK_SECRET = Deno.env.get("DIGISIGN_WEBHOOK_SECRET");
+    // DIGISIGN_WEBHOOK_SECRET may contain multiple comma-separated secrets
+    // (one per registered event) — we try each until one validates.
+    const WEBHOOK_SECRETS_RAW = Deno.env.get("DIGISIGN_WEBHOOK_SECRET");
     const signatureHeader = req.headers.get("Signature");
 
-    if (!WEBHOOK_SECRET) {
-      console.error("DIGISIGN_WEBHOOK_SECRET is not configured - webhook verification disabled is a security risk");
+    if (!WEBHOOK_SECRETS_RAW) {
+      console.error("DIGISIGN_WEBHOOK_SECRET is not configured");
       return new Response(
         JSON.stringify({ error: "Webhook secret not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { valid, error } = await verifySignature(signatureHeader, rawBody, WEBHOOK_SECRET);
-    if (!valid) {
-      console.error("Invalid webhook signature:", error);
+    const secrets = WEBHOOK_SECRETS_RAW.split(",").map(s => s.trim()).filter(Boolean);
+    let signatureValid = false;
+    let lastError = "";
+    for (const secret of secrets) {
+      const result = await verifySignature(signatureHeader, rawBody, secret);
+      if (result.valid) {
+        signatureValid = true;
+        break;
+      }
+      lastError = result.error || "";
+    }
+
+    if (!signatureValid) {
+      console.error("Invalid webhook signature (tried", secrets.length, "secrets):", lastError);
       return new Response(
         JSON.stringify({ error: "Invalid signature" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -167,7 +289,7 @@ serve(async (req) => {
     // Find lead by digisign_id
     const { data: lead, error: findError } = await supabaseAdmin
       .from("leads")
-      .select("id, contract_signed_at, digisign_id, company_name")
+      .select("id, contract_signed_at, digisign_id, company_name, contract_url, converted_to_engagement_id")
       .eq("digisign_id", envelopeId)
       .single();
 
@@ -196,26 +318,71 @@ serve(async (req) => {
 
     // Prepare updates based on event type
     const updates: Record<string, unknown> = {};
+    let signedDocumentUrl: string | null = null;
 
     switch (payload.event) {
-      case "envelopeCompleted":
-        // All signers have signed
-        updates.contract_signed_at = new Date().toISOString();
+      case "envelopeCompleted": {
+        const signedAt = new Date().toISOString();
+        updates.contract_signed_at = signedAt;
         console.log(`Envelope ${envelopeId} completed - contract signed`);
+
+        // Build the DigiSign selfcare link as base signed contract URL
+        const envelopeDetailUrl = `https://app.digisign.org/selfcare/envelopes/${envelopeId}/detail`;
+        signedDocumentUrl = envelopeDetailUrl;
+
+        // Try to get a direct signed PDF download URL from DigiSign API
+        try {
+          const DIGISIGN_ACCESS_KEY = Deno.env.get("DIGISIGN_ACCESS_KEY");
+          const DIGISIGN_SECRET_KEY = Deno.env.get("DIGISIGN_SECRET_KEY");
+
+          if (DIGISIGN_ACCESS_KEY && DIGISIGN_SECRET_KEY) {
+            const authRes = await fetch(`${DIGISIGN_API_URL}/auth-token`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ accessKey: DIGISIGN_ACCESS_KEY, secretKey: DIGISIGN_SECRET_KEY }),
+            });
+
+            if (authRes.ok) {
+              const authData = await authRes.json();
+              const token = authData.token;
+
+              // Fetch envelope documents to get signed PDF
+              const docsRes = await fetch(`${DIGISIGN_API_URL}/envelopes/${envelopeId}/documents`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+
+              if (docsRes.ok) {
+                const docsData = await docsRes.json();
+                const items = docsData.items || docsData;
+                if (Array.isArray(items) && items.length > 0) {
+                  const doc = items[0];
+                  const docId = doc.id;
+                  if (docId) {
+                    signedDocumentUrl = `${DIGISIGN_API_URL}/envelopes/${envelopeId}/documents/${docId}/download`;
+                    console.log(`Signed document download URL: ${signedDocumentUrl}`);
+                  }
+                }
+              }
+            }
+          }
+        } catch (docError) {
+          console.error("Failed to fetch signed document URL (using fallback):", docError);
+        }
+
+        updates.signed_contract_url = signedDocumentUrl;
         break;
+      }
 
       case "envelopeDeclined":
-        // A signer declined to sign
         console.log(`Envelope ${envelopeId} declined`);
         break;
 
       case "envelopeExpired":
-        // Envelope expired before all signatures
         console.log(`Envelope ${envelopeId} expired`);
         break;
     }
 
-    // Apply updates
+    // Apply updates to lead
     if (Object.keys(updates).length > 0) {
       const { error: updateError } = await supabaseAdmin
         .from("leads")
@@ -226,7 +393,6 @@ serve(async (req) => {
         const durationMs = Date.now() - startTime;
         console.error("Update error:", updateError);
 
-        // Log update error
         await supabaseAdmin.from("integration_log").insert({
           service: "digisign",
           action: "webhook_received",
@@ -242,6 +408,28 @@ serve(async (req) => {
           JSON.stringify({ error: "Nepodařilo se aktualizovat smlouvu" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+    }
+
+    // Propagate signed contract URL to engagement (if lead already converted)
+    if (payload.event === "envelopeCompleted" && lead.converted_to_engagement_id) {
+      try {
+        const engagementUpdates: Record<string, unknown> = {};
+        if (signedDocumentUrl) {
+          engagementUpdates.signed_contract_url = signedDocumentUrl;
+        }
+        if (lead.contract_url) {
+          engagementUpdates.contract_url = lead.contract_url;
+        }
+        if (Object.keys(engagementUpdates).length > 0) {
+          await supabaseAdmin
+            .from("engagements")
+            .update(engagementUpdates)
+            .eq("id", lead.converted_to_engagement_id);
+          console.log(`Propagated signed contract URL to engagement ${lead.converted_to_engagement_id}`);
+        }
+      } catch (engError) {
+        console.error("Failed to propagate to engagement:", engError);
       }
     }
 
@@ -262,13 +450,58 @@ serve(async (req) => {
               type: "contract_signed",
               title: "Smlouva podepsána!",
               message: `Smlouva podepsána pro: "${companyName}"`,
-              link: `/leads?openLead=${lead.id}`, 
-              metadata: { lead_id: lead.id, company_name: companyName },
+              link: `/leads?openLead=${lead.id}`,
+              metadata: {
+                lead_id: lead.id,
+                company_name: companyName,
+                signed_contract_url: signedDocumentUrl,
+              },
             }))
           );
         }
       } catch (notifError) {
         console.error("Failed to create notifications:", notifError);
+      }
+
+      try {
+        const appUrl = (Deno.env.get("APP_URL") || "https://crm.socials.cz").replace(/\/+$/, "");
+        const leadDetailUrl = `${appUrl}/leads?openLead=${lead.id}`;
+        await sendContractSignedSummaryEmail({
+          leadId: lead.id,
+          companyName: lead.company_name || null,
+          envelopeId,
+          signedAtIso: (updates.contract_signed_at as string) || new Date().toISOString(),
+          leadDetailUrl,
+          signedContractUrl: signedDocumentUrl,
+          draftUrl: lead.contract_url || null,
+        });
+        await supabaseAdmin.from("integration_log").insert({
+          service: "digisign",
+          action: "notify_contract_signed_summary_email",
+          related_table: "leads",
+          related_record_id: lead.id,
+          request_payload: {
+            lead_id: lead.id,
+            envelope_id: envelopeId,
+            recipients: SIGNED_CONTRACT_NOTIFY_TO,
+          },
+          is_success: true,
+        });
+      } catch (mailError) {
+        console.error("Failed to send signed contract summary email:", mailError);
+        await supabaseAdmin.from("integration_log").insert({
+          service: "digisign",
+          action: "notify_contract_signed_summary_email",
+          related_table: "leads",
+          related_record_id: lead.id,
+          request_payload: {
+            lead_id: lead.id,
+            envelope_id: envelopeId,
+            recipients: SIGNED_CONTRACT_NOTIFY_TO,
+          },
+          is_success: false,
+          error_message: mailError instanceof Error ? mailError.message : "unknown email error",
+        });
       }
     }
 
