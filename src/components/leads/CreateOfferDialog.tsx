@@ -216,7 +216,7 @@ function generateToken(): string {
 
 // Default portfolio links that can be added
 const DEFAULT_PORTFOLIO_OPTIONS: Omit<PortfolioLink, 'id'>[] = [
-  { title: 'Case Study: E-shop Fashion Brand', url: 'https://www.canva.com/design/example1', type: 'case_study' },
+  { title: 'Case Study: E-shop Fashion Brand', url: 'https://socials.cz/#pripadove-studie', type: 'case_study' },
   { title: 'Ukázka kampaní pro B2B klienty', url: 'https://www.canva.com/design/example2', type: 'presentation' },
   { title: 'Reference od klientů', url: 'https://socials.cz/reference', type: 'reference' },
 ];

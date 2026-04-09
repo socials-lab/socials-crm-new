@@ -275,8 +275,17 @@ function ServiceCard({ service, showTypeLabel = false, isDark = false }: { servi
   const hasDetailedSections = normalizedDetailedSections.length > 0;
   const hasDetails = hasDeliverables || service.offer_description || service.frequency || service.start_timeline || hasCountryVariants || hasDetailedSections;
   const baseOriginalPrice = service.original_price ?? service.price;
+  const getVariantOriginalPrice = (variant: CountryVariant) => {
+    if (typeof variant.original_price === 'number' && Number.isFinite(variant.original_price)) {
+      return variant.original_price;
+    }
+    if (typeof variant.multiplier === 'number' && variant.multiplier > 0 && variant.multiplier < 1) {
+      return baseOriginalPrice;
+    }
+    return variant.price;
+  };
   const variantsOriginalTotal = (service.country_variants || []).reduce(
-    (sum: number, variant: CountryVariant) => sum + (variant.original_price ?? variant.price),
+    (sum: number, variant: CountryVariant) => sum + getVariantOriginalPrice(variant),
     0,
   );
   const serviceTotalOriginalPrice = baseOriginalPrice + variantsOriginalTotal;
@@ -537,9 +546,9 @@ function ServiceCard({ service, showTypeLabel = false, isDark = false }: { servi
                           <span className="text-muted-foreground text-xs">({Math.round(variant.multiplier * 100)} % z ceny)</span>
                         </div>
                         <div className="text-right">
-                          {(variant.original_price ?? variant.price) > variant.price && (
+                          {getVariantOriginalPrice(variant) > variant.price && (
                             <div className="text-[11px] text-muted-foreground/80 line-through">
-                              +{(variant.original_price ?? variant.price).toLocaleString('cs-CZ')} {service.currency}
+                              +{getVariantOriginalPrice(variant).toLocaleString('cs-CZ')} {service.currency}
                               {service.billing_type === 'monthly' && <span className="text-xs font-normal text-muted-foreground/70">/měs</span>}
                             </div>
                           )}
@@ -1120,6 +1129,18 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
 
   const isExpired = offer.valid_until && new Date(offer.valid_until) < new Date();
   const offerServices: PublicOfferService[] = Array.isArray(offer.services) ? offer.services : [];
+  const getVariantOriginalPrice = (service: PublicOfferService, variant: CountryVariant) => {
+    if (typeof variant.original_price === 'number' && Number.isFinite(variant.original_price)) {
+      return variant.original_price;
+    }
+
+    const serviceBaseOriginal = service.original_price ?? service.price;
+    if (typeof variant.multiplier === 'number' && variant.multiplier > 0 && variant.multiplier < 1) {
+      return serviceBaseOriginal;
+    }
+
+    return variant.price;
+  };
   const getServiceMonthlyPrice = (service: PublicOfferService) => {
     const variantsTotal = (service.country_variants || []).reduce((sum: number, variant: CountryVariant) => sum + variant.price, 0);
     return service.price + variantsTotal;
@@ -1135,7 +1156,10 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
     });
   };
   const getServiceMonthlyOriginalPrice = (service: PublicOfferService) => {
-    const variantsTotal = (service.country_variants || []).reduce((sum: number, variant: CountryVariant) => sum + (variant.original_price ?? variant.price), 0);
+    const variantsTotal = (service.country_variants || []).reduce(
+      (sum: number, variant: CountryVariant) => sum + getVariantOriginalPrice(service, variant),
+      0,
+    );
     return (service.original_price ?? service.price) + variantsTotal;
   };
 
