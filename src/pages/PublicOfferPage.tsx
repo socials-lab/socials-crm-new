@@ -1232,7 +1232,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
               Návrh spolupráce
             </p>
             <h1 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 leading-[1.1]">
-              Strategická nabídka pro{' '}
+              Nabídka správy výkonnostních kampaní pro{' '}
               <span className="text-[#94e700]">
                 {offer.website 
                   ? offer.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
