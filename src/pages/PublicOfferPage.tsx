@@ -44,13 +44,14 @@ import {
   Share2,
   Sun,
   Moon,
+  X,
   Star as StarIcon,
   Plus as PlusIcon,
   History,
   Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { PublicOfferService, PublicOffer, PortfolioLink, CountryVariant } from '@/types/publicOffer';
+import type { PublicOfferService, PublicOffer, PortfolioLink, CountryVariant, ServiceDetailSection } from '@/types/publicOffer';
 import { getCountryFlag, getCountryName } from '@/constants/countries';
 import socialsLogoDark from '@/assets/socials-logo-dark.svg';
 import socialsLogo from '@/assets/socials-logo.svg';
@@ -91,12 +92,47 @@ function toLoomEmbedUrl(url: string | null | undefined): string | null {
 
 function hasMeaningfulHtmlContent(html: string | null | undefined): boolean {
   if (!html || typeof html !== 'string') return false;
+  const hasImage = /<img\b[^>]*>/i.test(html);
   const textOnly = html
-    .replace(/<img\b[^>]*>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<img\b[^>]*>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/gi, ' ')
     .trim();
-  return textOnly.length > 0;
+  return hasImage || textOnly.length > 0;
+}
+
+function sanitizeAuditHtml(html: string | null | undefined): string {
+  if (!html || typeof html !== 'string') return '';
+
+  // Pasted editor content often carries inline black text styles that become invisible in dark mode.
+  const withoutStyleTags = html.replace(/<style[\s\S]*?<\/style>/gi, '');
+  const withoutUnsafeInlineColors = withoutStyleTags.replace(/style=(["'])(.*?)\1/gi, (_match, quote: string, styleValue: string) => {
+    const cleanedRules = styleValue
+      .split(';')
+      .map((rule) => rule.trim())
+      .filter(Boolean)
+      .filter((rule) => {
+        const prop = rule.split(':')[0]?.trim().toLowerCase();
+        return !['color', 'background', 'background-color', 'fill', 'stroke'].includes(prop);
+      });
+
+    if (cleanedRules.length === 0) return '';
+    return `style=${quote}${cleanedRules.join('; ')}${quote}`;
+  });
+
+  // Normalize image rendering from rich-text editors:
+  // 1) wrap each image with a gallery item span
+  // 2) unwrap paragraphs that contain only these images
+  const withWrappedImages = withoutUnsafeInlineColors.replace(
+    /<img\b[^>]*>/gi,
+    (imgTag) => `<span class="audit-gallery-item">${imgTag}</span>`,
+  );
+
+  return withWrappedImages.replace(
+    /<p>\s*((?:<span class="audit-gallery-item">[\s\S]*?<\/span>\s*)+)<\/p>/gi,
+    '$1',
+  );
 }
 
 // Helper to get content block from offer snapshot or fallback to hardcoded defaults
@@ -152,77 +188,21 @@ function SectionDivider() {
   return <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent my-16" />;
 }
 
-// Scroll reveal wrapper
+// Lightweight section wrapper (scroll-reveal via IntersectionObserver was flaky and could leave content at opacity-0).
 function ScrollReveal({ children, className, delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.unobserve(el);
-        }
-      },
-      { threshold: 0.1, rootMargin: '0px 0px -60px 0px' }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
   return (
-    <div
-      ref={ref}
-      className={cn(
-        'transition-all duration-700 ease-out',
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8',
-        className
-      )}
-      style={{ transitionDelay: `${delay}ms` }}
-    >
+    <div className={className} style={delay ? { transitionDelay: `${delay}ms` } : undefined}>
       {children}
     </div>
   );
 }
 
-// Stagger children reveal
-function StaggerReveal({ children, className, staggerMs = 100 }: { children: ReactNode[]; className?: string; staggerMs?: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.unobserve(el);
-        }
-      },
-      { threshold: 0.05, rootMargin: '0px 0px -40px 0px' }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
+function StaggerReveal({ children, className }: { children: ReactNode; className?: string; staggerMs?: number }) {
+  const childArray = React.Children.toArray(children);
   return (
-    <div ref={ref} className={className}>
-      {(children as ReactNode[]).map((child, i) => (
-        <div
-          key={i}
-          className="transition-all duration-500 ease-out"
-          style={{
-            opacity: isVisible ? 1 : 0,
-            transform: isVisible ? 'translateY(0)' : 'translateY(20px)',
-            transitionDelay: `${i * staggerMs}ms`,
-          }}
-        >
-          {child}
-        </div>
+    <div className={className}>
+      {childArray.map((child, i) => (
+        <div key={i}>{child}</div>
       ))}
     </div>
   );
@@ -268,9 +248,7 @@ function ServiceCard({ service, showTypeLabel = false, isDark = false }: { servi
 
   const hasDeliverables = service.deliverables && service.deliverables.length > 0;
   const hasRequirements = service.requirements && service.requirements.length > 0;
-  const hasDetailedSections = service.detailed_sections && service.detailed_sections.length > 0;
   const hasCountryVariants = service.country_variants && service.country_variants.length > 0;
-  const hasDetails = hasDeliverables || service.offer_description || service.frequency || service.start_timeline || hasCountryVariants;
   const mainCountryCode = (service.managed_countries && service.managed_countries[0]) || 'CZ';
   const basePrice = service.price;
   const variantsTotal = (service.country_variants || []).reduce((sum: number, variant: CountryVariant) => sum + variant.price, 0);
@@ -294,6 +272,8 @@ function ServiceCard({ service, showTypeLabel = false, isDark = false }: { servi
       Array.isArray(section.items),
     )
     : [];
+  const hasDetailedSections = normalizedDetailedSections.length > 0;
+  const hasDetails = hasDeliverables || service.offer_description || service.frequency || service.start_timeline || hasCountryVariants || hasDetailedSections;
   const baseOriginalPrice = service.original_price ?? service.price;
   const variantsOriginalTotal = (service.country_variants || []).reduce(
     (sum: number, variant: CountryVariant) => sum + (variant.original_price ?? variant.price),
@@ -599,7 +579,7 @@ function ServiceCard({ service, showTypeLabel = false, isDark = false }: { servi
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <div className="mt-4 p-4 rounded-lg bg-foreground/[0.02] border border-foreground/[0.06] space-y-5">
-                      {service.detailed_sections!.map((section, sIdx) => (
+                      {normalizedDetailedSections.map((section, sIdx) => (
                         <div key={sIdx}>
                           <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
                             <span>{section.emoji}</span>
@@ -1048,6 +1028,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   const [copied, setCopied] = useState(false);
   const [isDark, setIsDark] = useState(true);
   const [showOfferHistory, setShowOfferHistory] = useState(false);
+  const [auditPreviewImage, setAuditPreviewImage] = useState<{ src: string; alt: string } | null>(null);
   const loomEmbedUrl = toLoomEmbedUrl(offer?.loom_url);
 
   const handleCopyLink = async () => {
@@ -1095,6 +1076,15 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!auditPreviewImage) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setAuditPreviewImage(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [auditPreviewImage]);
+
   if (loading) {
     return (
       <div className="offer-light min-h-screen bg-background">
@@ -1129,6 +1119,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
   }
 
   const isExpired = offer.valid_until && new Date(offer.valid_until) < new Date();
+  const offerServices: PublicOfferService[] = Array.isArray(offer.services) ? offer.services : [];
   const getServiceMonthlyPrice = (service: PublicOfferService) => {
     const variantsTotal = (service.country_variants || []).reduce((sum: number, variant: CountryVariant) => sum + variant.price, 0);
     return service.price + variantsTotal;
@@ -1148,18 +1139,18 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
     return (service.original_price ?? service.price) + variantsTotal;
   };
 
-  const coreMonthly = offer.services
+  const coreMonthly = offerServices
     .filter(s => s.billing_type === 'monthly' && s.service_type === 'core')
     .reduce((sum, s) => sum + getServiceMonthlyPrice(s), 0);
-  const addonMonthly = offer.services
+  const addonMonthly = offerServices
     .filter(s => s.billing_type === 'monthly' && s.service_type !== 'core')
     .reduce((sum, s) => sum + getServiceMonthlyPrice(s), 0);
   const totalMonthly = coreMonthly + addonMonthly;
-  const totalMonthlyBeforeServiceDiscount = offer.services
+  const totalMonthlyBeforeServiceDiscount = offerServices
     .filter(s => s.billing_type === 'monthly')
     .reduce((sum, s) => sum + getServiceMonthlyOriginalPrice(s), 0);
   const monthlyServiceDiscount = Math.max(0, totalMonthlyBeforeServiceDiscount - totalMonthly);
-  const totalOneOff = offer.services
+  const totalOneOff = offerServices
     .filter(s => s.billing_type === 'one_off')
     .reduce((sum, s) => sum + getServiceMonthlyPrice(s), 0);
   const historyEntries = [...(offer.history || [])]
@@ -1171,12 +1162,27 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
     (typeof offer.recommendation_intro === 'string' && offer.recommendation_intro.trim().length > 0) ||
     (typeof offer.custom_note === 'string' && offer.custom_note.trim().length > 0);
   const fallbackLastChange = offer.updated_at || offer.created_at;
+  const normalizedAuditHtml = sanitizeAuditHtml(offer.audit_html);
   const lastChangeDate = hasVersionHistory
     ? new Date(historyEntries[0].timestamp)
     : (fallbackLastChange ? new Date(fallbackLastChange) : null);
   const hasLastChangeDate = !!lastChangeDate && !Number.isNaN(lastChangeDate.getTime());
 
   const onboardingUrl = `/onboarding/${offer.lead_id}`;
+  const handleAuditImageClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    const image = target.closest('img');
+    if (!image) return;
+
+    const src = image.getAttribute('src')?.trim();
+    if (!src || /^javascript:/i.test(src)) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const alt = (image.getAttribute('alt') || 'Náhled banneru').trim() || 'Náhled banneru';
+    setAuditPreviewImage({ src, alt });
+  };
 
   return (
     <div className={cn(isDark ? "offer-dark" : "offer-light", "min-h-screen bg-background transition-colors duration-300")}>
@@ -1388,14 +1394,18 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                   subtitle="Na základě analýzy vašich reklamních účtů a webu jsme identifikovali klíčové oblasti pro zlepšení."
                 />
                 
-                {offer.audit_html ? (
+                {normalizedAuditHtml ? (
                   <div 
-                    className="prose prose-sm max-w-none [&_img]:max-w-full [&_img]:rounded-xl [&_img]:border [&_img]:border-foreground/10 [&_img]:my-4 [&_img]:shadow-lg [&_p]:text-sm [&_p]:text-foreground/80 [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:text-sm [&_li]:text-foreground/80 [&_strong]:text-foreground [&_em]:text-foreground/70"
-                    dangerouslySetInnerHTML={{ __html: offer.audit_html }}
+                    onClick={handleAuditImageClick}
+                    className={cn(
+                      'prose prose-sm max-w-none [&_span.audit-gallery-item]:inline-block [&_span.audit-gallery-item]:align-top [&_span.audit-gallery-item]:w-full [&_span.audit-gallery-item]:sm:w-[calc(50%-0.5rem)] [&_span.audit-gallery-item]:lg:w-[calc(33.333%-0.5rem)] [&_span.audit-gallery-item]:mr-2 [&_span.audit-gallery-item]:mb-3 [&_img]:w-full [&_img]:h-auto [&_img]:max-h-none [&_img]:object-contain [&_img]:rounded-lg [&_img]:border [&_img]:border-foreground/10 [&_img]:my-1 [&_img]:shadow-none [&_img]:bg-transparent [&_img]:cursor-zoom-in [&_p]:text-sm [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:text-sm [&_strong]:text-foreground [&_em]:text-foreground/70',
+                      isDark ? 'prose-invert [&_p]:text-foreground/90 [&_li]:text-foreground/85' : '[&_p]:text-foreground/80 [&_li]:text-foreground/80',
+                    )}
+                    dangerouslySetInnerHTML={{ __html: normalizedAuditHtml }}
                   />
-                ) : (
+                ) : (typeof offer.audit_summary === 'string' && offer.audit_summary.trim().length > 0) ? (
                   <div className="space-y-3">
-                    {offer.audit_summary!.split('\n').filter(line => line.trim().length > 0).map((finding, idx) => {
+                    {offer.audit_summary.split('\n').filter(line => line.trim().length > 0).map((finding, idx) => {
                       const cleanFinding = finding.replace(/^[-•*]\s*/, '').trim();
                       if (!cleanFinding) return null;
                       return (
@@ -1411,7 +1421,7 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                       );
                     })}
                   </div>
-                )}
+                ) : null}
 
                 {offer.recommendation_intro && (
                   <div className="mt-6 p-5 rounded-xl bg-[#94e700]/[0.05] border border-[#94e700]/20">
@@ -1435,6 +1445,35 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
                       </div>
                     </div>
                   </div>
+                )}
+
+                {auditPreviewImage && createPortal(
+                  <div
+                    className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+                    onClick={() => setAuditPreviewImage(null)}
+                  >
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAuditPreviewImage(null);
+                      }}
+                      aria-label="Zavřít náhled"
+                      className="absolute top-4 right-4 md:top-6 md:right-6 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                    <img
+                      src={auditPreviewImage.src}
+                      alt={auditPreviewImage.alt}
+                      className="max-w-full max-h-[88vh] rounded-2xl shadow-2xl object-contain"
+                      onClick={() => setAuditPreviewImage(null)}
+                    />
+                    <p className="absolute bottom-5 text-xs text-white/70">
+                      Klikněte kamkoliv pro zavření
+                    </p>
+                  </div>,
+                  document.body,
                 )}
               </section>
             </ScrollReveal>
@@ -1473,20 +1512,20 @@ export default function PublicOfferPage({ testToken }: { testToken?: string }) {
             </p>
           </div>
           
-          {offer.services.some(s => s.service_type === 'core') && offer.services.some(s => s.service_type === 'addon') && (
+          {offerServices.some(s => s.service_type === 'core') && offerServices.some(s => s.service_type === 'addon') && (
             <ServiceStructureExplanation />
           )}
           
           {(() => {
-            const coreServices = sortFreeServicesLast(offer.services.filter(s => s.service_type === 'core' && s.billing_type !== 'one_off'));
-            const addonServices = sortFreeServicesLast(offer.services.filter(s => s.service_type === 'addon' && s.billing_type !== 'one_off'));
-            const oneOffServices = sortFreeServicesLast(offer.services.filter(s => s.billing_type === 'one_off'));
-            const otherServices = sortFreeServicesLast(offer.services.filter(s => !s.service_type && s.billing_type !== 'one_off'));
+            const coreServices = sortFreeServicesLast(offerServices.filter(s => s.service_type === 'core' && s.billing_type !== 'one_off'));
+            const addonServices = sortFreeServicesLast(offerServices.filter(s => s.service_type === 'addon' && s.billing_type !== 'one_off'));
+            const oneOffServices = sortFreeServicesLast(offerServices.filter(s => s.billing_type === 'one_off'));
+            const otherServices = sortFreeServicesLast(offerServices.filter(s => !s.service_type && s.billing_type !== 'one_off'));
             
             if (coreServices.length === 0 && addonServices.length === 0 && oneOffServices.length === 0) {
               return (
                 <div className="space-y-3">
-                  {offer.services.map((service, idx) => (
+                  {offerServices.map((service, idx) => (
                     <ServiceCard key={service.id || idx} service={service} isDark={isDark} />
                   ))}
                 </div>
