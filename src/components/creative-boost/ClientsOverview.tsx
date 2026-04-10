@@ -69,7 +69,15 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
     getSettingsHistory,
     ensureClientMonthsForActiveEngagements,
   } = useCreativeBoostData();
-  const { colleagues, engagements, engagementServices, assignments, getClientById, updateEngagementService } = useCRMData();
+  const { colleagues, engagements, engagementServices, assignments, services, getClientById, updateEngagementService } = useCRMData();
+  const creativeBoostServiceId = useMemo(() => {
+    const cbService = services.find(
+      (service) =>
+        service.code?.toLowerCase() === 'creative_boost' ||
+        service.name?.toLowerCase().includes('creative boost'),
+    );
+    return cbService?.id ?? null;
+  }, [services]);
   
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<MonthStatus | 'all'>('all');
@@ -168,16 +176,26 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
       const engagementStartDate = linkedEngagement?.start_date ? new Date(linkedEngagement.start_date) : null;
       const engagementEndDate = linkedEngagement?.end_date ? new Date(linkedEngagement.end_date) : null;
 
+      const isCreativeBoostLinkedService = Boolean(
+        linkedService &&
+        (
+          (creativeBoostServiceId && linkedService.service_id === creativeBoostServiceId) ||
+          linkedService.creative_boost_price_per_credit !== null ||
+          linkedService.name?.toLowerCase().includes('creative boost')
+        )
+      );
+
       return Boolean(
         linkedService &&
         linkedService.is_active &&
-        linkedService.creative_boost_price_per_credit !== null &&
+        isCreativeBoostLinkedService &&
+        ((linkedService.creative_boost_price_per_credit ?? monthData?.pricePerCredit ?? 0) > 0) &&
         (!serviceStartDate || serviceStartDate <= monthEnd) &&
         (!engagementStartDate || engagementStartDate <= monthEnd) &&
         (!engagementEndDate || engagementEndDate >= monthStart)
       );
     });
-  }, [getClientMonthSummaries, year, month, engagementServices, engagements, getPreferredClientMonth]);
+  }, [getClientMonthSummaries, year, month, engagementServices, engagements, getPreferredClientMonth, creativeBoostServiceId]);
 
   const filteredSummaries = useMemo(() => {
     return summaries.filter(s => {
@@ -192,10 +210,10 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
         : null;
 
       const matchesSearch = search === '' ||
-        s.clientName.toLowerCase().includes(search.toLowerCase()) ||
-        s.brandName.toLowerCase().includes(search.toLowerCase()) ||
+        (s.clientName || '').toLowerCase().includes(search.toLowerCase()) ||
+        (s.brandName || '').toLowerCase().includes(search.toLowerCase()) ||
         Boolean(engagementName && engagementName.toLowerCase().includes(search.toLowerCase())) ||
-        Boolean(assignedColleague && assignedColleague.full_name.toLowerCase().includes(search.toLowerCase()));
+        Boolean(assignedColleague && assignedColleague.full_name?.toLowerCase().includes(search.toLowerCase()));
       const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
       const matchesDesigner = designerFilter === 'all' || primaryDesignerId === designerFilter;
       return matchesSearch && matchesStatus && matchesDesigner;
@@ -320,7 +338,8 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
       // Also update the source engagement_services record to keep them in sync
       if (field === 'maxCredits' || field === 'pricePerCredit' || field === 'rewardBannerPerCredit' || field === 'rewardVideoPerCredit') {
         if (!monthData.engagementServiceId) {
-          throw new Error(`Missing engagementServiceId for Creative Boost month ${monthData.id}.`);
+          console.warn(`Missing engagementServiceId for Creative Boost month ${monthData.id}, skipping service sync.`);
+          return;
         }
         const serviceUpdate: Record<string, unknown> = {};
         if (field === 'maxCredits') {
@@ -352,6 +371,16 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
     return { monthData, summary };
   };
 
+  const totals = useMemo(() => {
+    let totalMax = 0;
+    let totalUsed = 0;
+    summaries.forEach((s) => {
+      totalMax += s.maxCredits;
+      totalUsed += s.usedCredits;
+    });
+    return { totalMax, totalUsed, activeCount: summaries.length };
+  }, [summaries]);
+
   if (summaries.length === 0) {
     return (
       <Card>
@@ -366,8 +395,56 @@ export function ClientsOverview({ year, month }: ClientsOverviewProps) {
     );
   }
 
+  const usagePercTotal = totals.totalMax > 0 ? (totals.totalUsed / totals.totalMax) * 100 : 0;
+
   return (
     <div className="space-y-4">
+      {/* Summary stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
+              <Palette className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Aktivní zakázky</p>
+              <p className="text-xl font-bold">{totals.activeCount}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-700 shrink-0">
+              <Zap className="h-5 w-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-muted-foreground">Kredity (vyčerpáno / celkem)</p>
+              <p className="text-xl font-bold">
+                {totals.totalUsed}
+                <span className="text-sm font-normal text-muted-foreground"> / {totals.totalMax}</span>
+              </p>
+              <Progress value={Math.min(usagePercTotal, 100)} className={cn("h-1.5 mt-1", usagePercTotal > 100 && "[&>div]:bg-destructive")} />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-lg shrink-0",
+              totals.totalMax - totals.totalUsed >= 0 ? "bg-green-100 text-green-700" : "bg-destructive/10 text-destructive"
+            )}>
+              <span className="text-lg font-bold">{totals.totalMax - totals.totalUsed >= 0 ? '✓' : '!'}</span>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Zbývající kredity</p>
+              <p className={cn("text-xl font-bold", totals.totalMax - totals.totalUsed < 0 && "text-destructive")}>
+                {totals.totalMax - totals.totalUsed}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">

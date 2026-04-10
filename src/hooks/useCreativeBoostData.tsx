@@ -289,12 +289,12 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
         );
 
         if (orphanRows.length > 1) {
-          throw new Error(
-            `Creative Boost data integrity issue: multiple orphan month rows for client ${clientId} ${year}-${month}.`
+          console.warn(
+            `Creative Boost data integrity issue: multiple orphan month rows for client ${clientId} ${year}-${month}. Using first one.`
           );
         }
 
-        if (orphanRows.length === 1) {
+        if (orphanRows.length >= 1) {
           const orphan = orphanRows[0];
           const { data: repaired, error: repairError } = await supabase
             .from('creative_boost_client_months')
@@ -713,6 +713,17 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
     [outputs, getClientById, outputTypes, calculateOutputCredits]
   );
 
+  // Find Creative Boost service by name pattern (must be defined before useMemo/useCallback that reference it)
+  const cbServiceId = useMemo(() => {
+    const cbService = services.find(
+      (s) =>
+        s.code?.toLowerCase() === 'creative_boost' ||
+        s.name?.toLowerCase().includes('creative boost') ||
+        s.name?.toLowerCase().includes('cb'),
+    );
+    return cbService?.id;
+  }, [services]);
+
   const getColleagueCreditsByClient = useCallback((colleagueId: string, year: number, month: number): ColleagueClientRewardSummary[] => {
     // Group outputs by client
     const clientOutputsMap = new Map<string, { outputs: typeof outputs, clientMonth: CreativeBoostClientMonth | undefined }>();
@@ -788,7 +799,11 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
         const creativeBoostService = engagementServices.find((service) => (
           service.engagement_id === clientMonth.engagementId &&
           service.is_active &&
-          service.creative_boost_price_per_credit !== null
+          (
+            (cbServiceId ? service.service_id === cbServiceId : false) ||
+            service.creative_boost_price_per_credit !== null ||
+            service.name?.toLowerCase().includes('creative boost')
+          )
         ));
         if (!creativeBoostService) {
           dataIssues.push(`Creative Boost service for engagement ${clientMonth.engagementId} was not found.`);
@@ -825,7 +840,7 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
     }
 
     return results.sort((a, b) => b.totalReward - a.totalReward);
-  }, [outputs, clientMonths, engagementServices, engagements, getClientById, calculateOutputCredits, outputTypes]);
+  }, [outputs, clientMonths, engagementServices, engagements, getClientById, calculateOutputCredits, outputTypes, cbServiceId]);
 
   const getClientMonthByEngagementServiceId = useCallback(
     (engagementServiceId: string, year: number, month: number) => {
@@ -909,15 +924,6 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
   }, [outputTypes]);
 
   // Auto-sync: Ensure CreativeBoostClientMonth records exist for all active engagements with CB service
-  // Find Creative Boost service by name pattern
-  const cbServiceId = useMemo(() => {
-    const cbService = services.find(s => 
-      s.name.toLowerCase().includes('creative boost') || 
-      s.name.toLowerCase().includes('cb')
-    );
-    return cbService?.id;
-  }, [services]);
-  
   const ensureClientMonthsForActiveEngagements = useCallback(
     async (year: number, month: number) => {
       if (!cbServiceId) return; // No Creative Boost service found
@@ -1004,7 +1010,10 @@ export function CreativeBoostProvider({ children }: { children: ReactNode }) {
 
   const updateClientMonth = async (id: string, data: Partial<CreativeBoostClientMonth>): Promise<void> => {
     const existing = clientMonths.find(cm => cm.id === id);
-    if (!existing) throw new Error('Client month not found');
+    if (!existing) {
+      console.warn(`Client month ${id} not found, skipping update.`);
+      return;
+    }
 
     const changes: Omit<CreativeBoostSettingsChange, 'id' | 'changedAt'>[] = [];
 

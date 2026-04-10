@@ -151,6 +151,7 @@ function EngagementsContent() {
   const highlightedRef = useRef<HTMLDivElement>(null);
   const { isSuperAdmin, canSeeFinancials, role } = useUserRole();
   const canDeleteEngagement = isSuperAdmin || role === 'admin';
+  const canViewContracts = isSuperAdmin || role === 'admin';
   const canViewFinancials = isSuperAdmin || canSeeFinancials;
 
   const {
@@ -1495,82 +1496,84 @@ function EngagementsContent() {
                     </div>
 
                     {/* Smlouva section - PDF upload */}
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-sm flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        📎 Smlouva
-                      </h4>
-                      {engagement.signed_contract_url && (
-                        <a
-                          href={engagement.signed_contract_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/5 border border-green-500/30 text-sm text-green-700 dark:text-green-400 hover:bg-green-500/10 transition-colors"
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                          Podepsaná smlouva
-                          <ExternalLink className="h-3.5 w-3.5 ml-auto" />
-                        </a>
-                      )}
-                      {engagement.contract_url ? (
-                        <div className="flex items-center gap-2">
+                    {canViewContracts && (
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-sm flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          📎 Smlouva
+                        </h4>
+                        {engagement.signed_contract_url && (
                           <a
-                            href={engagement.contract_url}
+                            href={engagement.signed_contract_url}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background border text-sm text-primary hover:bg-muted transition-colors flex-1"
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/5 border border-green-500/30 text-sm text-green-700 dark:text-green-400 hover:bg-green-500/10 transition-colors"
                           >
-                            <FileText className="h-4 w-4" />
-                            {engagement.signed_contract_url ? 'Draft smlouvy (DigiSign)' : 'Smlouva'}
+                            <CheckCircle2 className="h-4 w-4" />
+                            Podepsaná smlouva
                             <ExternalLink className="h-3.5 w-3.5 ml-auto" />
                           </a>
+                        )}
+                        {engagement.contract_url ? (
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={engagement.contract_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background border text-sm text-primary hover:bg-muted transition-colors flex-1"
+                            >
+                              <FileText className="h-4 w-4" />
+                              {engagement.signed_contract_url ? 'Draft smlouvy (DigiSign)' : 'Smlouva'}
+                              <ExternalLink className="h-3.5 w-3.5 ml-auto" />
+                            </a>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                safeUpdateEngagement(engagement.id, { contract_url: null }, 'Smlouva odebrána');
+                              }}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        ) : (
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive"
+                            variant="outline"
+                            size="sm"
+                            className="h-9 text-sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              safeUpdateEngagement(engagement.id, { contract_url: null }, 'Smlouva odebrána');
+                              const input = document.createElement('input');
+                              input.type = 'file';
+                              input.accept = '.pdf';
+                              input.onchange = async (evt) => {
+                                const file = (evt.target as HTMLInputElement).files?.[0];
+                                if (!file) return;
+                                try {
+                                  const { data, error } = await supabase.storage
+                                    .from('contracts')
+                                    .upload(`${engagement.id}/${file.name}`, file, { upsert: true });
+                                  if (error) throw error;
+                                  const { data: urlData } = supabase.storage.from('contracts').getPublicUrl(data.path);
+                                  safeUpdateEngagement(engagement.id, { contract_url: urlData.publicUrl }, 'Smlouva nahrána');
+                                } catch (err) {
+                                  toast.error('Nepodařilo se nahrát smlouvu');
+                                  console.error(err);
+                                }
+                              };
+                              input.click();
                             }}
                           >
-                            <X className="h-3.5 w-3.5" />
+                            <Plus className="h-3.5 w-3.5 mr-1" />
+                            Nahrát smlouvu
                           </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-9 text-sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const input = document.createElement('input');
-                            input.type = 'file';
-                            input.accept = '.pdf';
-                            input.onchange = async (evt) => {
-                              const file = (evt.target as HTMLInputElement).files?.[0];
-                              if (!file) return;
-                              try {
-                                const { data, error } = await supabase.storage
-                                  .from('contracts')
-                                  .upload(`${engagement.id}/${file.name}`, file, { upsert: true });
-                                if (error) throw error;
-                                const { data: urlData } = supabase.storage.from('contracts').getPublicUrl(data.path);
-                                safeUpdateEngagement(engagement.id, { contract_url: urlData.publicUrl }, 'Smlouva nahrána');
-                              } catch (err) {
-                                toast.error('Nepodařilo se nahrát smlouvu');
-                                console.error(err);
-                              }
-                            };
-                            input.click();
-                          }}
-                        >
-                          <Plus className="h-3.5 w-3.5 mr-1" />
-                          Nahrát smlouvu
-                        </Button>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Integrace section - shows status of automations */}
                     {(() => {

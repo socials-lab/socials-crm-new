@@ -61,6 +61,7 @@ const convertSchema = z.object({
 });
 
 type ConvertFormData = z.infer<typeof convertSchema>;
+const CREATIVE_BOOST_SERVICE_CODE = 'CREATIVE_BOOST';
 
 interface TeamMember {
   colleague_id: string;
@@ -278,6 +279,10 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         selected_tier: ls.selected_tier || null,
         intro_discount_percent: ls.intro_discount_percent ?? null,
         intro_discount_months: ls.intro_discount_months ?? null,
+        creative_boost_credits: ls.creative_boost_credits ?? null,
+        creative_boost_price_per_credit: ls.creative_boost_price_per_credit ?? null,
+        creative_boost_graphic_reward: ls.creative_boost_graphic_reward ?? null,
+        creative_boost_editor_reward: ls.creative_boost_editor_reward ?? null,
         intro_discount_start_date: ls.intro_discount_percent && ls.intro_discount_months
           ? toDateOnlyString(new Date())
           : null,
@@ -368,6 +373,93 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
       if (!conversionResult?.success) {
         throw new Error('Převod selhal - neočekávaná odpověď');
+      }
+
+      // STEP 5b: Ensure Creative Boost service settings + client month are initialized
+      // RPC currently does not persist Creative Boost-specific fields from lead services.
+      try {
+        const cbLeadServices = (lead.potential_services || []).filter((leadService) => {
+          const catalogService = services.find((service) => service.id === leadService.service_id);
+          return (
+            catalogService?.code === CREATIVE_BOOST_SERVICE_CODE ||
+            leadService.name?.toLowerCase().includes('creative boost')
+          );
+        });
+
+        if (cbLeadServices.length > 0 && conversionResult.engagement_id && conversionResult.client_id) {
+          const { data: createdEngagementServices, error: createdServicesError } = await supabase
+            .from('engagement_services')
+            .select('id, service_id, name')
+            .eq('engagement_id', conversionResult.engagement_id)
+            .eq('is_active', true);
+
+          if (createdServicesError) throw createdServicesError;
+
+          const startDate = data.start_date ? new Date(data.start_date) : new Date();
+          const monthDate = Number.isNaN(startDate.getTime()) ? new Date() : startDate;
+          const targetYear = monthDate.getFullYear();
+          const targetMonth = monthDate.getMonth() + 1;
+
+          for (const cbLeadService of cbLeadServices) {
+            const matchedEngagementService = (createdEngagementServices || []).find((service) =>
+              service.service_id === cbLeadService.service_id || service.name === cbLeadService.name,
+            );
+            if (!matchedEngagementService) continue;
+
+            let credits = cbLeadService.creative_boost_credits && cbLeadService.creative_boost_credits > 0
+              ? cbLeadService.creative_boost_credits
+              : null;
+            let pricePerCredit = cbLeadService.creative_boost_price_per_credit && cbLeadService.creative_boost_price_per_credit > 0
+              ? cbLeadService.creative_boost_price_per_credit
+              : null;
+
+            if (!credits && pricePerCredit && cbLeadService.price > 0) {
+              credits = Math.round(cbLeadService.price / pricePerCredit);
+            }
+            if (!pricePerCredit && credits && credits > 0 && cbLeadService.price > 0) {
+              pricePerCredit = Math.round(cbLeadService.price / credits);
+            }
+            if (!credits && !pricePerCredit && cbLeadService.price > 0) {
+              pricePerCredit = 400;
+              credits = Math.round(cbLeadService.price / pricePerCredit);
+            }
+
+            if (!credits || !pricePerCredit) continue;
+
+            const { error: updateServiceError } = await supabase
+              .from('engagement_services')
+              .update({
+                creative_boost_min_credits: credits,
+                creative_boost_max_credits: credits,
+                creative_boost_price_per_credit: pricePerCredit,
+                creative_boost_reward_per_credit_banner: cbLeadService.creative_boost_graphic_reward ?? null,
+                creative_boost_reward_per_credit_video: cbLeadService.creative_boost_editor_reward ?? null,
+                creative_boost_fixed_billing: true,
+              })
+              .eq('id', matchedEngagementService.id);
+
+            if (updateServiceError) throw updateServiceError;
+
+            const { error: upsertMonthError } = await supabase
+              .from('creative_boost_client_months')
+              .upsert({
+                client_id: conversionResult.client_id,
+                year: targetYear,
+                month: targetMonth,
+                min_credits: credits,
+                max_credits: credits,
+                price_per_credit: pricePerCredit,
+                status: 'active',
+                engagement_id: conversionResult.engagement_id,
+                engagement_service_id: matchedEngagementService.id,
+              }, { onConflict: 'client_id,year,month' });
+
+            if (upsertMonthError) throw upsertMonthError;
+          }
+        }
+      } catch (cbInitErr) {
+        console.warn('Creative Boost initialization failed after conversion (non-blocking):', cbInitErr);
+        toast.warning('Zakázka vytvořena, ale Creative Boost měsíc se nepodařilo inicializovat automaticky.');
       }
 
       // STEP 6: Create Fakturoid subject AFTER successful conversion
@@ -531,10 +623,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   const oneOffTotal = lead.potential_services
     ?.filter(s => s.billing_type === 'one_off')
     .reduce((sum, s) => sum + s.price, 0) || 0;
-  if (!lead.currency) {
-    throw new Error(`Lead ${lead.id} has no currency`);
-  }
-  const currency = lead.currency;
+  const currency = lead.currency || 'CZK';
 
   // Check if lead has at least one service
   const hasServices = (lead.potential_services?.length ?? 0) > 0;

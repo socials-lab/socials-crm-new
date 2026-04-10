@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Component, type ReactNode, type ErrorInfo } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,6 +7,45 @@ import { OutputTypesConfig } from '@/components/creative-boost/OutputTypesConfig
 import { useUserRole } from '@/hooks/useUserRole';
 import { format, addMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
+
+class CreativeBoostErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state: { error: Error | null } = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('Creative Boost crashed:', error, info);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="p-6 space-y-4">
+          <h2 className="text-lg font-semibold text-destructive">
+            Creative Boost — chyba při načítání
+          </h2>
+          <pre className="text-sm bg-muted p-4 rounded overflow-auto max-h-60">
+            {this.state.error.message}
+            {'\n'}
+            {this.state.error.stack}
+          </pre>
+          <button
+            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:opacity-90"
+            onClick={() => this.setState({ error: null })}
+          >
+            Zkusit znovu
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function CreativeBoostContent() {
   const { isSuperAdmin, role } = useUserRole();
@@ -92,7 +131,11 @@ function CreativeBoostContent() {
 }
 
 const CreativeBoost = () => {
-  return <CreativeBoostContent />;
+  return (
+    <CreativeBoostErrorBoundary>
+      <CreativeBoostContent />
+    </CreativeBoostErrorBoundary>
+  );
 };
 
 export default CreativeBoost;
