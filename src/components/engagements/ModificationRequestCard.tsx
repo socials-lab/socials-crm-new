@@ -313,7 +313,7 @@ export function ModificationRequestCard({
             </p>
             <p>
               <span className="text-muted-foreground">Cena:</span>{' '}
-              <span className="line-through text-muted-foreground">{c.old_price.toLocaleString('cs-CZ')}</span>
+              <span className="line-through text-muted-foreground">{(c.old_price ?? 0).toLocaleString('cs-CZ')}</span>
               {' → '}
               <InlineEditableNumber value={c.new_price} canEdit={canInlineEdit} onSave={(v) => updateFn({ new_price: v })} suffix={c.currency} className="font-medium text-primary" />
             </p>
@@ -325,7 +325,7 @@ export function ModificationRequestCard({
         return (
           <div className="space-y-1 text-sm">
             <p><span className="text-muted-foreground">Služba:</span> {c.service_name}</p>
-            <p><span className="text-muted-foreground">Aktuální cena:</span> {c.price.toLocaleString('cs-CZ')} {c.currency}</p>
+            <p><span className="text-muted-foreground">Aktuální cena:</span> {(c.price ?? 0).toLocaleString('cs-CZ')} {c.currency || 'CZK'}</p>
           </div>
         );
       }
@@ -404,8 +404,8 @@ export function ModificationRequestCard({
             <p><span className="text-muted-foreground">Zakázka:</span>{' '}
               <InlineEditableText value={c.engagement_name} canEdit={canInlineEdit} onSave={(v) => updateFn({ engagement_name: v })} className="font-medium" />
             </p>
-            <p><span className="text-muted-foreground">Služby:</span> {c.services.length}×</p>
-            {c.services.map((s, i) => (
+            <p><span className="text-muted-foreground">Služby:</span> {c.services?.length ?? 0}×</p>
+            {(c.services ?? []).map((s, i) => (
               <div key={i} className="ml-3">
                 <p>• <InlineEditableText value={s.name} canEdit={canInlineEdit} onSave={(v) => updateServiceInNewEngagement(i, { name: v })} className="font-medium" />
                   {' — '}<InlineEditableNumber value={s.price} canEdit={canInlineEdit} onSave={(v) => updateServiceInNewEngagement(i, { price: v })} suffix={`${s.currency}/${s.billing_type === 'monthly' ? 'měs' : 'jednorázově'}`} />
@@ -421,7 +421,7 @@ export function ModificationRequestCard({
                 )}
               </div>
             ))}
-            <p className="font-medium"><span className="text-muted-foreground">Celkem:</span> {c.total_monthly_price.toLocaleString('cs-CZ')} {c.currency}/měs</p>
+            <p className="font-medium"><span className="text-muted-foreground">Celkem:</span> {(c.total_monthly_price ?? 0).toLocaleString('cs-CZ')} {c.currency || 'CZK'}/měs</p>
             {c.is_different_sro && c.onboarding_email && (
               <p className="text-xs text-muted-foreground mt-1">📋 Klient vyplní údaje přes onboarding formulář ({c.onboarding_email})</p>
             )}

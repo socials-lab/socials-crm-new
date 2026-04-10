@@ -310,7 +310,7 @@ export function BulkEditStep({ engagementId, onChange, initialData }: BulkEditSt
                   <div className="flex items-center gap-1 text-sm">
                     {priceChanged && !isDeactivated && (
                       <span className="line-through text-muted-foreground text-xs">
-                        {es.old_price.toLocaleString('cs-CZ')}
+                        {(es.old_price ?? 0).toLocaleString('cs-CZ')}
                       </span>
                     )}
                     <Input
@@ -354,7 +354,7 @@ export function BulkEditStep({ engagementId, onChange, initialData }: BulkEditSt
                           <div className="flex items-center gap-1 shrink-0">
                             {changed && (
                               <span className="text-xs line-through text-muted-foreground">
-                                {a.old_value.toLocaleString('cs-CZ')}
+                                {(a.old_value ?? 0).toLocaleString('cs-CZ')}
                               </span>
                             )}
                             <Input

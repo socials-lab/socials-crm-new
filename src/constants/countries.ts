@@ -34,16 +34,12 @@ export type ManagedCountryCode = typeof MANAGED_COUNTRIES[number]['code'];
 
 export function getCountryFlag(code: string): string {
   const country = MANAGED_COUNTRIES.find((item) => item.code === code);
-  if (!country) {
-    throw new Error(`Unknown managed country code: ${code}`);
-  }
+  if (!country) return '🌍';
   return country.flag;
 }
 
 export function getCountryName(code: string): string {
   const country = MANAGED_COUNTRIES.find((item) => item.code === code);
-  if (!country) {
-    throw new Error(`Unknown managed country code: ${code}`);
-  }
+  if (!country) return code;
   return country.name;
 }

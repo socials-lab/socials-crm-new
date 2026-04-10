@@ -1,12 +1,12 @@
 import type { EngagementService } from '@/types/crm';
 import { getEffectiveServicePrice } from '@/utils/introDiscountUtils';
 
-function assertCreativeBoostPricing(service: EngagementService): { maxCredits: number; pricePerCredit: number } {
-  if (service.creative_boost_max_credits === null || service.creative_boost_price_per_credit === null) {
-    throw new Error(`Creative Boost service ${service.id} is missing max credits or price per credit.`);
-  }
-  if (service.creative_boost_max_credits < 0 || service.creative_boost_price_per_credit < 0) {
-    throw new Error(`Creative Boost service ${service.id} has invalid negative pricing configuration.`);
+function getCreativeBoostPricing(service: EngagementService): { maxCredits: number; pricePerCredit: number } | null {
+  if (
+    service.creative_boost_max_credits == null || service.creative_boost_price_per_credit == null ||
+    service.creative_boost_max_credits < 0 || service.creative_boost_price_per_credit < 0
+  ) {
+    return null;
   }
   return {
     maxCredits: service.creative_boost_max_credits,
@@ -15,8 +15,9 @@ function assertCreativeBoostPricing(service: EngagementService): { maxCredits: n
 }
 
 export function getCreativeBoostExpectedMonthlyRevenue(service: EngagementService): number {
-  const { maxCredits, pricePerCredit } = assertCreativeBoostPricing(service);
-  return maxCredits * pricePerCredit;
+  const pricing = getCreativeBoostPricing(service);
+  if (!pricing) return service.price ?? 0;
+  return pricing.maxCredits * pricing.pricePerCredit;
 }
 
 export function getEngagementMonthlyRevenue(

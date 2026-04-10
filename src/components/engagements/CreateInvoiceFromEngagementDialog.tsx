@@ -82,7 +82,8 @@ function getServiceSuggestedInvoiceAmount(service: EngagementService): number {
     return service.price;
   }
   if (service.creative_boost_price_per_credit === null || service.creative_boost_max_credits === null) {
-    throw new Error(`Creative Boost service ${service.id} is missing max credits or price per credit.`);
+    console.warn(`Creative Boost service ${service.id} is missing max credits or price per credit, falling back to service.price`);
+    return service.price;
   }
   return service.creative_boost_max_credits * service.creative_boost_price_per_credit;
 }
@@ -97,10 +98,7 @@ export function CreateInvoiceFromEngagementDialog({
   onCreateInvoice,
 }: CreateInvoiceFromEngagementDialogProps) {
   const initializedForOpenRef = useRef(false);
-  if (!engagement.currency) {
-    throw new Error(`Missing engagement currency for ${engagement.id}`);
-  }
-  const engagementCurrency = engagement.currency;
+  const engagementCurrency = engagement.currency || 'CZK';
 
   // Generate period options - past 6 months + current + next 2 months
   const periodOptions = useMemo(() => {
@@ -182,7 +180,9 @@ export function CreateInvoiceFromEngagementDialog({
     const periodLabel = getPeriodLabel(defaultPeriod);
     const selectedOption = periodOptions.find((option) => option.value === defaultPeriod);
     if (!selectedOption) {
-      throw new Error(`Missing period option for ${defaultPeriod}`);
+      console.warn(`Missing period option for ${defaultPeriod}`);
+      initializedForOpenRef.current = true;
+      return;
     }
     const defaultPeriodStart = startOfMonth(new Date(selectedOption.year, selectedOption.month - 1));
     const defaultPeriodEnd = endOfMonth(new Date(selectedOption.year, selectedOption.month - 1));

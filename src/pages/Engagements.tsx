@@ -89,7 +89,7 @@ function isCreativeBoostEngagementService(
   if (creativeBoostServiceId && engagementService.service_id === creativeBoostServiceId) {
     return true;
   }
-  const lowerName = engagementService.name.toLowerCase();
+  const lowerName = (engagementService.name ?? '').toLowerCase();
   return (
     engagementService.creative_boost_price_per_credit !== null ||
     engagementService.creative_boost_min_credits !== null ||
@@ -108,17 +108,15 @@ function withPromiseTimeout<T>(promise: Promise<T>, timeoutMs: number, label: st
 }
 
 function getCreativeBoostEstimatedPayrollCost(service: EngagementService): number {
-  if (service.creative_boost_max_credits === null) {
-    throw new Error(`Creative Boost service ${service.id} is missing max credits.`);
+  const maxCredits = service.creative_boost_max_credits ?? service.creative_boost_min_credits ?? 0;
+  const bannerReward = service.creative_boost_reward_per_credit_banner ?? 0;
+  const videoReward = service.creative_boost_reward_per_credit_video ?? 0;
+  if (maxCredits <= 0 || (bannerReward <= 0 && videoReward <= 0)) {
+    return 0;
   }
-  if (
-    service.creative_boost_reward_per_credit_banner === null ||
-    service.creative_boost_reward_per_credit_video === null
-  ) {
-    throw new Error(`Creative Boost service ${service.id} is missing reward per credit configuration.`);
-  }
-  const averageReward = (service.creative_boost_reward_per_credit_banner + service.creative_boost_reward_per_credit_video) / 2;
-  return service.creative_boost_max_credits * averageReward;
+
+  const averageReward = (bannerReward + videoReward) / 2;
+  return maxCredits * averageReward;
 }
 
 const getTierPrice = (service: Service | undefined, tier: ServiceTier): number | null => {
@@ -316,7 +314,7 @@ function EngagementsContent() {
       const client = getClientById(engagement.client_id);
       const clientLabel = getClientOptionLabel(client ?? {}).toLowerCase();
       const matchesSearch =
-        engagement.name.toLowerCase().includes(query) ||
+        (engagement.name ?? '').toLowerCase().includes(query) ||
         clientLabel.includes(query) ||
         client?.brand_name?.toLowerCase().includes(query) ||
         client?.name?.toLowerCase().includes(query);
@@ -654,13 +652,13 @@ function EngagementsContent() {
               if (isCreativeBoostEngagementService(s, CREATIVE_BOOST_SERVICE_ID)) {
                 return sum + getCreativeBoostExpectedMonthlyRevenue(s);
               }
-              return sum + s.price;
+              return sum + (s.price ?? 0);
             }, 0);
           
           // Use services total if available, otherwise fall back to engagement fees
           const displayAmount = engagementServicesList.length > 0 
             ? totalServicesAmount 
-            : (engagement.type === 'retainer' ? engagement.monthly_fee : engagement.one_off_fee);
+            : (engagement.type === 'retainer' ? (engagement.monthly_fee ?? 0) : (engagement.one_off_fee ?? 0));
           
           const hasEndDate = engagement.end_date && engagement.type === 'retainer';
           
@@ -741,7 +739,7 @@ function EngagementsContent() {
                   {/* Price - now showing total from services */}
                   {canViewFinancials && (
                     <span className="text-sm font-semibold whitespace-nowrap hidden sm:flex items-center gap-1">
-                      {displayAmount.toLocaleString()} {engagement.currency}
+                      {(displayAmount ?? 0).toLocaleString()} {engagement.currency || 'CZK'}
                       {engagement.type === 'retainer' && '/měs'}
                       {engagementServicesList.length > 1 && (
                         <span className="text-xs font-normal text-muted-foreground">
@@ -814,13 +812,13 @@ function EngagementsContent() {
                         }
                         if (s.billing_type === 'monthly') {
                           return sum + getEffectiveServicePrice(
-                            s.price,
+                            s.price ?? 0,
                             s.intro_discount_percent,
                             s.intro_discount_months,
                             s.intro_discount_start_date,
                           );
                         }
-                        return sum + s.price;
+                        return sum + (s.price ?? 0);
                       }, 0);
                     const estimatedCbCost = engServices
                       .filter((service) =>
@@ -1067,7 +1065,7 @@ function EngagementsContent() {
                                   >
                                     <div className="flex min-w-0 flex-1 items-center gap-2">
                                       <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
-                                        {service?.code?.charAt(0) || engService.name.charAt(0)}
+                                        {service?.code?.charAt(0) || (engService.name ?? '?').charAt(0)}
                                       </div>
                                       <div className="min-w-0">
                                         <div className="flex items-center gap-2">
@@ -1126,7 +1124,7 @@ function EngagementsContent() {
                                     <div className="shrink-0 flex items-center gap-2">
                                       {canViewFinancials && (
                                         <span className="text-xs text-muted-foreground">
-                                          {engService.price.toLocaleString()} {engService.currency}
+                                          {(engService.price ?? 0).toLocaleString()} {engService.currency || 'CZK'}
                                           {engService.billing_type === 'monthly' && '/měs'}
                                         </span>
                                       )}
@@ -1357,9 +1355,7 @@ function EngagementsContent() {
                               {engagement.managed_countries?.length > 0
                                 ? engagement.managed_countries.map((code) => {
                                     const country = MANAGED_COUNTRIES.find((item) => item.code === code);
-                                    if (!country) {
-                                      throw new Error(`Unknown managed country code: ${code}`);
-                                    }
+                                    if (!country) return `🌍 ${code}`;
                                     return `${country.flag} ${country.name}`;
                                   }).join(', ')
                                 : 'Vybrat země...'}
@@ -1400,12 +1396,9 @@ function EngagementsContent() {
                         <div className="flex flex-wrap gap-1">
                           {engagement.managed_countries.map((code) => {
                             const country = MANAGED_COUNTRIES.find((item) => item.code === code);
-                            if (!country) {
-                              throw new Error(`Unknown managed country code: ${code}`);
-                            }
                             return (
                               <Badge key={code} variant="secondary" className="text-xs">
-                                {country.flag} {country.name}
+                                {country ? `${country.flag} ${country.name}` : `🌍 ${code}`}
                               </Badge>
                             );
                           })}
@@ -1662,7 +1655,8 @@ function EngagementsContent() {
         (() => {
           const selectedEngagement = engagements.find(e => e.id === serviceEngagementId);
           if (!selectedEngagement?.currency) {
-            throw new Error(`Missing engagement currency for ${serviceEngagementId}`);
+            console.error(`Missing engagement currency for ${serviceEngagementId}`);
+            return null;
           }
           return (
         <AddEngagementServiceDialog

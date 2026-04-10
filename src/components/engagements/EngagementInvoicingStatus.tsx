@@ -30,7 +30,8 @@ interface EngagementInvoicingBadgesProps {
 export function getRecentMonths(engagement: Engagement, invoices: IssuedInvoice[]): InvoiceMonth[] {
   const now = new Date();
   const currentMonth = startOfMonth(now);
-  const engagementStart = startOfMonth(new Date(engagement.start_date));
+  const parsedStart = engagement.start_date ? new Date(engagement.start_date) : now;
+  const engagementStart = startOfMonth(isNaN(parsedStart.getTime()) ? now : parsedStart);
 
   const months: InvoiceMonth[] = [];
 
@@ -74,7 +75,8 @@ export function getRecentMonths(engagement: Engagement, invoices: IssuedInvoice[
 export function getAllInvoicingMonths(engagement: Engagement, invoices: IssuedInvoice[]): InvoiceMonth[] {
   const now = new Date();
   const currentMonth = startOfMonth(now);
-  const engagementStart = startOfMonth(new Date(engagement.start_date));
+  const parsedStart = engagement.start_date ? new Date(engagement.start_date) : now;
+  const engagementStart = startOfMonth(isNaN(parsedStart.getTime()) ? now : parsedStart);
 
   const months: InvoiceMonth[] = [];
   let monthDate = engagementStart;

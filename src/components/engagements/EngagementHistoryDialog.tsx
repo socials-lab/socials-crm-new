@@ -98,8 +98,8 @@ function HistoryItem({ record }: { record: EngagementHistoryRecord }) {
             {metadata.cost_model && (
               <p className="text-xs text-muted-foreground">
                 Model: {formatHistoryValue('cost_model', metadata.cost_model)} 
-                {metadata.monthly_cost && ` • ${metadata.monthly_cost.toLocaleString('cs-CZ')} Kč/měs`}
-                {metadata.hourly_cost && ` • ${metadata.hourly_cost.toLocaleString('cs-CZ')} Kč/h`}
+                {metadata.monthly_cost != null && ` • ${Number(metadata.monthly_cost).toLocaleString('cs-CZ')} Kč/měs`}
+                {metadata.hourly_cost != null && ` • ${Number(metadata.hourly_cost).toLocaleString('cs-CZ')} Kč/h`}
                 {metadata.percentage_of_revenue && ` • ${metadata.percentage_of_revenue}%`}
               </p>
             )}
@@ -109,12 +109,9 @@ function HistoryItem({ record }: { record: EngagementHistoryRecord }) {
         {record.change_type === 'created' && record.entity_type === 'service' && (
           <div className="text-sm space-y-0.5">
             <p>Přidána služba <span className="font-medium">{metadata.service_name}</span></p>
-            {metadata.price !== undefined && (
+            {metadata.price != null && (
               <p className="text-xs text-muted-foreground">
-                Cena: {metadata.price.toLocaleString('cs-CZ')} {(() => {
-                  if (!metadata.currency) throw new Error('Chybí měna v historii služby');
-                  return metadata.currency;
-                })()}
+                Cena: {Number(metadata.price).toLocaleString('cs-CZ')} {metadata.currency || 'CZK'}
                 {metadata.billing_type && ` • ${formatHistoryValue('billing_type', metadata.billing_type)}`}
               </p>
             )}

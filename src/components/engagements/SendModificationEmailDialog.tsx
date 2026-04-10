@@ -122,11 +122,11 @@ export function SendModificationEmailDialog({
       case 'add_service': {
         const c = request.proposed_changes as AddServiceProposedChanges;
         const billingText = c.billing_type === 'monthly' ? '/měs' : ' (jednorázově)';
-        return `Služba: ${c.name}\nCena: ${c.price.toLocaleString('cs-CZ')} ${c.currency}${billingText}`;
+        return `Služba: ${c.name}\nCena: ${(c.price ?? 0).toLocaleString('cs-CZ')} ${c.currency || 'CZK'}${billingText}`;
       }
       case 'update_service_price': {
         const c = request.proposed_changes as UpdateServicePriceProposedChanges;
-        return `Služba: ${c.service_name}\nAktuální cena: ${c.old_price.toLocaleString('cs-CZ')} ${c.currency}\nNová cena: ${c.new_price.toLocaleString('cs-CZ')} ${c.currency}`;
+        return `Služba: ${c.service_name}\nAktuální cena: ${(c.old_price ?? 0).toLocaleString('cs-CZ')} ${c.currency || 'CZK'}\nNová cena: ${(c.new_price ?? 0).toLocaleString('cs-CZ')} ${c.currency || 'CZK'}`;
       }
       case 'deactivate_service': {
         const c = request.proposed_changes as DeactivateServiceProposedChanges;
