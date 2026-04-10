@@ -11,6 +11,7 @@ import {
   ArrowRightLeft,
   Plus,
   MailOpen,
+  Mail,
   User,
   Calendar,
 } from 'lucide-react';
@@ -224,6 +225,16 @@ export function LeadCommunicationTimeline({
       icon: <CheckCircle2 className="h-3 w-3" />,
       title: 'Smlouva podepsána',
       direction: 'received',
+    });
+  }
+
+  if (lead.welcome_email_sent_at) {
+    events.push({
+      id: 'welcome-email-sent',
+      date: lead.welcome_email_sent_at,
+      icon: <Mail className="h-3 w-3" />,
+      title: 'Welcome e-mail odeslán',
+      direction: 'sent',
     });
   }
 

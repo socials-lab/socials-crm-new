@@ -690,6 +690,7 @@ export interface Lead {
   contract_sent_at: string | null;
   contract_signed_at: string | null;
   signed_contract_url: string | null;
+  welcome_email_sent_at: string | null;
   digisign_envelope_id: string | null;
   digisign_document_url: string | null;
   

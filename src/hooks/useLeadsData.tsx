@@ -32,6 +32,18 @@ const LEAD_FIELD_LABELS: Record<string, string> = {
   billing_zip: 'PSČ',
   billing_country: 'Země',
   billing_email: 'Fakturační e-mail',
+  offer_sent_at: 'Nabídka odeslána',
+  access_request_sent_at: 'Žádost o přístupy odeslána',
+  access_received_at: 'Přístupy přijaty',
+  onboarding_form_sent_at: 'Onboarding formulář odeslán',
+  onboarding_form_completed_at: 'Onboarding formulář vyplněn',
+  contract_created_at: 'Smlouva vytvořena',
+  contract_sent_at: 'Smlouva odeslána',
+  contract_signed_at: 'Smlouva podepsána',
+  welcome_email_sent_at: 'Welcome e-mail odeslán',
+  converted_at: 'Převedeno na zakázku',
+  google_docs_contract_url: 'Google Docs smlouva',
+  signed_contract_url: 'Podepsaná smlouva',
 };
 
 const STAGE_LABELS: Record<LeadStage, string> = {

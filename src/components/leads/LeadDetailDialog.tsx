@@ -59,6 +59,7 @@ import { RequestAccessDialog } from './RequestAccessDialog';
 import { SendMeetingRequestDialog } from './SendMeetingRequestDialog';
 import { SendOnboardingFormDialog } from './SendOnboardingFormDialog';
 import { SendContractDialog } from './SendContractDialog';
+import { SendWelcomeEmailDialog } from './SendWelcomeEmailDialog';
 import { SendOfferDialog } from './SendOfferDialog';
 import { CreateOfferDialog } from './CreateOfferDialog';
 import { ConfirmStageTransitionDialog } from './ConfirmStageTransitionDialog';
@@ -138,6 +139,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
   const [isCreateOfferOpen, setIsCreateOfferOpen] = useState(false);
   const [sharedOfferUrl, setSharedOfferUrl] = useState<string | null>(null);
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
+  const [isWelcomeEmailOpen, setIsWelcomeEmailOpen] = useState(false);
   const [showContractWarning, setShowContractWarning] = useState(false);
   const [showOnboardingWarning, setShowOnboardingWarning] = useState(false);
   const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
@@ -953,6 +955,11 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                     onMarkContractSigned={handleMarkContractSigned}
                     onCheckDigiSign={lead.digisign_id ? handleCheckDigiSign : undefined}
                     isCheckingDigiSign={isDigiSignLoading}
+                    onSendWelcomeEmail={() => setIsWelcomeEmailOpen(true)}
+                    onMarkWelcomeEmailSent={() => {
+                      updateLead(lead.id, { welcome_email_sent_at: new Date().toISOString() });
+                      toast.success('📧 Welcome e-mail označen jako odeslaný');
+                    }}
                     onConvert={handleConvertClick}
                     onRemoveService={(index) => {
                       const currentServices = [...(lead.potential_services || [])];
@@ -1263,6 +1270,16 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
             digisign_document_url: data.digisign_document_url,
           });
           toast.success('📄 Smlouva byla odeslána k ruční kontrole Daně Bauerové');
+        }}
+      />
+
+      <SendWelcomeEmailDialog
+        open={isWelcomeEmailOpen}
+        onOpenChange={setIsWelcomeEmailOpen}
+        lead={lead}
+        onMarkSent={() => {
+          updateLead(lead.id, { welcome_email_sent_at: new Date().toISOString() });
+          toast.success('📧 Welcome e-mail označen jako odeslaný');
         }}
       />
     </>

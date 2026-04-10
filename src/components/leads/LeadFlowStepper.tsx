@@ -13,6 +13,7 @@ import {
   Check,
   Calendar,
   CircleDot,
+  Mail,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +42,8 @@ interface LeadFlowStepperProps {
   onMarkContractSigned: () => void;
   onCheckDigiSign?: () => void;
   isCheckingDigiSign?: boolean;
+  onSendWelcomeEmail: () => void;
+  onMarkWelcomeEmailSent: () => void;
   onConvert: () => void;
   onRemoveService?: (index: number) => void;
 }
@@ -121,6 +124,8 @@ export function LeadFlowStepper({
   onMarkContractSigned,
   onCheckDigiSign,
   isCheckingDigiSign,
+  onSendWelcomeEmail,
+  onMarkWelcomeEmailSent,
   onConvert,
   onRemoveService,
 }: LeadFlowStepperProps) {
@@ -412,6 +417,26 @@ export function LeadFlowStepper({
           </div>
         </div>
       ),
+    },
+    {
+      id: 'welcome_email',
+      label: 'Welcome e-mail',
+      isComplete: !!lead.welcome_email_sent_at,
+      completedAt: lead.welcome_email_sent_at,
+      detail: lead.welcome_email_sent_at ? 'Odesláno' : undefined,
+      actions: !lead.welcome_email_sent_at ? [{
+        label: 'Připravit e-mail',
+        onClick: onSendWelcomeEmail,
+        variant: 'default',
+      }, {
+        label: 'Označit jako odeslaný',
+        onClick: onMarkWelcomeEmailSent,
+        variant: 'ghost',
+      }] : [{
+        label: 'Zobrazit',
+        onClick: onSendWelcomeEmail,
+        variant: 'ghost',
+      }],
     },
     {
       id: 'converted',
