@@ -66,7 +66,8 @@ async function fetchWithTimeout(
 ): Promise<Response> {
   const requestUrl = typeof input === 'string' ? input : input.toString();
   const isAuthRequest = requestUrl.includes('/auth/v1/');
-  const timeoutMs = isAuthRequest ? 30000 : 15000;
+  const isFunctionsRequest = requestUrl.includes('/functions/v1/');
+  const timeoutMs = isAuthRequest ? 30000 : isFunctionsRequest ? 60000 : 15000;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const originalSignal = init?.signal;

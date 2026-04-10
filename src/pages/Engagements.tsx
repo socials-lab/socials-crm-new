@@ -74,6 +74,7 @@ import { normalizeUrlProtocol } from '@/lib/validation';
 import { getClientOptionLabel } from '@/lib/clientOptionLabel';
 import { isEngagementServiceActiveInMonth } from '@/lib/engagementServiceLifecycle';
 import { invokeWithTimeout } from '@/lib/supabaseUtils';
+import { buildFreeloProjectName, buildSlackChannelNameFromWebsite } from '@/lib/slackChannelName';
 import { getCreativeBoostExpectedMonthlyRevenue } from '@/utils/engagementRevenueUtils';
 import { getEffectiveServicePrice } from '@/utils/introDiscountUtils';
 
@@ -247,6 +248,93 @@ function EngagementsContent() {
   const [tempOfferUrl, setTempOfferUrl] = useState<string>('');
   const [editingContractUrlId, setEditingContractUrlId] = useState<string | null>(null);
   const [tempContractUrl, setTempContractUrl] = useState<string>('');
+
+  // Integration retry state
+  const [retryingFreelo, setRetryingFreelo] = useState<string | null>(null);
+  const [retryingSlack, setRetryingSlack] = useState<string | null>(null);
+
+  const handleRetryFreelo = async (engagement: Engagement) => {
+    const client = getClientById(engagement.client_id);
+    const websiteName = client?.website || '';
+    const clientNameFallback = client?.brand_name || client?.name || engagement.name || 'Projekt';
+    const freeloProjectName = buildFreeloProjectName(websiteName, clientNameFallback);
+    const engAssignments = getAssignmentsByEngagementId(engagement.id);
+    const defaultEmails = ['danny@socials.cz', 'otas@socials.cz', 'david.hala@socials.cz'];
+    const teamEmails = engAssignments
+      .map(a => getColleagueById(a.colleague_id)?.email)
+      .filter(Boolean) as string[];
+    const allEmails = [...new Set([...defaultEmails, ...teamEmails])];
+
+    setRetryingFreelo(engagement.id);
+    try {
+      const { data: result, error } = await invokeWithTimeout<{
+        success?: boolean;
+        project_url?: string;
+        error?: string;
+      }>('create-freelo-project', {
+        body: {
+          project_name: freeloProjectName,
+          currency: engagement.currency || 'CZK',
+          team_emails: allEmails,
+        },
+      }, 30000);
+
+      if (error || !result?.success) {
+        toast.error(`Freelo se nepodařilo vytvořit: ${error?.message || result?.error || 'Neznámá chyba'}`);
+        return;
+      }
+      if (result.project_url) {
+        await supabase.from('engagements').update({ freelo_url: result.project_url }).eq('id', engagement.id);
+        await updateEngagement(engagement.id, { freelo_url: result.project_url } as any);
+      }
+      toast.success('Freelo projekt vytvořen');
+    } catch (err) {
+      toast.error(`Freelo chyba: ${err instanceof Error ? err.message : 'Timeout'}`);
+    } finally {
+      setRetryingFreelo(null);
+    }
+  };
+
+  const handleRetrySlack = async (engagement: Engagement) => {
+    const client = getClientById(engagement.client_id);
+    const websiteName = client?.website || '';
+    const clientNameFallback = client?.brand_name || client?.name || engagement.name || 'klient';
+    const channelName = buildSlackChannelNameFromWebsite(websiteName, clientNameFallback);
+    const engAssignments = getAssignmentsByEngagementId(engagement.id);
+    const defaultEmails = ['danny@socials.cz', 'otas@socials.cz', 'david.hala@socials.cz'];
+    const teamEmails = engAssignments
+      .map(a => getColleagueById(a.colleague_id)?.email)
+      .filter(Boolean) as string[];
+    const allEmails = [...new Set([...defaultEmails, ...teamEmails])];
+
+    setRetryingSlack(engagement.id);
+    try {
+      const { data: result, error } = await invokeWithTimeout<{
+        success?: boolean;
+        channel_name?: string;
+        error?: string;
+      }>('create-slack-channel', {
+        body: {
+          channel_name: channelName,
+          team_emails: allEmails,
+        },
+      }, 30000);
+
+      if (error || !result?.success) {
+        toast.error(`Slack kanál se nepodařilo vytvořit: ${error?.message || result?.error || 'Neznámá chyba'}`);
+        return;
+      }
+      if (result.channel_name) {
+        await supabase.from('engagements').update({ slack_channel_name: result.channel_name } as any).eq('id', engagement.id);
+        await updateEngagement(engagement.id, { slack_channel_name: result.channel_name } as any);
+      }
+      toast.success(`Slack kanál #${result.channel_name || channelName} vytvořen`);
+    } catch (err) {
+      toast.error(`Slack chyba: ${err instanceof Error ? err.message : 'Timeout'}`);
+    } finally {
+      setRetryingSlack(null);
+    }
+  };
 
   // Create invoice dialog state
   const [invoiceDialogEngagement, setInvoiceDialogEngagement] = useState<Engagement | null>(null);
@@ -1527,6 +1615,16 @@ function EngagementsContent() {
                                 <>
                                   <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
                                   <span className="text-amber-600 font-medium">Freelo nevytvořeno</span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 text-xs ml-1 px-2"
+                                    disabled={retryingFreelo === engagement.id}
+                                    onClick={(e) => { e.stopPropagation(); handleRetryFreelo(engagement); }}
+                                  >
+                                    {retryingFreelo === engagement.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                                    <span className="ml-1">Vytvořit</span>
+                                  </Button>
                                 </>
                               )}
                             </div>
@@ -1540,6 +1638,16 @@ function EngagementsContent() {
                                 <>
                                   <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
                                   <span className="text-amber-600 font-medium">Slack kanál nevytvořen</span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 text-xs ml-1 px-2"
+                                    disabled={retryingSlack === engagement.id}
+                                    onClick={(e) => { e.stopPropagation(); handleRetrySlack(engagement); }}
+                                  >
+                                    {retryingSlack === engagement.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                                    <span className="ml-1">Vytvořit</span>
+                                  </Button>
                                 </>
                               )}
                             </div>

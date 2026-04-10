@@ -41,6 +41,7 @@ import type { Lead, CostModel, ClientTier, ServiceRewardRole, ServiceRewardTierC
 import { toast } from 'sonner';
 import { getLeadOfferUrl } from '@/utils/offerUrl';
 import { invokeWithTimeout } from '@/lib/supabaseUtils';
+import { buildFreeloProjectName, buildSlackChannelNameFromWebsite } from '@/lib/slackChannelName';
 
 const convertSchema = z.object({
   // Editable client fields
@@ -401,7 +402,9 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       }
 
       // STEP 7: Create Freelo project (non-blocking)
-      const brandName = form.getValues('brand_name') || lead.company_name;
+      const websiteName = form.getValues('website') || lead.website || '';
+      const clientNameFallback = form.getValues('brand_name') || lead.company_name;
+      const freeloProjectName = buildFreeloProjectName(websiteName, clientNameFallback);
       const defaultEmails = ['danny@socials.cz', 'otas@socials.cz', 'david.hala@socials.cz'];
       const teamEmails = teamMembers
         .map(m => colleagues.find(c => c.id === m.colleague_id)?.email)
@@ -416,7 +419,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
           error?: string;
         }>('create-freelo-project', {
           body: {
-            project_name: brandName,
+            project_name: freeloProjectName,
             currency: lead.currency || 'CZK',
             team_emails: allEmails,
           },
@@ -436,7 +439,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       // STEP 7b: Create Slack channel (non-blocking)
       let slackFailed = false;
       try {
-        const channelName = `c_${brandName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)}`;
+        const channelName = buildSlackChannelNameFromWebsite(websiteName, lead.company_name || data.brand_name);
         const { data: slackResult, error: slackError } = await invokeWithTimeout<{
           success?: boolean;
           channel_name?: string;
