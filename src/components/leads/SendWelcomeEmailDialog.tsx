@@ -9,11 +9,14 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Copy, Check, Mail, Send, Users, Calendar, Sparkles } from 'lucide-react';
 import type { Lead } from '@/types/crm';
 import { useCRMData } from '@/hooks/useCRMData';
+import { useAuth } from '@/hooks/useAuth';
 import { EmailSignatureRichEditor } from '@/components/shared/EmailSignatureRichEditor';
 import { invokeWithTimeout } from '@/lib/supabaseUtils';
+import { inflectVocativeFullName } from '@/lib/emailSignature';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -26,11 +29,23 @@ interface SendWelcomeEmailDialogProps {
 }
 
 export function SendWelcomeEmailDialog({ open, onOpenChange, lead, onMarkSent }: SendWelcomeEmailDialogProps) {
+  const { user } = useAuth();
   const { colleagues } = useCRMData();
   const [copied, setCopied] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [mainContactName, setMainContactName] = useState('');
 
-  const owner = colleagues.find(c => c.id === lead.owner_id);
+  const currentUserColleague = colleagues.find((c) => c.profile_id === user?.id);
+  const normalize = (value: string | null | undefined) =>
+    (value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+  const canSendFromCrm =
+    normalize(currentUserColleague?.full_name) === normalize('Daniel Bauer') &&
+    normalize(currentUserColleague?.email) === 'danny@socials.cz' &&
+    normalize(currentUserColleague?.role) === 'admin';
 
   const services = lead.potential_services || [];
 
@@ -47,11 +62,16 @@ export function SendWelcomeEmailDialog({ open, onOpenChange, lead, onMarkSent }:
     }
   }, [lead.offer_created_at]);
 
-  const contactFirstName = (lead.contact_name || '').split(' ')[0] || '';
+  const contactFirstName = (lead.contact_name || '').trim().split(/\s+/).filter(Boolean)[0] || '';
+  const contactNameVocative = inflectVocativeFullName(contactFirstName).trim();
 
   const emailHtml = useMemo(() => {
+    const mainContactLine = mainContactName.trim()
+      ? `Váš hlavní kontakt bude náš Meta Ads specialista <strong>${mainContactName.trim()}</strong>.`
+      : 'Váš hlavní kontakt bude náš Meta Ads specialista <strong>[DOPLŇTE JMÉNO HLAVNÍHO KONTAKTU]</strong>.';
+
     return `
-      <p>Dobrý den${contactFirstName ? ` ${contactFirstName}` : ''},</p>
+      <p>Dobrý den${contactNameVocative ? `, ${contactNameVocative}` : ''},</p>
       <p></p>
       <p>vítám vás mezi klienty Socials 🎉 a moc si vážím vaší důvěry. Vím, že výběr agentury není snadné rozhodnutí, a o to víc mě těší, že jste si vybrali právě nás. Smlouva je podepsaná, onboarding formulář vyplněn – můžeme se pustit do práce.</p>
       <p></p>
@@ -59,10 +79,10 @@ export function SendWelcomeEmailDialog({ open, onOpenChange, lead, onMarkSent }:
       <p></p>
       <p>1. Založíme vám projekt ve Freelu a přidáme přístupy na e-maily z formuláře.</p>
       <p>2. Veškerá komunikace poběží přes Freelo – vše na jednom místě, nic se neztratí.</p>
-      <p>3. Projektový manažer se ozve, doladí přístupy a domluvíme úvodní hovor.</p>
+      <p>3. Ozve se vám váš hlavní kontakt (Meta Ads specialista), doladí přístupy a domluví úvodní hovor. Projektový manažer zároveň pohlídá hladký onboarding.</p>
       <p>4. Můžeme se pustit do práce 🚀</p>
       <p></p>
-      <p>${owner ? `Váš hlavní kontakt bude náš Meta Ads specialista <strong>${owner.full_name}</strong>.` : 'Váš hlavní kontakt bude náš Meta Ads specialista.'} Ozve se vám ve Freelu a domluví úvodní telefonát, kde si společně projdete vaše cíle a podle toho nastavíme projekt.</p>
+      <p>${mainContactLine} Bude vás provázet denní komunikací i strategií kampaní. Projektový manažer bude k dispozici pro organizaci a onboarding.</p>
       <p></p>
       <p><strong>Ještě jedna důležitá věc</strong></p>
       <p>U nás ve firmě fungujeme na principu BUF – brutálně upřímný feedback. Znamená to, že vám vždy řekneme věci na rovinu, a totéž čekáme i od vás. Když vám něco nebude na spolupráci sedět, řekněte nám to narovinu. Jen tak se můžeme zlepšovat a poskytovat pro vás tu nejlepší službu. 🙂</p>
@@ -74,13 +94,19 @@ export function SendWelcomeEmailDialog({ open, onOpenChange, lead, onMarkSent }:
       <p>Přeji hezký den.</p>
       <p>Daniel Bauer<br />CEO @Socials</p>
     `;
-  }, [owner, contactFirstName]);
+  }, [contactNameVocative, mainContactName]);
 
   const [editableHtml, setEditableHtml] = useState(emailHtml);
 
   useEffect(() => {
     setEditableHtml(emailHtml);
   }, [emailHtml, open]);
+
+  useEffect(() => {
+    if (open) {
+      setMainContactName('');
+    }
+  }, [open]);
 
   const htmlToPlainText = (html: string) => {
     const withBreaks = html
@@ -114,8 +140,20 @@ export function SendWelcomeEmailDialog({ open, onOpenChange, lead, onMarkSent }:
   const mailtoLink = `mailto:${recipientEmail}?subject=${subject}&body=${body}`;
 
   const handleSendDirect = async () => {
+    if (!canSendFromCrm) {
+      toast.error('Tento e-mail může z CRM odeslat pouze Daniel Bauer (danny@socials.cz, admin).');
+      return;
+    }
+    if (!mainContactName.trim()) {
+      toast.error('Nejdřív doplňte hlavní kontakt pro klienta.');
+      return;
+    }
     if (!recipientEmail.trim()) {
       toast.error('Lead nemá vyplněný kontaktní e-mail');
+      return;
+    }
+    if (!currentUserColleague?.email) {
+      toast.error('Chybí informace o odesílateli (kolega/e-mail)');
       return;
     }
 
@@ -124,6 +162,7 @@ export function SendWelcomeEmailDialog({ open, onOpenChange, lead, onMarkSent }:
       const { error } = await invokeWithTimeout('send-email', {
         body: {
           to: recipientEmail.trim(),
+          from: `${currentUserColleague.full_name} <${currentUserColleague.email}>`,
           subject: subjectText,
           html: `
             <style>
@@ -184,13 +223,39 @@ export function SendWelcomeEmailDialog({ open, onOpenChange, lead, onMarkSent }:
             <div className="p-2.5 rounded-lg border bg-muted/30 text-center">
               <Users className="h-4 w-4 mx-auto mb-1 text-blue-600" />
               <p className="text-xs text-muted-foreground">Hlavní kontakt</p>
-              <p className="text-sm font-semibold truncate">{owner?.full_name || '—'}</p>
+              <p className="text-sm font-semibold truncate">{mainContactName.trim() || 'Doplňte'}</p>
             </div>
             <div className="p-2.5 rounded-lg border bg-muted/30 text-center">
               <Calendar className="h-4 w-4 mx-auto mb-1 text-green-600" />
               <p className="text-xs text-muted-foreground">Start</p>
               <p className="text-sm font-semibold">{startDateFormatted || '—'}</p>
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium">Hlavní kontakt pro klienta (povinné)</p>
+            <Input
+              value={mainContactName}
+              onChange={(e) => setMainContactName(e.target.value)}
+              placeholder="Např. Jan Novák"
+            />
+          </div>
+
+          {/* Sender */}
+          <div className="p-2.5 rounded-lg border bg-primary/5 text-sm">
+            <span className="text-muted-foreground">Odesílatel: </span>
+            <span className="font-medium">{currentUserColleague?.full_name || 'Neznámý uživatel'}</span>
+            {currentUserColleague?.position ? (
+              <span className="text-muted-foreground"> ({currentUserColleague.position})</span>
+            ) : null}
+            {currentUserColleague?.email ? (
+              <span className="text-muted-foreground"> — {currentUserColleague.email}</span>
+            ) : null}
+            {!canSendFromCrm ? (
+              <div className="text-xs text-amber-700 mt-1">
+                Tento e-mail může z CRM odeslat pouze Daniel Bauer (danny@socials.cz, admin).
+              </div>
+            ) : null}
           </div>
 
           {/* Editable email body */}
@@ -203,22 +268,30 @@ export function SendWelcomeEmailDialog({ open, onOpenChange, lead, onMarkSent }:
           </div>
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={handleCopy} className="gap-2">
+        <DialogFooter className="flex-col sm:flex-row sm:flex-wrap sm:justify-end gap-2">
+          <Button variant="outline" onClick={handleCopy} className="gap-2 w-full sm:w-auto">
             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             {copied ? 'Zkopírováno' : 'Kopírovat text'}
           </Button>
-          <Button variant="outline" asChild className="gap-2">
+          <Button variant="outline" asChild className="gap-2 w-full sm:w-auto">
             <a href={mailtoLink}>
               <Send className="h-4 w-4" />
               Otevřít v e-mailu
             </a>
           </Button>
-          <Button onClick={() => { onMarkSent(); onOpenChange(false); }} className="gap-2">
+          <Button
+            onClick={() => { onMarkSent(); onOpenChange(false); }}
+            disabled={!mainContactName.trim()}
+            className="gap-2 w-full sm:w-auto"
+          >
             <Check className="h-4 w-4" />
             Označit jako odeslaný
           </Button>
-          <Button onClick={handleSendDirect} disabled={isSending || !recipientEmail.trim()} className="gap-2">
+          <Button
+            onClick={handleSendDirect}
+            disabled={isSending || !recipientEmail.trim() || !currentUserColleague?.email || !canSendFromCrm}
+            className="gap-2 w-full sm:w-auto"
+          >
             <Send className="h-4 w-4" />
             {isSending ? 'Odesílám...' : 'Odeslat z CRM'}
           </Button>
