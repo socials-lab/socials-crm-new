@@ -12,6 +12,7 @@ import { DEFAULT_GMAIL_BCC } from '@/hooks/useGoogleCalendar';
 import { EmailTagList } from '@/components/ui/email-tag-list';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
+import { EmailSenderInfo } from '@/components/shared/EmailSenderInfo';
 import { formatEmailTextToHtml, getDefaultEmailSignature, inflectVocativeFullName } from '@/lib/emailSignature';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 
@@ -165,6 +166,8 @@ export function SendInterviewInviteDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          <EmailSenderInfo colleague={currentUserColleague} />
+
           <div className="space-y-2">
             <Label htmlFor="email-to">Příjemce</Label>
             <Input

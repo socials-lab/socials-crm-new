@@ -12,6 +12,7 @@ import { DEFAULT_GMAIL_BCC } from '@/hooks/useGoogleCalendar';
 import { EmailTagList } from '@/components/ui/email-tag-list';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
+import { EmailSenderInfo } from '@/components/shared/EmailSenderInfo';
 import { formatEmailTextToHtml, getDefaultEmailSignature, inflectVocativeFullName } from '@/lib/emailSignature';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 
@@ -168,6 +169,8 @@ export function SendRejectionEmailDialog({
           <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
             Po odeslání bude uchazeč přesunut do stavu "Zamítnut".
           </div>
+
+          <EmailSenderInfo colleague={currentUserColleague} />
 
           <div className="space-y-2">
             <Label htmlFor="email-to">Příjemce</Label>

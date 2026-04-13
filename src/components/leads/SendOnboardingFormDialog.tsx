@@ -17,6 +17,7 @@ import { toast } from '@/components/ui/sonner';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
+import { EmailSenderInfo } from '@/components/shared/EmailSenderInfo';
 import { formatEmailTextToHtml, getDefaultEmailSignature, inflectVocativeFullName } from '@/lib/emailSignature';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 import type { Lead } from '@/types/crm';
@@ -278,6 +279,8 @@ export function SendOnboardingFormDialog({
               </div>
             </div>
           )}
+          <EmailSenderInfo colleague={currentUserColleague} />
+
           {/* Form URL */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Odkaz na formulář</Label>

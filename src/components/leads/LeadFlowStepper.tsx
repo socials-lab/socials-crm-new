@@ -27,6 +27,7 @@ interface LeadFlowStepperProps {
   offerDraftSavedAt?: number | null;
   onSendMeetingRequest: () => void;
   onQuickConfirmMeetingSent: () => void;
+  onRejectLead: () => void;
   onRequestAccess: () => void;
   onQuickConfirmAccessSent: () => void;
   onMarkAccessReceived: () => void;
@@ -109,6 +110,7 @@ export function LeadFlowStepper({
   offerDraftSavedAt = null,
   onSendMeetingRequest,
   onQuickConfirmMeetingSent,
+  onRejectLead,
   onRequestAccess,
   onQuickConfirmAccessSent,
   onMarkAccessReceived,
@@ -197,8 +199,10 @@ export function LeadFlowStepper({
       actions: !lead.meeting_request_sent_at ? [
         { label: 'Odeslat e-mail', onClick: onSendMeetingRequest, variant: 'outline' },
         { label: '✓ Potvrdil ručně', onClick: onQuickConfirmMeetingSent, variant: 'ghost' },
+        { label: 'Odmítnout lead', onClick: onRejectLead, variant: 'ghost' },
       ] : [
         { label: 'Odeslat znovu', onClick: onSendMeetingRequest, variant: 'ghost' },
+        { label: 'Odmítnout lead', onClick: onRejectLead, variant: 'ghost' },
       ],
     },
     {

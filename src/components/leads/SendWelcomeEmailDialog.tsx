@@ -16,7 +16,7 @@ import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
 import { EmailSignatureRichEditor } from '@/components/shared/EmailSignatureRichEditor';
 import { invokeWithTimeout } from '@/lib/supabaseUtils';
-import { inflectVocativeFullName } from '@/lib/emailSignature';
+import { formatEmailTextToHtml, getDefaultEmailSignature, inflectVocativeFullName } from '@/lib/emailSignature';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -64,6 +64,13 @@ export function SendWelcomeEmailDialog({ open, onOpenChange, lead, onMarkSent }:
 
   const contactFirstName = (lead.contact_name || '').trim().split(/\s+/).filter(Boolean)[0] || '';
   const contactNameVocative = inflectVocativeFullName(contactFirstName).trim();
+  const signatureHtml = useMemo(
+    () =>
+      formatEmailTextToHtml(
+        getDefaultEmailSignature(currentUserColleague, { fallbackName: 'Tým Socials' }),
+      ),
+    [currentUserColleague],
+  );
 
   const emailHtml = useMemo(() => {
     const mainContactLine = mainContactName.trim()
@@ -92,9 +99,9 @@ export function SendWelcomeEmailDialog({ open, onOpenChange, lead, onMarkSent }:
       <p>Těším se na spolupráci!</p>
       <p></p>
       <p>Přeji hezký den.</p>
-      <p>Daniel Bauer<br />CEO @Socials</p>
+      ${signatureHtml}
     `;
-  }, [contactNameVocative, mainContactName]);
+  }, [contactNameVocative, mainContactName, signatureHtml]);
 
   const [editableHtml, setEditableHtml] = useState(emailHtml);
 

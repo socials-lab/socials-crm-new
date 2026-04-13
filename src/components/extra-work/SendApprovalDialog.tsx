@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { EmailTagInput } from '@/components/ui/email-tag-input';
+import { EmailSenderInfo } from '@/components/shared/EmailSenderInfo';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useAuth } from '@/hooks/useAuth';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
@@ -348,6 +349,8 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
                 </div>
               </div>
             )}
+
+            <EmailSenderInfo colleague={currentUserColleague} />
 
             <div className="space-y-2">
               <Label htmlFor="email">Email příjemce</Label>

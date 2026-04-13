@@ -80,6 +80,14 @@ const DEFAULT_TEMPLATES: Record<string, Omit<EmailTemplate, 'id' | 'updated_at' 
     body_template: `Dobrý den {name},\n\nděkuji za Váš zájem o spolupráci.\n\nRádi bychom si s Vámi domluvili krátký telefonát, abychom zjistili, jak Vám můžeme nejlépe pomoci.\n\nSjednejte si se mnou hovor kliknutím na odkaz níže:\n👉 {meeting_url}\n\nDěkuji a budu se těšit na náš rozhovor.\n\n{signature}`,
     available_variables: ['name', 'company', 'meeting_url', 'signature'],
   },
+  lead_rejection: {
+    template_key: 'lead_rejection',
+    name: 'Odmítnutí leadu',
+    description: 'Slušné odmítnutí spolupráce pro lead.',
+    subject_template: 'Vyjádření ke spolupráci - {company} / Socials',
+    body_template: `Dobrý den, {name},\n\nděkujeme Vám za zájem o spolupráci se Socials a za čas, který jste nám věnoval/a.\n\nPo pečlivém vyhodnocení jsme dospěli k tomu, že pro Vás v tuto chvíli nejsme ideální partner. Specializujeme se primárně na klienty s většími marketingovými rozpočty kde můžeme lépe predikovat náš přínos.\n\nNechceme Vám proto slibovat něco, co by pro Vás v této fázi nemuselo mít očekávaný výsledek.\n\nVelmi si vážíme Vaší důvěry a přejeme Vám, ať se Vašemu projektu daří. Pokud se situace v budoucnu změní, rádi se k možnosti spolupráce vrátíme.\n\n{signature}`,
+    available_variables: ['name', 'company', 'signature'],
+  },
   applicant_onboarding: {
     template_key: 'applicant_onboarding',
     name: 'Onboarding kandidáta',

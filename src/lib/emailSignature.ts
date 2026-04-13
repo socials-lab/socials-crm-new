@@ -38,6 +38,11 @@ export function getDefaultEmailSignature(
   colleague: SignatureColleague | null | undefined,
   options: EmailSignatureOptions = {}
 ): string {
+  const customSignature = (colleague?.email_signature || '').trim();
+  if (customSignature) {
+    return customSignature;
+  }
+
   const fullName = colleague?.full_name?.trim() || '';
   const position = colleague?.position?.trim() || '';
   const fallbackName = options.fallbackName?.trim() || 'Tým Socials';

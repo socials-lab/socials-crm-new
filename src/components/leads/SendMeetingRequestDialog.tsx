@@ -19,6 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useMeetingScheduleUrl } from '@/hooks/useMeetingScheduleUrl';
 import { EmailCcBccFields } from '@/components/shared/EmailCcBccFields';
+import { EmailSenderInfo } from '@/components/shared/EmailSenderInfo';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { formatEmailTextToHtml, getDefaultEmailSignature, inflectVocativeFullName } from '@/lib/emailSignature';
 
@@ -248,6 +249,8 @@ export function SendMeetingRequestDialog({
               </div>
             </div>
           )}
+
+          <EmailSenderInfo colleague={currentUserColleague} />
 
           {/* To */}
           <div className="space-y-1.5">

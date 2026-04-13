@@ -54,6 +54,39 @@ function isCzechClient(billingCountry: string | null | undefined): boolean {
   return CZ_COUNTRY_NAMES.includes(billingCountry.toLowerCase().trim());
 }
 
+function formatBilledDaysLabel(days: number): string {
+  if (days === 1) return '1 den';
+  if (days >= 2 && days <= 4) return `${days} dny`;
+  return `${days} dnů`;
+}
+
+function withProratedDaysInDescription(item: InvoiceLineItem): InvoiceLineItem {
+  if (item.source !== 'engagement' || item.prorated_days >= item.total_days_in_month) {
+    return item;
+  }
+
+  const billedDaysSuffix = `(${formatBilledDaysLabel(item.prorated_days)})`;
+  if ((item.line_description || '').includes(billedDaysSuffix)) {
+    return item;
+  }
+
+  const periodDate = parseISO(item.period_start);
+  const monthLabel = format(periodDate, 'LLLL yyyy', { locale: cs });
+  const baseDescription = item.source_description || item.line_description || 'Služba';
+
+  return {
+    ...item,
+    line_description: `${baseDescription} - ${monthLabel} ${billedDaysSuffix}`,
+  };
+}
+
+function normalizeProratedDescriptions(invoices: MonthlyEngagementInvoice[]): MonthlyEngagementInvoice[] {
+  return invoices.map((invoice) => ({
+    ...invoice,
+    line_items: invoice.line_items.map(withProratedDaysInDescription),
+  }));
+}
+
 function requireSingleCurrency(items: InvoiceLineItem[], context: string): string {
   if (items.length === 0) {
     throw new Error(`Missing line items for ${context}`);
@@ -75,7 +108,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   const [invoices, setInvoices] = useState<MonthlyEngagementInvoice[]>(() => {
     try {
       const saved = localStorage.getItem(draftKey);
-      return saved ? JSON.parse(saved) : [];
+      return saved ? normalizeProratedDescriptions(JSON.parse(saved)) : [];
     } catch {
       return [];
     }
@@ -115,7 +148,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
   useEffect(() => {
     try {
       const saved = localStorage.getItem(draftKey);
-      setInvoices(saved ? JSON.parse(saved) : []);
+      setInvoices(saved ? normalizeProratedDescriptions(JSON.parse(saved)) : []);
     } catch {
       setInvoices([]);
     }
@@ -312,7 +345,7 @@ export function FutureInvoicing({ year, month, onIssuedStatsChange }: FutureInvo
               prorated_days: activeDays,
               total_days_in_month: totalDays,
               prorated_amount: proratedAmount,
-              line_description: `${service.name} - ${format(periodStart, 'LLLL yyyy', { locale: cs })}`,
+              line_description: `${service.name} - ${format(periodStart, 'LLLL yyyy', { locale: cs })}${isProrated ? ` (${formatBilledDaysLabel(activeDays)})` : ''}`,
               unit_price: proratedAmount,
               quantity: 1,
               adjustment_amount: 0,

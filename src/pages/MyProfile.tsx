@@ -50,6 +50,7 @@ import { optionalIco, czechDic } from '@/lib/validation';
 import { getDefaultEmailSignature, signatureHtmlToStoredText, signatureTextToEditableHtml } from '@/lib/emailSignature';
 
 const profileSchema = z.object({
+  position: z.string().nullable(),
   phone: z.string().nullable(),
   birthday: z.date().nullable(),
   personal_email: z.string().email('Zadejte platný email').nullable().or(z.literal('')),
@@ -82,6 +83,7 @@ export default function MyProfile() {
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
+      position: currentColleague?.position || null,
       phone: currentColleague?.phone || null,
       birthday: currentColleague?.birthday ? new Date(currentColleague.birthday) : null,
       personal_email: currentColleague?.personal_email || null,
@@ -104,6 +106,7 @@ export default function MyProfile() {
         : getDefaultEmailSignature(currentColleague, { fallbackName: 'Tým Socials' });
       setEmailSignatureHtml(signatureTextToEditableHtml(resolvedSignature));
       form.reset({
+        position: currentColleague.position || null,
         phone: currentColleague.phone || null,
         birthday: currentColleague.birthday ? new Date(currentColleague.birthday) : null,
         personal_email: currentColleague.personal_email || null,
@@ -177,6 +180,7 @@ export default function MyProfile() {
     setIsSubmitting(true);
 
     const profilePayload = {
+      position: data.position || currentColleague.position,
       phone: data.phone || null,
       birthday: data.birthday ? format(data.birthday, 'yyyy-MM-dd') : null,
       personal_email: data.personal_email || null,
@@ -323,6 +327,28 @@ export default function MyProfile() {
             </CardHeader>
             <CardContent className="p-4 md:p-6 space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="position"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Briefcase className="h-4 w-4" />
+                        Pozice
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Např. Meta Ads specialist"
+                          {...field}
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value || null)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="phone"

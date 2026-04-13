@@ -24,6 +24,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 
 type MarketingRole = 'content_manager' | 'video_editor' | 'graphic_designer';
 type MarketingWorkType = 'reels_video' | 'complex_video' | 'podcast' | 'other_hourly';
+type ManualMarketingCostCategory = 'other_fixed' | 'podcast_studio_rent';
 type MainMarketingActivity =
   | 'content_management'
   | 'video_editing_production'
@@ -135,6 +136,37 @@ interface MarketingAdSpendEntry {
   channel: 'meta' | 'ppc' | 'other';
   amount: number;
   note: string | null;
+}
+
+const MANUAL_COST_CATEGORY_LABELS: Record<ManualMarketingCostCategory, string> = {
+  other_fixed: 'Ostatní / fix',
+  podcast_studio_rent: 'Pronájem podcast studia',
+};
+
+const PODCAST_STUDIO_NOTE_PREFIX = '[podcast_studio_rent] ';
+
+function stripManualCostCategoryPrefix(note: string | null | undefined): string {
+  const normalized = String(note ?? '').trim();
+  if (normalized.toLowerCase().startsWith(PODCAST_STUDIO_NOTE_PREFIX.trim())) {
+    return normalized.slice(PODCAST_STUDIO_NOTE_PREFIX.length).trim();
+  }
+  return normalized;
+}
+
+function getManualCostCategoryFromEntry(entry: MarketingAdSpendEntry): ManualMarketingCostCategory {
+  const note = String(entry.note ?? '').trim().toLowerCase();
+  if (note.startsWith(PODCAST_STUDIO_NOTE_PREFIX.trim())) {
+    return 'podcast_studio_rent';
+  }
+  return 'other_fixed';
+}
+
+function getStoredManualCostNote(note: string, category: ManualMarketingCostCategory): string {
+  const cleanNote = stripManualCostCategoryPrefix(note).trim();
+  if (category === 'podcast_studio_rent') {
+    return `${PODCAST_STUDIO_NOTE_PREFIX}${cleanNote}`;
+  }
+  return cleanNote;
 }
 
 const ROLE_LABELS: Record<MarketingRole, string> = {
@@ -346,6 +378,7 @@ function MarketingPageContent() {
     spend_date: format(now, 'yyyy-MM-dd'),
     amount: '',
     note: '',
+    category: 'other_fixed' as ManualMarketingCostCategory,
   });
   const [isAnnualRoleBreakdownOpen, setIsAnnualRoleBreakdownOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'monthly' | 'annual'>('monthly');
@@ -793,6 +826,7 @@ function MarketingPageContent() {
       spend_date: format(now, 'yyyy-MM-dd'),
       amount: '',
       note: '',
+      category: 'other_fixed',
     });
     setEditingManualCostId(null);
   };
@@ -820,7 +854,7 @@ function MarketingPageContent() {
         spend_date: manualCostForm.spend_date,
         channel: 'other' as const,
         amount: parsedAmount,
-        note: manualCostForm.note.trim(),
+        note: getStoredManualCostNote(manualCostForm.note, manualCostForm.category),
       };
 
       if (editingManualCostId) {
@@ -917,7 +951,15 @@ function MarketingPageContent() {
   );
   const pureVideoEditingCost = videoWorkCost;
   const actualOtherSpend = useMemo(
-    () => adSpendEntries.filter((entry) => entry.channel === 'other').reduce((sum, entry) => sum + (entry.amount || 0), 0),
+    () => adSpendEntries
+      .filter((entry) => entry.channel === 'other' && getManualCostCategoryFromEntry(entry) === 'other_fixed')
+      .reduce((sum, entry) => sum + (entry.amount || 0), 0),
+    [adSpendEntries]
+  );
+  const actualPodcastStudioRentSpend = useMemo(
+    () => adSpendEntries
+      .filter((entry) => entry.channel === 'other' && getManualCostCategoryFromEntry(entry) === 'podcast_studio_rent')
+      .reduce((sum, entry) => sum + (entry.amount || 0), 0),
     [adSpendEntries]
   );
   const actualOtherCost = actualOtherSpend;
@@ -1407,7 +1449,8 @@ function MarketingPageContent() {
     setManualCostForm({
       spend_date: entry.spend_date,
       amount: String(entry.amount || ''),
-      note: entry.note || '',
+      note: stripManualCostCategoryPrefix(entry.note || ''),
+      category: getManualCostCategoryFromEntry(entry),
     });
     setEditingManualCostId(entry.id);
   };
@@ -1834,7 +1877,7 @@ function MarketingPageContent() {
                       { label: 'Content management', plan: planForm.planned_content_budget, actual: contentWorkCost },
                       { label: 'Video editing', plan: planForm.planned_video_budget, actual: pureVideoEditingCost },
                       { label: 'Podcast postprodukce', plan: planForm.planned_podcast_postproduction_budget, actual: podcastPostproductionCost },
-                      { label: 'Pronájem studia', plan: planForm.planned_podcast_studio_rent_budget, actual: null },
+                      { label: 'Pronájem studia', plan: planForm.planned_podcast_studio_rent_budget, actual: actualPodcastStudioRentSpend },
                       { label: 'Graphic design', plan: planForm.planned_graphic_budget, actual: creativeWorkCost },
                       { label: 'Ad spend', plan: plannedAdSpendBudget, actual: actualMetaSpend + actualPpcSpend },
                       { label: 'Ostatní / fix', plan: planForm.planned_other_budget, actual: actualOtherCost },
@@ -1896,7 +1939,7 @@ function MarketingPageContent() {
               <CollapsibleContent>
                 <div className="mt-1 rounded-lg border overflow-hidden">
                   <div className="space-y-2 border-b p-3">
-                    <div className="grid gap-2 sm:grid-cols-[150px,160px,1fr]">
+                    <div className="grid gap-2 sm:grid-cols-[150px,170px,160px,1fr]">
                       <div className="space-y-0.5">
                         <Label className="text-xs">Datum</Label>
                         <Input
@@ -1915,6 +1958,21 @@ function MarketingPageContent() {
                           onChange={(e) => setManualCostForm((prev) => ({ ...prev, amount: e.target.value }))}
                           placeholder="25000"
                         />
+                      </div>
+                      <div className="space-y-0.5">
+                        <Label className="text-xs">Typ nákladu</Label>
+                        <Select
+                          value={manualCostForm.category}
+                          onValueChange={(value) => setManualCostForm((prev) => ({ ...prev, category: value as ManualMarketingCostCategory }))}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="other_fixed">{MANUAL_COST_CATEGORY_LABELS.other_fixed}</SelectItem>
+                            <SelectItem value="podcast_studio_rent">{MANUAL_COST_CATEGORY_LABELS.podcast_studio_rent}</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-0.5">
                         <Label className="text-xs">Poznámka</Label>
@@ -1949,6 +2007,7 @@ function MarketingPageContent() {
                       <TableHeader className="sticky top-0 z-10 bg-background">
                         <TableRow className="bg-muted/20">
                           <TableHead className="text-xs w-[90px]">Datum</TableHead>
+                          <TableHead className="text-xs w-[220px]">Typ</TableHead>
                           <TableHead className="text-xs">Poznámka</TableHead>
                           <TableHead className="text-right text-xs w-[120px]">Kč</TableHead>
                           <TableHead className="text-right text-xs w-[140px]">Akce</TableHead>
@@ -1957,7 +2016,7 @@ function MarketingPageContent() {
                       <TableBody>
                         {manualOtherCosts.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={4} className="text-center text-xs text-muted-foreground py-5">
+                            <TableCell colSpan={5} className="text-center text-xs text-muted-foreground py-5">
                               Zatím žádné manuální náklady.
                             </TableCell>
                           </TableRow>
@@ -1967,7 +2026,10 @@ function MarketingPageContent() {
                               <TableCell className="text-xs tabular-nums text-muted-foreground">
                                 {new Date(entry.spend_date).toLocaleDateString('cs-CZ', { day: '2-digit', month: '2-digit' })}
                               </TableCell>
-                              <TableCell className="text-xs">{entry.note || '—'}</TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {MANUAL_COST_CATEGORY_LABELS[getManualCostCategoryFromEntry(entry)]}
+                              </TableCell>
+                              <TableCell className="text-xs">{stripManualCostCategoryPrefix(entry.note) || '—'}</TableCell>
                               <TableCell className="text-right text-xs font-medium tabular-nums">
                                 {Math.round(entry.amount || 0).toLocaleString('cs-CZ')} Kč
                               </TableCell>

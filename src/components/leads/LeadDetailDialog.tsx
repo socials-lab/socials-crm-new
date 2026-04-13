@@ -57,6 +57,7 @@ import { LeadHistoryDialog } from './LeadHistoryDialog';
 import { AddLeadServiceDialog } from './AddLeadServiceDialog';
 import { RequestAccessDialog } from './RequestAccessDialog';
 import { SendMeetingRequestDialog } from './SendMeetingRequestDialog';
+import { SendLeadRejectionDialog } from './SendLeadRejectionDialog';
 import { SendOnboardingFormDialog } from './SendOnboardingFormDialog';
 import { SendContractDialog } from './SendContractDialog';
 import { SendWelcomeEmailDialog } from './SendWelcomeEmailDialog';
@@ -132,6 +133,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
   const [isRequestAccessOpen, setIsRequestAccessOpen] = useState(false);
   const [isMeetingRequestOpen, setIsMeetingRequestOpen] = useState(false);
+  const [isLeadRejectionOpen, setIsLeadRejectionOpen] = useState(false);
   const [isOnboardingFormOpen, setIsOnboardingFormOpen] = useState(false);
   const [isOnboardingDataOpen, setIsOnboardingDataOpen] = useState(false);
   const [isResetOnboardingOpen, setIsResetOnboardingOpen] = useState(false);
@@ -924,6 +926,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                         '✓ Žádost o schůzku označena jako odeslaná',
                       );
                     }}
+                    onRejectLead={() => setIsLeadRejectionOpen(true)}
                     onRequestAccess={() => setIsRequestAccessOpen(true)}
                     onQuickConfirmAccessSent={() => {
                       void persistLeadUpdate(
@@ -1100,6 +1103,22 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
           if (emailData) {
             addNote(lead.id, emailData.body, 'email_sent', null, emailData.subject, emailData.recipients);
           }
+        }}
+      />
+
+      <SendLeadRejectionDialog
+        open={isLeadRejectionOpen}
+        onOpenChange={setIsLeadRejectionOpen}
+        contactName={lead.contact_name}
+        contactEmail={lead.contact_email}
+        companyName={lead.company_name}
+        leadId={lead.id}
+        onSent={(emailData) => {
+          updateLeadStage(lead.id, 'bad_fit');
+          if (emailData) {
+            addNote(lead.id, emailData.body, 'email_sent', null, emailData.subject, emailData.recipients);
+          }
+          toast.success('Lead byl slušně odmítnut a přesunut do Bad Fit');
         }}
       />
 

@@ -17,6 +17,7 @@ import { toast } from '@/components/ui/sonner';
 import { DEFAULT_GMAIL_BCC, useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { useAuth } from '@/hooks/useAuth';
 import { useCRMData } from '@/hooks/useCRMData';
+import { EmailSenderInfo } from '@/components/shared/EmailSenderInfo';
 import { formatEmailTextToHtml, getDefaultEmailSignature } from '@/lib/emailSignature';
 import { useEmailTemplates } from '@/hooks/useEmailTemplates';
 
@@ -230,6 +231,8 @@ export function RequestAccessDialog({
               </div>
             </div>
           )}
+
+          <EmailSenderInfo colleague={currentUserColleague} />
 
           {/* To */}
           <div className="space-y-1.5">
