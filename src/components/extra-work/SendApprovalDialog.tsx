@@ -43,6 +43,8 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isConfirmingManual, setIsConfirmingManual] = useState(false);
+  const [isMarkingApproved, setIsMarkingApproved] = useState(false);
   const [approvalToken, setApprovalToken] = useState<string | null>(extraWork.approval_token || null);
   const [isPreparingApprovalLink, setIsPreparingApprovalLink] = useState(false);
   const [approvalLinkError, setApprovalLinkError] = useState<string | null>(null);
@@ -51,6 +53,13 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
   const client = useMemo(() => getClientById(extraWork.client_id), [extraWork.client_id, getClientById]);
   const currentUserColleague = useMemo(() => colleagues.find(c => c.profile_id === user?.id), [colleagues, user?.id]);
   const colleague = useMemo(() => colleagues.find(c => c.id === extraWork.colleague_id), [extraWork.colleague_id, colleagues]);
+  const ownerColleague = useMemo(() => {
+    if (extraWork.upsold_by_id) {
+      const upsoldBy = colleagues.find(c => c.id === extraWork.upsold_by_id);
+      if (upsoldBy) return upsoldBy;
+    }
+    return colleague;
+  }, [extraWork.upsold_by_id, colleagues, colleague]);
   const engagement = useMemo(() => engagements.find(e => e.id === extraWork.engagement_id), [extraWork.engagement_id, engagements]);
 
   const clientName = client?.brand_name || client?.name || 'Klient';
@@ -116,7 +125,7 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
   }, [extraWork.id, extraWork.approval_token]);
 
   const currentUserColleagueId = currentUserColleague?.id || '';
-  const colleagueName = colleague?.full_name || '';
+  const colleagueName = ownerColleague?.full_name || '';
   const engagementName = engagement?.name || '';
 
   // Generate default email content
@@ -246,6 +255,50 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
       toast.error('Nepodařilo se odeslat email');
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleManualConfirm = async () => {
+    setIsConfirmingManual(true);
+    try {
+      await ensureApprovalToken();
+      toast.success('Označeno jako odeslané ručně. Odkaz můžete poslat mimo CRM.');
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to confirm manual approval send:', error);
+      toast.error('Nepodařilo se připravit schvalovací odkaz pro ruční odeslání');
+    } finally {
+      setIsConfirmingManual(false);
+    }
+  };
+
+  const handleManualClientApproved = async () => {
+    if (!onUpdate) {
+      toast.error('Chybí možnost aktualizace vícepráce');
+      return;
+    }
+
+    setIsMarkingApproved(true);
+    try {
+      const nowIso = new Date().toISOString();
+      await Promise.resolve(
+        onUpdate(extraWork.id, {
+          status: 'in_progress',
+          client_approved_at: nowIso,
+          client_rejected_at: null,
+          client_rejection_reason: null,
+          client_approval_email: currentUserColleague?.email || 'manual-confirmation',
+          approval_date: nowIso,
+          approved_by: null,
+        })
+      );
+      toast.success('Vícepráce byla ručně označena jako klientem schválená');
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to mark extra work as manually approved:', error);
+      toast.error('Nepodařilo se ručně označit vícepráci jako schválenou');
+    } finally {
+      setIsMarkingApproved(false);
     }
   };
 
@@ -432,6 +485,34 @@ export function SendApprovalDialog({ open, onOpenChange, extraWork, onUpdate }: 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Zrušit
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleManualConfirm}
+            disabled={isConfirmingManual || isPreparingApprovalLink}
+          >
+            {isConfirmingManual ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Potvrzuji...
+              </>
+            ) : (
+              'Potvrdit ručně'
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleManualClientApproved}
+            disabled={isMarkingApproved}
+          >
+            {isMarkingApproved ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Schvaluji...
+              </>
+            ) : (
+              'Klient už schválil'
+            )}
           </Button>
           <Button onClick={handleSendEmail} disabled={isSending || !hasGmailScope}>
             {isSending ? (

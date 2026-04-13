@@ -40,6 +40,7 @@ import { SendApprovalDialog } from './SendApprovalDialog';
 import { statusConfig } from './ExtraWorkStatusBadge';
 import { useCRMData } from '@/hooks/useCRMData';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { ExtraWork, ExtraWorkStatus } from '@/types/crm';
 import { format } from 'date-fns';
@@ -94,8 +95,10 @@ export function ExtraWorkTable({
   onSearchChange,
 }: ExtraWorkTableProps) {
   const { clients, colleagues, getClientById, getEngagementById, getColleagueById, approveExtraWork, completeExtraWork, issuedInvoices } = useCRMData();
+  const { user } = useAuth();
   const { isSuperAdmin, role } = useUserRole();
   const { toast } = useToast();
+  const currentUserColleague = useMemo(() => colleagues.find(c => c.profile_id === user?.id), [colleagues, user?.id]);
 
   // Permission check: only admin/management can approve extra work
   const canApprove = isSuperAdmin || role === 'admin' || role === 'management';
@@ -508,6 +511,7 @@ export function ExtraWorkTable({
                 const engagement = work.engagement_id ? getEngagementById(work.engagement_id) : null;
                 const config = statusConfig[work.status];
                 const isInvoiced = work.status === 'invoiced';
+                const isWaitingForClient = work.status === 'pending_approval' && !!work.approval_token;
                 const upsoldBy = work.upsold_by_id ? getColleagueById(work.upsold_by_id) : null;
                 
                 return (
@@ -648,6 +652,29 @@ export function ExtraWorkTable({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          {isWaitingForClient && canApprove && (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                const nowIso = new Date().toISOString();
+                                onUpdate(work.id, {
+                                  status: 'in_progress',
+                                  client_approved_at: nowIso,
+                                  client_rejected_at: null,
+                                  client_rejection_reason: null,
+                                  client_approval_email: currentUserColleague?.email || 'manual-confirmation',
+                                  approval_date: nowIso,
+                                  approved_by: null,
+                                });
+                                toast({
+                                  title: 'Ručně schváleno',
+                                  description: 'Vícepráce byla označena jako schválená klientem.',
+                                });
+                              }}
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Schválit ručně
+                            </DropdownMenuItem>
+                          )}
                           {work.status === 'pending_approval' && canApprove && (
                             <DropdownMenuItem onClick={() => setSendApprovalWork(work)}>
                               <Send className="h-4 w-4 mr-2" />

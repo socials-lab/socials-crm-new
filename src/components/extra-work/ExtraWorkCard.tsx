@@ -58,6 +58,7 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
 
   const client = getClientById(work.client_id);
   const colleague = colleagues.find(c => c.id === work.colleague_id);
+  const currentUserColleague = colleagues.find(c => c.profile_id === user?.id);
   const engagement = engagements.find(e => e.id === work.engagement_id);
   const clientName = client?.brand_name || client?.name || 'Neznámý klient';
 
@@ -96,6 +97,20 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
     if (!user?.id) return;
     onUpdate?.(work.id, { approved_by: user.id });
     toast.success('Vícepráce aktivována pro realizaci');
+  };
+
+  const handleManualClientApprove = () => {
+    const nowIso = new Date().toISOString();
+    onUpdate?.(work.id, {
+      status: 'in_progress',
+      client_approved_at: nowIso,
+      client_rejected_at: null,
+      client_rejection_reason: null,
+      client_approval_email: currentUserColleague?.email || 'manual-confirmation',
+      approval_date: nowIso,
+      approved_by: null,
+    });
+    toast.success('Vícepráce byla ručně označena jako klientem schválená');
   };
 
   const formattedBillingPeriod = useMemo(() => {
@@ -319,6 +334,10 @@ export function ExtraWorkCard({ work, onEdit, onDelete, onSendApproval, onUpdate
                         <DropdownMenuItem onSelect={() => handleCopyLink()}>
                           <Copy className="h-4 w-4 mr-2" />
                           {linkCopied ? 'Zkopírováno' : 'Zkopírovat odkaz'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={handleManualClientApprove}>
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Schválit ručně
                         </DropdownMenuItem>
                         {onEdit && (
                           <DropdownMenuItem onSelect={() => onEdit(work)}>

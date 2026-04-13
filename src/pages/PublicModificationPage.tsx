@@ -23,7 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import socialsLogo from '@/assets/socials-logo.png';
+import socialsLogo from '@/assets/socials-logo-dark.svg';
 import {
   getModificationRequestByToken,
   clientAcceptOffer,

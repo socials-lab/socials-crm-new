@@ -29,7 +29,7 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import socialsLogo from '@/assets/socials-logo.png';
+import socialsLogo from '@/assets/socials-logo-dark.svg';
 import { AvatarUpload } from '@/components/forms/AvatarUpload';
 import { CompanySearchInput } from '@/components/shared/CompanySearchInput';
 import type { CompanySearchResult } from '@/hooks/useAresSearch';

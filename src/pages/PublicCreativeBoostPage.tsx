@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, AlertCircle, Zap, Image, Video } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import socialsLogo from '@/assets/socials-logo.png';
+import socialsLogo from '@/assets/socials-logo-dark.svg';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { cn } from '@/lib/utils';

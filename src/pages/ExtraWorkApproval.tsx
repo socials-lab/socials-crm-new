@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertCircle, CheckCircle2, XCircle, Loader2, Building2, Briefcase, Clock, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import socialsLogo from '@/assets/socials-logo.png';
+import socialsLogo from '@/assets/socials-logo-dark.svg';
 
 interface ExtraWorkApprovalData {
   id: string;

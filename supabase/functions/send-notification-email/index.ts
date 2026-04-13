@@ -17,9 +17,12 @@ const NOTIFICATION_EMAIL_CONFIG: Record<string, { emoji: string; color: string }
   offer_sent: { emoji: "📤", color: "#ec4899" },
   colleague_birthday: { emoji: "🎂", color: "#f43f5e" },
   new_feedback_idea: { emoji: "💡", color: "#eab308" },
+  extra_work_created: { emoji: "🔧", color: "#f97316" },
+  extra_work_approved: { emoji: "✅", color: "#16a34a" },
 };
 
 const IMPORTANT_TYPES = ["contract_signed", "lead_converted", "form_completed"];
+const FORCE_DELIVERY_TYPES = ["extra_work_created", "extra_work_approved"];
 
 type NotificationPayload = {
   notification_id?: string;
@@ -50,6 +53,8 @@ const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
   offer_sent: "Nabídka odeslána",
   colleague_birthday: "Narozeniny kolegy",
   new_feedback_idea: "Nový feedback nápad",
+  extra_work_created: "Nová vícepráce",
+  extra_work_approved: "Vícepráce schválena klientem",
 };
 
 function escapeHtml(value: unknown): string {
@@ -347,6 +352,7 @@ serve(async (req) => {
 
       const level = profile?.email_notification_level || "none";
       if (
+        FORCE_DELIVERY_TYPES.includes(type) ||
         level === "all" ||
         (level === "important" && IMPORTANT_TYPES.includes(type))
       ) {
