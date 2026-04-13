@@ -46,3 +46,35 @@ curl -s "https://bkemtvqmbpxopuasgxcq.supabase.co/rest/v1/TABLE?select=*" \
 - Wrong: `await supabase.rpc(...).catch(console.error)`
 - Correct: `supabase.rpc(...).then(({ error }) => { if (error) console.error(error); })`
 - Or use try/catch with await
+
+## 🚨 Migration Drift Guardrails (MANDATORY)
+
+This repo has multiple developers/agents on one branch. To prevent deploy breakage, follow this strict flow.
+
+1. **Always sync first (required):**
+   ```bash
+   git fetch origin
+   git checkout feature/supabase-implementation-plans
+   git pull --ff-only origin feature/supabase-implementation-plans
+   ```
+
+2. **Before creating/applying any migration, verify local vs remote history:**
+   ```bash
+   npx supabase migration list --db-url "$SUPABASE_DB_URL_PROD"
+   ```
+
+3. **If remote has migration versions not present locally:**
+   - **DO NOT** generate placeholder/reconcile/manual backfill migrations.
+   - **DO NOT** continue with deploy.
+   - First retry step 1 (pull latest) and re-check.
+   - If still missing after pull: **STOP** and notify user to contact **Jakub Rana** (owner) to get the missing migration committed/pushed.
+
+4. **Forbidden patterns:**
+   - Never create `*_placeholder.sql` to satisfy missing history.
+   - Never create duplicate migration version timestamps.
+   - Never "repair" by inventing unknown prior migrations.
+
+5. **If drift is detected, required user message format:**
+   - State exact missing migration version(s).
+   - State that deploy is blocked intentionally to avoid schema corruption/history conflicts.
+   - Instruct: "Please contact Jakub Rana to push the missing migration(s), then rerun deploy."
