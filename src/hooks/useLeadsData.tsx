@@ -302,20 +302,25 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
   const deleteLeadMutation = useMutation({
     mutationFn: async (id: string) => {
       const deletedAt = now();
-      const { error } = await supabase
+      const { data: updatedLead, error } = await supabase
         .from('leads')
         .update({
           deleted_at: deletedAt,
           updated_at: deletedAt,
         })
         .eq('id', id)
-        .is('deleted_at', null);
+        .is('deleted_at', null)
+        .select('id')
+        .maybeSingle();
 
       if (error) {
         if (isMissingDeletedAtColumnError(error)) {
           throw new Error('Soft delete is unavailable: database schema is outdated (missing leads.deleted_at). Apply latest migrations first.');
         }
         throw error;
+      }
+      if (!updatedLead) {
+        throw new Error('Lead se nepodařilo smazat. Zkontrolujte oprávnění nebo zda už není smazaný.');
       }
 
       // Keep an audit trail entry for soft delete action
@@ -418,20 +423,18 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
       created_at: now(),
     };
 
-    // Append to notes JSONB array
-    const currentNotes = Array.isArray(lead.notes) ? lead.notes : [];
-    const updatedNotes = [...currentNotes, newNote];
+    const { error: appendError } = await supabase.rpc('append_lead_note', {
+      p_lead_id: leadId,
+      p_note: newNote as unknown as Record<string, unknown>,
+    });
+    if (appendError) throw appendError;
 
-    // Update lead with new notes array
-    await withTimeout(updateLeadMutation.mutateAsync({
-      id: leadId,
-      data: { notes: updatedNotes }
-    }), 30000);
+    queryClient.invalidateQueries({ queryKey: ['leads'] });
 
     // Log note addition in history
     const noteTypeLabel = noteType === 'call' ? 'hovor' : noteType === 'internal' ? 'interní poznámka' : noteType === 'email_sent' ? 'odeslaný e-mail' : noteType === 'email_received' ? 'přijatý e-mail' : 'poznámka';
     await addHistoryEntry(leadId, 'note_added', null, null, null, `Přidán ${noteTypeLabel}: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);
-  }, [leads, updateLeadMutation, addHistoryEntry]);
+  }, [leads, addHistoryEntry, queryClient]);
 
   const getLeadById = useCallback((id: string) => leads.find(l => l.id === id), [leads]);
 

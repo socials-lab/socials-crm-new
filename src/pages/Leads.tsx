@@ -22,6 +22,7 @@ import { useSearchParams } from 'react-router-dom';
 import type { Lead, LeadStage } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, subQuarters, isWithinInterval } from 'date-fns';
+import { toast } from 'sonner';
 
 type KPIPeriod = 'this_month' | 'last_month' | 'this_quarter' | 'last_quarter' | 'ytd' | 'year';
 
@@ -52,7 +53,7 @@ type ViewMode = 'kanban' | 'table';
 const STAGE_ORDER: LeadStage[] = ['new_lead', 'meeting_done', 'waiting_access', 'access_received', 'preparing_offer', 'offer_sent', 'won', 'lost', 'postponed', 'bad_fit'];
 
 export default function Leads() {
-  const { leads, updateLeadStage } = useLeadsData();
+  const { leads, updateLeadStage, deleteLead } = useLeadsData();
   const { colleagues } = useCRMData();
   const { isSuperAdmin, role, canSeeFinancials } = useUserRole();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -170,6 +171,21 @@ export default function Leads() {
 
   const handleStageChange = async (leadId: string, newStage: LeadStage): Promise<void> => {
     await updateLeadStage(leadId, newStage);
+  };
+
+  const handleDeleteLead = async (leadId: string) => {
+    try {
+      await deleteLead(leadId);
+      if (selectedLeadId === leadId) {
+        setSelectedLeadId(null);
+        setIsDetailOpen(false);
+      }
+      toast.success('Lead byl smazán');
+    } catch (error) {
+      console.error('Failed to delete lead:', error);
+      toast.error(error instanceof Error ? error.message : 'Lead se nepodařilo smazat');
+      throw error;
+    }
   };
 
   const owners = useMemo(() => {
@@ -323,6 +339,7 @@ export default function Leads() {
         lead={selectedLead}
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
+        onDelete={handleDeleteLead}
       />
 
       {/* Add/Edit Dialog */}

@@ -286,29 +286,40 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
     setPendingTransition(null);
   };
 
-  const handleAddNote = (text: string, type: LeadNoteType, date: string | null, subject?: string | null, recipients?: string[] | null) => {
-    addNote(lead.id, text, type, date, subject, recipients);
+  const handleAddNote = async (
+    text: string,
+    type: LeadNoteType,
+    date: string | null,
+    subject?: string | null,
+    recipients?: string[] | null
+  ) => {
+    await addNote(lead.id, text, type, date, subject, recipients);
     toast.success('Poznámka byla přidána');
   };
 
-  const handleInlineNoteSubmit = () => {
+  const handleInlineNoteSubmit = async () => {
     if (!noteText.trim()) return;
     const isEmail = noteType === 'email_sent' || noteType === 'email_received';
     const subject = isEmail && emailSubject.trim() ? emailSubject.trim() : null;
     const recipients = isEmail && emailRecipients.trim() 
       ? emailRecipients.split(',').map(r => r.trim()).filter(Boolean) 
       : null;
-    handleAddNote(
-      noteText.trim(), 
-      noteType, 
-      noteType === 'call' && callDate ? callDate : null,
-      subject,
-      recipients,
-    );
-    setNoteText('');
-    setCallDate('');
-    setEmailSubject('');
-    setEmailRecipients('');
+    try {
+      await handleAddNote(
+        noteText.trim(),
+        noteType,
+        noteType === 'call' && callDate ? callDate : null,
+        subject,
+        recipients,
+      );
+      setNoteText('');
+      setCallDate('');
+      setEmailSubject('');
+      setEmailRecipients('');
+    } catch (error) {
+      console.error('Failed to add lead note:', error);
+      toast.error('Poznámku se nepodařilo uložit');
+    }
   };
 
   const handleAddService = (service: LeadService) => {
@@ -363,9 +374,13 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
             <AlertDialogCancel>Zrušit</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                onDelete?.(lead.id);
-                onOpenChange(false);
+              onClick={async () => {
+                try {
+                  await onDelete?.(lead.id);
+                  onOpenChange(false);
+                } catch {
+                  // onDelete already surfaces a user-facing error toast
+                }
               }}
             >
               Smazat
@@ -779,29 +794,42 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
 
               {/* BOOKING / MEETING SECTION */}
               {(lead.booking_datetime || lead.booking_meet_link || lead.booking_status) && (
-                <div className="p-4 rounded-lg border bg-card flex items-center gap-6 flex-wrap">
-                  <h4 className="text-xs font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
-                    📅 Schůzka
-                  </h4>
-                  {lead.booking_datetime && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-700 border-emerald-500/30">
-                        ✓ {new Date(lead.booking_datetime).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                <div className="rounded-xl border-2 border-emerald-500/40 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
+                        📅 Schůzka domluvena
                       </Badge>
+                      {lead.booking_status && (
+                        <span className="text-xs text-muted-foreground">
+                          Stav: <span className="font-medium text-foreground">{lead.booking_status}</span>
+                        </span>
+                      )}
                     </div>
-                  )}
-                  {lead.booking_status && (
-                    <div className="text-sm">
-                      <span className="text-muted-foreground text-xs mr-1">Stav:</span>
-                      <span className="font-medium">{lead.booking_status}</span>
-                    </div>
-                  )}
-                  {lead.booking_meet_link && (
-                    <a href={lead.booking_meet_link} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-sm text-primary hover:underline font-medium">
-                      🎥 Google Meet
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
+
+                    {lead.booking_meet_link && (
+                      <a
+                        href={lead.booking_meet_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/40 bg-background px-3 py-1.5 text-sm font-medium text-primary hover:bg-emerald-500/10"
+                      >
+                        🎥 Otevřít Google Meet
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </div>
+
+                  {lead.booking_datetime && (
+                    <p className="mt-3 text-lg font-semibold text-emerald-700 dark:text-emerald-400">
+                      {new Date(lead.booking_datetime).toLocaleString('cs-CZ', {
+                        day: 'numeric',
+                        month: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
                   )}
                 </div>
               )}
@@ -1052,7 +1080,7 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
 
               {/* Delete button at the bottom */}
               {onDelete && (
-                <div className="pt-4 border-t flex justify-end">
+                <div className="pt-4 border-t flex justify-start">
                   <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive gap-1.5" onClick={() => setShowDeleteConfirm(true)}>
                     <Trash2 className="h-4 w-4" />
                     Smazat lead

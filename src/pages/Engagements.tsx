@@ -723,6 +723,8 @@ function EngagementsContent() {
         ) : paginatedEngagements.map((engagement) => {
           const client = getClientById(engagement.client_id);
           const clientLabel = getClientOptionLabel(client ?? {});
+          const clientWebsite = (client?.website ?? '').trim();
+          const clientWebsiteUrl = clientWebsite ? normalizeUrlProtocol(clientWebsite) : null;
           const marginPercent = canViewFinancials ? getLatestMargin(engagement.id) : null;
           const engagementAssignments = getAssignmentsByEngagementId(engagement.id).filter(a => !a.end_date);
           const isExpanded = expandedEngagementId === engagement.id;
@@ -788,6 +790,19 @@ function EngagementsContent() {
                       >
                         {clientLabel}
                       </button>
+                      {clientWebsiteUrl && (
+                        <a
+                          href={clientWebsiteUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="ml-2 inline-flex items-center gap-1 text-primary hover:underline"
+                          title={clientWebsite}
+                        >
+                          <Globe className="h-3 w-3" />
+                          <span className="max-w-[180px] truncate align-middle">{clientWebsite}</span>
+                        </a>
+                      )}
                       {engagement.managed_countries?.length > 0 && (
                         <span className="ml-1">
                           {engagement.managed_countries.map((code) => getCountryFlag(code)).join(' ')}
@@ -949,6 +964,23 @@ function EngagementsContent() {
                                 {clientLabel}
                               </button>
                             </p>
+                            {clientWebsiteUrl && (
+                              <p className="flex items-center gap-2">
+                                <span className="text-muted-foreground">Web:</span>
+                                <a
+                                  href={clientWebsiteUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center gap-1 text-primary hover:underline"
+                                  title={clientWebsite}
+                                >
+                                  <Globe className="h-3.5 w-3.5" />
+                                  <span>{clientWebsite}</span>
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              </p>
+                            )}
                             <div className="flex items-center gap-2">
                               <span className="text-muted-foreground">Kontakt:</span>
                               <Select

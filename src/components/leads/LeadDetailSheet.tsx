@@ -198,11 +198,16 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
     setPendingTransition(null);
   };
 
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (!noteText.trim()) return;
-    addNote(lead.id, noteText.trim());
-    setNoteText('');
-    toast.success('Poznámka byla přidána');
+    try {
+      await addNote(lead.id, noteText.trim());
+      setNoteText('');
+      toast.success('Poznámka byla přidána');
+    } catch (error) {
+      console.error('Failed to add lead note:', error);
+      toast.error('Poznámku se nepodařilo uložit');
+    }
   };
 
   const handleAddService = (service: LeadService) => {
@@ -1433,7 +1438,7 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
 
             {/* Delete button at the bottom */}
             {onDelete && (
-              <div className="pt-4 border-t flex justify-end">
+              <div className="pt-4 border-t flex justify-start">
                 <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive gap-1.5" onClick={() => setShowDeleteConfirm(true)}>
                   <Trash2 className="h-4 w-4" />
                   Smazat lead
