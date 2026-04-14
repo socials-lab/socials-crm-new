@@ -107,7 +107,9 @@ export function LeadCommunicationTimeline({
       default:
         noteIcon = <MessageSquare className="h-3 w-3" />;
         noteTitle = 'Poznámka';
-        direction = 'system';
+        // General notes are user-authored content, so render as message bubbles
+        // (system rows hide description text by design).
+        direction = 'sent';
     }
 
     events.push({

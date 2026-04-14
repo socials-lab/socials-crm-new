@@ -302,25 +302,15 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
   const deleteLeadMutation = useMutation({
     mutationFn: async (id: string) => {
       const deletedAt = now();
-      const { data: updatedLead, error } = await supabase
-        .from('leads')
-        .update({
-          deleted_at: deletedAt,
-          updated_at: deletedAt,
-        })
-        .eq('id', id)
-        .is('deleted_at', null)
-        .select('id')
-        .maybeSingle();
+      const { error } = await supabase.rpc('soft_delete_lead', {
+        p_lead_id: id,
+      });
 
       if (error) {
         if (isMissingDeletedAtColumnError(error)) {
           throw new Error('Soft delete is unavailable: database schema is outdated (missing leads.deleted_at). Apply latest migrations first.');
         }
         throw error;
-      }
-      if (!updatedLead) {
-        throw new Error('Lead se nepodařilo smazat. Zkontrolujte oprávnění nebo zda už není smazaný.');
       }
 
       // Keep an audit trail entry for soft delete action
@@ -369,22 +359,29 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
 
   const updateLeadStage = useCallback(async (id: string, stage: LeadStage) => {
     const lead = leads.find(l => l.id === id);
+
+    await withTimeout((async () => {
+      const { error } = await supabase.rpc('update_lead_stage', {
+        p_lead_id: id,
+        p_stage: stage,
+      });
+      if (error) throw error;
+    })(), 30000);
+
+    queryClient.invalidateQueries({ queryKey: ['leads'] });
+
     if (lead) {
       const oldStageLabel = STAGE_LABELS[lead.stage];
       const newStageLabel = STAGE_LABELS[stage];
-
-      // Log stage change
       await addHistoryEntry(id, 'stage_change', 'stage', LEAD_FIELD_LABELS.stage || 'Stav', oldStageLabel, newStageLabel);
     }
-
-    await withTimeout(updateLeadMutation.mutateAsync({ id, data: { stage } }), 30000);
 
     // Non-blocking notifications
     if (lead) {
       if (stage === 'lost') notifyLeadLost(id, lead.company_name).catch(() => {});
       if (lead.offer_sent_at && !lead.contract_signed_at && stage === 'offer_sent') notifyOfferSent(id, lead.company_name).catch(() => {});
     }
-  }, [leads, updateLeadMutation, addHistoryEntry]);
+  }, [leads, addHistoryEntry, queryClient]);
 
   const addNote = useCallback(async (
     leadId: string,

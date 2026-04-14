@@ -107,17 +107,23 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange, onAddLostReason
     setDragOverStage(null);
   };
 
-  const handleDrop = (e: React.DragEvent, stage: LeadStage) => {
+  const handleDrop = async (e: React.DragEvent, stage: LeadStage) => {
     e.preventDefault();
-    if (draggedLeadId) {
-      const lead = leads.find(l => l.id === draggedLeadId);
-      if (lead && lead.stage !== stage) {
-        const fromStage = lead.stage;
-        
+    const droppedLeadId = e.dataTransfer.getData('text/plain') || draggedLeadId;
+    if (!droppedLeadId) {
+      setDraggedLeadId(null);
+      setDragOverStage(null);
+      return;
+    }
+
+    const lead = leads.find(l => l.id === droppedLeadId);
+    if (lead && lead.stage !== stage) {
+      const fromStage = lead.stage;
+      try {
         // 1. Update stage immediately
-        onStageChange(draggedLeadId, stage);
+        await onStageChange(droppedLeadId, stage);
         toast.success(`Lead přesunut do "${STAGE_CONFIG[stage].title}"`);
-        
+
         // 2. Show confirmation dialog for analytics
         setPendingTransition({
           leadId: lead.id,
@@ -127,6 +133,9 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange, onAddLostReason
           leadValue: lead.estimated_price || 0,
         });
         setShowTransitionDialog(true);
+      } catch (error) {
+        console.error('Failed to move lead in pipeline:', error);
+        toast.error('Lead se nepodařilo přesunout do zvoleného stavu');
       }
     }
     setDraggedLeadId(null);
