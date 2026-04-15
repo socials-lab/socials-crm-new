@@ -778,6 +778,16 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
                           options={Object.entries(SOURCE_LABELS).map(([value, label]) => ({ value, label }))}
                         />
                       </div>
+                      <div className="col-span-2 p-2.5 rounded-lg border-l-4 border-primary/40 bg-primary/5">
+                        <span className="text-xs text-muted-foreground block mb-0.5">💬 Zpráva od klienta</span>
+                        <InlineEditField
+                          value={lead.client_message || ''}
+                          type="textarea"
+                          onSave={(v) => { updateLead(lead.id, { client_message: v || null }); toast.success('Uloženo'); }}
+                          emptyText="Zatím bez zprávy od klienta (klikni pro doplnění)"
+                          displayClassName="text-sm whitespace-pre-wrap"
+                        />
+                      </div>
                     </div>
                     <div className="p-2.5 rounded-lg border-l-4 border-red-400 bg-red-500/5">
                       <span className="text-xs text-muted-foreground block mb-0.5">🎯 Pain point</span>

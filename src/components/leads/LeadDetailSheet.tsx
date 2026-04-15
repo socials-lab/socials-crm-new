@@ -593,12 +593,14 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
                   </div>
                 )}
 
-                {lead.client_message && (
-                  <div className="p-3 rounded-lg border-l-4 border-primary/50 bg-muted/30">
-                    <span className="text-xs text-muted-foreground block mb-1">Zpráva od klienta:</span>
-                    <p className="text-sm italic">"{lead.client_message}"</p>
-                  </div>
-                )}
+                <div className="p-3 rounded-lg border-l-4 border-primary/50 bg-muted/30">
+                  <span className="text-xs text-muted-foreground block mb-1">Zpráva od klienta:</span>
+                  <p className="text-sm italic whitespace-pre-wrap">
+                    {lead.client_message?.trim()
+                      ? `"${lead.client_message}"`
+                      : 'Zatím bez zprávy od klienta.'}
+                  </p>
+                </div>
 
               </div>
             </div>
@@ -1133,15 +1135,17 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
                     </div>
 
                     {/* Client message */}
-                    {lead.client_message && (
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                          <MessageSquare className="h-3 w-3" />
-                          Zpráva od klienta
-                        </p>
-                        <p className="text-xs italic pl-4 text-muted-foreground">"{lead.client_message}"</p>
-                      </div>
-                    )}
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                        <MessageSquare className="h-3 w-3" />
+                        Zpráva od klienta
+                      </p>
+                      <p className="text-xs italic pl-4 text-muted-foreground whitespace-pre-wrap">
+                        {lead.client_message?.trim()
+                          ? `"${lead.client_message}"`
+                          : 'Zatím bez zprávy od klienta.'}
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>

@@ -8,10 +8,11 @@ const corsHeaders = {
 
 interface UpdateLeadWebhookPayload {
   lead_id: string;
-  booking_datetime: string;
-  booking_meet_link: string;
+  booking_datetime?: string;
+  booking_meet_link?: string;
   booking_status?: string | null;
   meeting_request_sent_at?: string | null;
+  client_message?: string | null;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -68,6 +69,11 @@ function parseUrl(name: string, value: unknown): string {
   return parsed.toString();
 }
 
+function parseOptionalUrl(name: string, value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  return parseUrl(name, value);
+}
+
 function parseOptionalString(name: string, value: unknown): string | null | undefined {
   if (value === undefined) return undefined;
   if (value === null) return null;
@@ -91,12 +97,32 @@ function validatePayload(input: unknown): UpdateLeadWebhookPayload {
     throw new Error('Invalid field "lead_id": expected UUID');
   }
 
+  const bookingDateTime = parseOptionalIsoDateTime("booking_datetime", payload.booking_datetime);
+  const bookingMeetLink = parseOptionalUrl("booking_meet_link", payload.booking_meet_link);
+  const bookingStatus = parseOptionalString("booking_status", payload.booking_status);
+  const meetingRequestSentAt = parseOptionalIsoDateTime("meeting_request_sent_at", payload.meeting_request_sent_at);
+  const clientMessage = parseOptionalString("client_message", payload.client_message);
+
+  const hasAnyUpdatableField =
+    bookingDateTime !== undefined ||
+    bookingMeetLink !== undefined ||
+    bookingStatus !== undefined ||
+    meetingRequestSentAt !== undefined ||
+    clientMessage !== undefined;
+
+  if (!hasAnyUpdatableField) {
+    throw new Error(
+      'Payload must include at least one updatable field: "booking_datetime", "booking_meet_link", "booking_status", "meeting_request_sent_at" or "client_message"',
+    );
+  }
+
   return {
     lead_id: leadId,
-    booking_datetime: parseIsoDateTime("booking_datetime", payload.booking_datetime),
-    booking_meet_link: parseUrl("booking_meet_link", payload.booking_meet_link),
-    booking_status: parseOptionalString("booking_status", payload.booking_status),
-    meeting_request_sent_at: parseOptionalIsoDateTime("meeting_request_sent_at", payload.meeting_request_sent_at),
+    booking_datetime: bookingDateTime,
+    booking_meet_link: bookingMeetLink,
+    booking_status: bookingStatus,
+    meeting_request_sent_at: meetingRequestSentAt,
+    client_message: clientMessage,
   };
 }
 
@@ -197,14 +223,26 @@ serve(async (req) => {
     leadIdForLog = payload.lead_id;
 
     const updateData: Record<string, unknown> = {
-      booking_datetime: payload.booking_datetime,
-      booking_meet_link: payload.booking_meet_link,
-      booking_status: payload.booking_status ?? "scheduled",
       updated_at: new Date().toISOString(),
     };
 
+    if (payload.booking_datetime !== undefined) {
+      updateData.booking_datetime = payload.booking_datetime;
+    }
+    if (payload.booking_meet_link !== undefined) {
+      updateData.booking_meet_link = payload.booking_meet_link;
+    }
+    if (payload.booking_status !== undefined) {
+      updateData.booking_status = payload.booking_status;
+    } else if (payload.booking_datetime !== undefined || payload.booking_meet_link !== undefined) {
+      updateData.booking_status = "scheduled";
+    }
+
     if (payload.meeting_request_sent_at !== undefined) {
       updateData.meeting_request_sent_at = payload.meeting_request_sent_at;
+    }
+    if (payload.client_message !== undefined) {
+      updateData.client_message = payload.client_message;
     }
 
     const { data: updatedLead, error: updateError } = await supabaseAdmin
@@ -212,7 +250,7 @@ serve(async (req) => {
       .update(updateData)
       .eq("id", payload.lead_id)
       .is("deleted_at", null)
-      .select("id, booking_datetime, booking_meet_link, booking_status, meeting_request_sent_at")
+      .select("id, booking_datetime, booking_meet_link, booking_status, meeting_request_sent_at, client_message")
       .maybeSingle();
 
     if (updateError) {
@@ -246,6 +284,7 @@ serve(async (req) => {
       booking_meet_link: updatedLead.booking_meet_link,
       booking_status: updatedLead.booking_status,
       meeting_request_sent_at: updatedLead.meeting_request_sent_at,
+      client_message: updatedLead.client_message,
     };
 
     await logIntegration(supabaseAdmin, {
