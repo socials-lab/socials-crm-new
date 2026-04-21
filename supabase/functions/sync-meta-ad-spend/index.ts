@@ -3,12 +3,17 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-internal-secret",
 };
 
 type MetaInsightRow = {
   date_start?: string;
   spend?: string;
+};
+
+type AccessProfileRow = {
+  is_super_admin?: boolean | null;
+  page_permissions?: Array<{ page?: string | null; can_view?: boolean | null }> | null;
 };
 
 function formatDate(d: Date): string {
@@ -35,12 +40,90 @@ async function hmacSha256(secret: string, message: string): Promise<string> {
   return toHex(sig);
 }
 
+async function getInternalSecret(supabaseAdmin: ReturnType<typeof createClient>): Promise<string | null> {
+  const { data, error } = await supabaseAdmin
+    .from("internal_function_secrets")
+    .select("secret")
+    .eq("name", "sync-meta-ad-spend")
+    .maybeSingle<{ secret: string }>();
+
+  if (error) {
+    throw new Error(`Failed to load internal function secret: ${error.message}`);
+  }
+
+  return data?.secret?.trim() || null;
+}
+
+async function hasMarketingAccess(req: Request, supabaseAdmin: ReturnType<typeof createClient>): Promise<boolean> {
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return false;
+  }
+
+  const userClient = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    },
+  );
+
+  const { data: authData, error: authError } = await userClient.auth.getUser();
+  if (authError || !authData.user) {
+    return false;
+  }
+
+  const { data: accessRows, error: accessError } = await userClient
+    .rpc("get_effective_access_profile")
+    .returns<Array<AccessProfileRow>>();
+
+  if (accessError || !accessRows || accessRows.length === 0) {
+    return false;
+  }
+
+  const accessRow = accessRows[0];
+  if (accessRow.is_super_admin) {
+    return true;
+  }
+
+  return (accessRow.page_permissions || []).some((permission) => {
+    return permission?.page === "marketing" && permission?.can_view === true;
+  });
+}
+
+async function isAuthorizedRequest(req: Request, supabaseAdmin: ReturnType<typeof createClient>): Promise<boolean> {
+  const internalSecret = req.headers.get("x-internal-secret")?.trim() || null;
+  const expectedSecret = await getInternalSecret(supabaseAdmin);
+  if (expectedSecret && internalSecret === expectedSecret) {
+    return true;
+  }
+
+  return hasMarketingAccess(req, supabaseAdmin);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    const authorized = await isAuthorizedRequest(req, supabaseAdmin);
+    if (!authorized) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const body = await req.json().catch(() => ({}));
     const year = Number(body?.year);
     const month = Number(body?.month);
@@ -118,11 +201,6 @@ serve(async (req) => {
 
       nextUrl = typeof payload?.paging?.next === "string" ? payload.paging.next : "";
     }
-
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
 
     const { error: deleteError } = await supabaseAdmin
       .from("marketing_ad_spend_entries")

@@ -27,6 +27,7 @@ const FORCE_DELIVERY_TYPES = ["extra_work_created", "extra_work_approved"];
 type NotificationPayload = {
   notification_id?: string;
   user_id?: string;
+  dispatch_token?: string;
   type?: string;
   title?: string;
   message?: string;
@@ -180,7 +181,7 @@ function buildEmailHtml(
 async function markDelivery(
   supabaseAdmin: ReturnType<typeof createClient>,
   notificationId: string,
-  status: "sent" | "skipped" | "failed",
+  status: "processing" | "sent" | "skipped" | "failed",
   reason?: string,
   errorMessage?: string,
 ) {
@@ -272,31 +273,98 @@ serve(async (req) => {
       );
     }
 
-    const { data: inserted, error: insertDeliveryError } = await supabaseAdmin
-      .from("notification_email_deliveries")
-      .insert({
-        notification_id: notification.id,
-        status: "pending",
-      })
-      .select("id")
-      .maybeSingle();
+    if (body.dispatch_token) {
+      const { data: deliveryRow, error: deliveryLookupError } = await supabaseAdmin
+        .from("notification_email_deliveries")
+        .select("notification_id, status")
+        .eq("notification_id", notification.id)
+        .eq("dispatch_token", body.dispatch_token)
+        .maybeSingle<{ notification_id: string; status: string }>();
 
-    if (insertDeliveryError) {
-      const msg = String(insertDeliveryError.message || "");
-      if (msg.toLowerCase().includes("duplicate") || msg.includes("unique")) {
+      if (deliveryLookupError) {
+        console.error("Failed to load notification delivery row", deliveryLookupError);
+        return new Response(
+          JSON.stringify({ error: "Failed to load delivery state" }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      if (!deliveryRow) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized notification dispatch" }),
+          {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      if (deliveryRow.status !== "pending") {
         return new Response(
           JSON.stringify({ skipped: true, reason: "already_processed" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-      console.error("Failed to initialize delivery record", insertDeliveryError);
-    }
 
-    if (!inserted && !insertDeliveryError) {
-      return new Response(
-        JSON.stringify({ skipped: true, reason: "already_processed" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      const { data: claimedRows, error: claimError } = await supabaseAdmin
+        .from("notification_email_deliveries")
+        .update({
+          status: "processing",
+          reason: null,
+          error_message: null,
+        })
+        .eq("notification_id", notification.id)
+        .eq("dispatch_token", body.dispatch_token)
+        .eq("status", "pending")
+        .select("notification_id");
+
+      if (claimError) {
+        console.error("Failed to claim notification delivery row", claimError);
+        return new Response(
+          JSON.stringify({ error: "Failed to claim delivery" }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      if (!claimedRows || claimedRows.length === 0) {
+        return new Response(
+          JSON.stringify({ skipped: true, reason: "already_processed" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    } else {
+      const { data: inserted, error: insertDeliveryError } = await supabaseAdmin
+        .from("notification_email_deliveries")
+        .insert({
+          notification_id: notification.id,
+          status: "pending",
+        })
+        .select("id")
+        .maybeSingle();
+
+      if (insertDeliveryError) {
+        const msg = String(insertDeliveryError.message || "");
+        if (msg.toLowerCase().includes("duplicate") || msg.includes("unique")) {
+          return new Response(
+            JSON.stringify({ skipped: true, reason: "already_processed" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+        console.error("Failed to initialize delivery record", insertDeliveryError);
+      }
+
+      if (!inserted && !insertDeliveryError) {
+        return new Response(
+          JSON.stringify({ skipped: true, reason: "already_processed" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
     }
 
     const user_id = notification.user_id;
