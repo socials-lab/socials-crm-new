@@ -23,9 +23,11 @@ const allowedLeadStages = [
   "access_received",
   "preparing_offer",
   "offer_sent",
+  "waiting_contract_signature",
   "won",
   "lost",
   "postponed",
+  "bad_fit",
 ] as const;
 
 const allowedIndustries = [

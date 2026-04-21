@@ -50,7 +50,7 @@ const formatCurrency = (value: number) => {
 
 type ViewMode = 'kanban' | 'table';
 
-const STAGE_ORDER: LeadStage[] = ['new_lead', 'meeting_done', 'waiting_access', 'access_received', 'preparing_offer', 'offer_sent', 'won', 'lost', 'postponed', 'bad_fit'];
+const STAGE_ORDER: LeadStage[] = ['new_lead', 'meeting_done', 'waiting_access', 'access_received', 'preparing_offer', 'offer_sent', 'waiting_contract_signature', 'won', 'lost', 'postponed', 'bad_fit'];
 
 export default function Leads() {
   const { leads, updateLeadStage, deleteLead } = useLeadsData();

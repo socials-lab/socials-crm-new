@@ -597,6 +597,7 @@ export default function Dashboard() {
     access_received: leads.filter(l => l.stage === 'access_received').length,
     preparing_offer: leads.filter(l => l.stage === 'preparing_offer').length,
     offer_sent: leads.filter(l => l.stage === 'offer_sent').length,
+    waiting_contract_signature: leads.filter(l => l.stage === 'waiting_contract_signature').length,
     won: leads.filter(l => l.stage === 'won').length,
     lost: leads.filter(l => l.stage === 'lost').length,
     postponed: leads.filter(l => l.stage === 'postponed').length,
@@ -753,7 +754,8 @@ export default function Dashboard() {
   // Active pipeline leads (excluding closed stages)
   const activePipelineLeads = useMemo(() => 
     leadsPipeline.new_lead + leadsPipeline.meeting_done + leadsPipeline.waiting_access + 
-    leadsPipeline.access_received + leadsPipeline.preparing_offer + leadsPipeline.offer_sent
+    leadsPipeline.access_received + leadsPipeline.preparing_offer + leadsPipeline.offer_sent +
+    leadsPipeline.waiting_contract_signature
   , [leadsPipeline]);
 
   return (
@@ -1049,6 +1051,7 @@ export default function Dashboard() {
                 { label: 'Přístupy přijaty', value: leadsPipeline.access_received, color: 'bg-teal-500' },
                 { label: 'Příprava nabídky', value: leadsPipeline.preparing_offer, color: 'bg-violet-500' },
                 { label: 'Nabídka odeslána', value: leadsPipeline.offer_sent, color: 'bg-pink-500' },
+                { label: 'Čeká na podpis smlouvy', value: leadsPipeline.waiting_contract_signature, color: 'bg-cyan-500' },
               ].map((stage) => (
                 <div key={stage.label} className="flex items-center gap-3">
                   <div className={`w-2 h-2 rounded-full ${stage.color} shrink-0`} />

@@ -92,6 +92,9 @@ verify_jwt = false
 [functions.create-lead-webhook]
 verify_jwt = false
 
+[functions.create-applicant-webhook]
+verify_jwt = false
+
 [functions.update-lead-webhook]
 verify_jwt = false
 

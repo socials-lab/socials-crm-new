@@ -567,7 +567,7 @@ export default function Analytics() {
     });
 
     // Funnel data
-    const stages = ['new_lead', 'meeting_done', 'waiting_access', 'access_received', 'preparing_offer', 'offer_sent', 'won', 'lost', 'postponed'] as const;
+    const stages = ['new_lead', 'meeting_done', 'waiting_access', 'access_received', 'preparing_offer', 'offer_sent', 'waiting_contract_signature', 'won', 'lost', 'postponed', 'bad_fit'] as const;
     const funnelData = stages.map(stage => ({
       stage,
       count: leads.filter(l => l.stage === stage).length,
@@ -593,7 +593,7 @@ export default function Analytics() {
     }).sort((a, b) => b.count - a.count);
 
     // Pipeline velocity - average days in each stage
-    const pipelineStages = ['new_lead', 'meeting_done', 'waiting_access', 'access_received', 'preparing_offer', 'offer_sent'];
+    const pipelineStages = ['new_lead', 'meeting_done', 'waiting_access', 'access_received', 'preparing_offer', 'offer_sent', 'waiting_contract_signature'];
     const pipelineVelocity = pipelineStages.map(stage => {
       const stageLeads = leads.filter(l => l.stage === stage);
       const totalDays = stageLeads.reduce((sum, l) => {

@@ -16,6 +16,7 @@ const STAGE_ORDER: LeadStage[] = [
   'access_received',
   'preparing_offer',
   'offer_sent',
+  'waiting_contract_signature',
   'won',
 ];
 
@@ -26,6 +27,7 @@ const STAGE_LABELS: Record<LeadStage, string> = {
   access_received: 'Přístupy',
   preparing_offer: 'Nabídka',
   offer_sent: 'Odesláno',
+  waiting_contract_signature: 'Čeká na podpis',
   won: 'Won',
   lost: 'Lost',
   postponed: 'Odloženo',
@@ -44,6 +46,8 @@ const LABEL_TO_STAGE: Record<string, LeadStage> = {
   'Příprava nabídky': 'preparing_offer',
   Odesláno: 'offer_sent',
   'Nabídka odeslána': 'offer_sent',
+  'Čeká na podpis': 'waiting_contract_signature',
+  'Čeká na podpis smlouvy': 'waiting_contract_signature',
   Won: 'won',
   'Vyhráno': 'won',
   Lost: 'lost',

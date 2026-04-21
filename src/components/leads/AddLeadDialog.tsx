@@ -52,7 +52,7 @@ const leadSchema = z.object({
   contact_position: z.string().optional().nullable(),
   contact_email: z.string().email('Zadejte platný email').or(z.literal('')).optional().nullable(),
   contact_phone: z.string().optional().nullable(),
-  stage: z.enum(['new_lead', 'meeting_done', 'waiting_access', 'access_received', 'preparing_offer', 'offer_sent', 'won', 'lost', 'postponed'] as const),
+  stage: z.enum(['new_lead', 'meeting_done', 'waiting_access', 'access_received', 'preparing_offer', 'offer_sent', 'waiting_contract_signature', 'won', 'lost', 'postponed', 'bad_fit'] as const),
   owner_id: z.string().min(1, 'Odpovědná osoba je povinná'),
   source: z.enum(['referral', 'inbound', 'cold_outreach', 'event', 'linkedin', 'website', 'other'] as const),
   source_custom: z.string().optional().nullable(),

@@ -93,6 +93,7 @@ const STAGE_LABELS: Record<LeadStage, string> = {
   access_received: 'Přístupy přijaty',
   preparing_offer: 'Příprava nabídky',
   offer_sent: 'Nabídka odeslána',
+  waiting_contract_signature: 'Čeká na podpis smlouvy',
   won: 'Vyhráno',
   lost: 'Prohráno',
   postponed: 'Odloženo',
@@ -237,12 +238,12 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
   // Handle convert button click - check warnings in sequence
   const handleConvertClick = () => {
     const hasOnboardingCompleted = lead.onboarding_form_completed_at !== null && lead.onboarding_form_completed_at !== undefined;
-    const hasContract = lead.contract_url !== null && lead.contract_url !== undefined;
+    const hasContractSigned = lead.contract_signed_at !== null && lead.contract_signed_at !== undefined;
     
     if (!hasOnboardingCompleted) {
       // Step 1: Show onboarding warning first
       setShowOnboardingWarning(true);
-    } else if (!hasContract) {
+    } else if (!hasContractSigned) {
       // Step 2: Show contract warning
       setShowContractWarning(true);
     } else {
@@ -328,23 +329,23 @@ export function LeadDetailSheet({ lead: leadProp, open, onOpenChange, onEdit, on
               ⚠️ Smlouva nebyla podepsána
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Pro tento lead zatím nebyla vytvořena nebo podepsána smlouva. 
-              Opravdu chcete pokračovat s převodem na zakázku bez podepsané smlouvy?
+              Lead lze převést na zakázku až po podpisu smlouvy.
+              Nejprve smlouvu podepište nebo ověřte stav v DigiSign.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>
-              Zrušit
+              Zavřít
             </AlertDialogCancel>
             <AlertDialogAction 
               onClick={() => {
                 setTimeout(() => {
-                  setIsConvertOpen(true);
+                  setIsContractDialogOpen(true);
                 }, 100);
               }}
               className="bg-amber-500 hover:bg-amber-600"
             >
-              Ano, pokračovat
+              Otevřít smlouvu
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

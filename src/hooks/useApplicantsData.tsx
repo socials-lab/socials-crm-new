@@ -53,6 +53,8 @@ const transformApplicant = (row: Record<string, unknown>): Applicant => ({
   cover_letter: row.cover_letter,
   cv_url: row.cv_url,
   video_url: row.video_url,
+  loom_video_url: row.loom_video_url,
+  portfolio_url: row.portfolio_url,
   stage: row.stage,
   owner_id: row.owner_id,
   notes: row.notes || [],
@@ -117,6 +119,8 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
               cover_letter: data.cover_letter,
               cv_url: data.cv_url,
               video_url: data.video_url,
+              loom_video_url: data.loom_video_url,
+              portfolio_url: data.portfolio_url,
               stage: data.stage,
               owner_id: data.owner_id,
               notes: [],
@@ -146,6 +150,8 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
           if (updates.cover_letter !== undefined) updateData.cover_letter = updates.cover_letter;
           if (updates.cv_url !== undefined) updateData.cv_url = updates.cv_url;
           if (updates.video_url !== undefined) updateData.video_url = updates.video_url;
+          if (updates.loom_video_url !== undefined) updateData.loom_video_url = updates.loom_video_url;
+          if (updates.portfolio_url !== undefined) updateData.portfolio_url = updates.portfolio_url;
           if (updates.stage !== undefined) updateData.stage = updates.stage;
           if (updates.owner_id !== undefined) updateData.owner_id = updates.owner_id;
           if (updates.source !== undefined) updateData.source = updates.source;
@@ -184,8 +190,27 @@ export function ApplicantsDataProvider({ children }: { children: ReactNode }) {
     mutationFn: async (id: string) => {
       return withTimeout(
         (async () => {
-          const { error } = await supabase.from('applicants').delete().eq('id', id);
-          if (error) throw error;
+          const { error: rpcError } = await supabase.rpc('delete_applicant', {
+            p_applicant_id: id,
+          });
+          if (!rpcError) return;
+
+          // Fallback for environments where RPC schema cache is stale.
+          const isRpcMissing =
+            rpcError.code === 'PGRST202' ||
+            rpcError.code === '42883' ||
+            rpcError.message?.toLowerCase().includes('delete_applicant') === true;
+
+          if (isRpcMissing) {
+            const { error: deleteError } = await supabase
+              .from('applicants')
+              .delete()
+              .eq('id', id);
+            if (deleteError) throw deleteError;
+            return;
+          }
+
+          throw rpcError;
         })(),
         30000
       );

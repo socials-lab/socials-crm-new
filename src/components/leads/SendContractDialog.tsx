@@ -20,6 +20,8 @@ import {
 import type { Lead, LeadService } from '@/types/crm';
 import { toast } from 'sonner';
 import { useDigiSign } from '@/hooks/useDigiSign';
+import { supabase } from '@/integrations/supabase/client';
+import type { PublicOfferService } from '@/types/publicOffer';
 
 interface SendContractDialogProps {
   open: boolean;
@@ -96,9 +98,75 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
   const [draftCreated, setDraftCreated] = useState(false);
   const [draftEnvelopeId, setDraftEnvelopeId] = useState<string | null>(null);
   const [hasResetDraft, setHasResetDraft] = useState(false);
+  const [offerServicesFallback, setOfferServicesFallback] = useState<LeadService[]>([]);
   const { createContract } = useDigiSign();
 
-  const leadServices: LeadService[] = Array.isArray(lead.potential_services) ? lead.potential_services : [];
+  useEffect(() => {
+    if (!open) return;
+
+    const localServices = Array.isArray(lead.potential_services) ? lead.potential_services : [];
+    if (localServices.length > 0) {
+      setOfferServicesFallback([]);
+      return;
+    }
+
+    let mounted = true;
+    (async () => {
+      try {
+        let query = supabase
+          .from('public_offers')
+          .select('services, token')
+          .eq('is_active', true);
+
+        if (lead.offer_token) {
+          query = query.eq('token', lead.offer_token);
+        } else {
+          query = query.eq('lead_id', lead.id);
+        }
+
+        const { data, error } = await query
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        const services = (data?.services ?? []) as PublicOfferService[];
+        const normalized: LeadService[] = Array.isArray(services)
+          ? services.map((service, idx) => ({
+              id: service.id || `offer-service-${idx}`,
+              service_id: service.service_id,
+              name: service.name,
+              selected_tier: service.selected_tier ?? null,
+              price: Number(service.price || 0),
+              currency: service.currency || lead.currency || 'CZK',
+              billing_type: service.billing_type || 'monthly',
+              managed_countries: service.managed_countries || [],
+              country_variants: service.country_variants || [],
+              intro_discount_percent: null,
+              intro_discount_months: null,
+              creative_boost_credits: service.creative_boost_credits ?? null,
+              creative_boost_price_per_credit: service.creative_boost_price_per_credit ?? null,
+              creative_boost_graphic_reward: null,
+              creative_boost_editor_reward: null,
+            }))
+          : [];
+
+        if (mounted) {
+          setOfferServicesFallback(normalized);
+        }
+      } catch (error) {
+        console.error('Failed to load services from public offer fallback:', error);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [open, lead.id, lead.offer_token, lead.potential_services, lead.currency]);
+
+  const localLeadServices: LeadService[] = Array.isArray(lead.potential_services) ? lead.potential_services : [];
+  const leadServices: LeadService[] = localLeadServices.length > 0 ? localLeadServices : offerServicesFallback;
   const monthlyServices = leadServices.filter(s => (s.billing_type || 'monthly') === 'monthly');
   const oneOffServices = leadServices.filter(s => s.billing_type === 'one_off');
   const monthlyTotal = monthlyServices.reduce((sum, s) => sum + (s.price || 0), 0);

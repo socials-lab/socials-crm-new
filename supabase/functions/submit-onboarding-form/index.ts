@@ -83,7 +83,7 @@ serve(async (req) => {
     // Verify lead exists and is not already completed
     const { data: lead, error: leadError } = await supabaseAdmin
       .from("leads")
-      .select("id, onboarding_form_completed_at")
+      .select("id, stage, onboarding_form_completed_at")
       .eq("id", data.leadId)
       .single();
 
@@ -180,6 +180,7 @@ serve(async (req) => {
         onboarding_project_contacts: sanitizedProjectContacts,
         onboarding_start_date: onboardingStartDate,
         onboarding_form_completed_at: new Date().toISOString(),
+        stage: lead.stage === "won" ? "won" : "waiting_contract_signature",
       })
       .eq("id", data.leadId);
 

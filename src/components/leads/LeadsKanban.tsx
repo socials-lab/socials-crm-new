@@ -25,6 +25,7 @@ const STAGE_CONFIG: Record<LeadStage, { title: string; shortTitle: string; color
   access_received: { title: 'Přístupy přijaty', shortTitle: 'Přístupy', color: 'bg-green-500', bgColor: 'bg-green-500/10' },
   preparing_offer: { title: 'Příprava nabídky', shortTitle: 'Nabídka', color: 'bg-violet-500', bgColor: 'bg-violet-500/10' },
   offer_sent: { title: 'Nabídka odeslána', shortTitle: 'Odesláno', color: 'bg-pink-500', bgColor: 'bg-pink-500/10' },
+  waiting_contract_signature: { title: 'Čeká na podpis smlouvy', shortTitle: 'Podpis', color: 'bg-cyan-500', bgColor: 'bg-cyan-500/10' },
   won: { title: 'Vyhráno', shortTitle: 'Won', color: 'bg-emerald-500', bgColor: 'bg-emerald-500/10' },
   lost: { title: 'Prohráno', shortTitle: 'Lost', color: 'bg-red-500', bgColor: 'bg-red-500/10' },
   postponed: { title: 'Odloženo', shortTitle: 'Odloženo', color: 'bg-gray-500', bgColor: 'bg-gray-500/10' },
@@ -39,6 +40,7 @@ const ACTIVE_STAGES: LeadStage[] = [
   'access_received', 
   'preparing_offer', 
   'offer_sent', 
+  'waiting_contract_signature',
 ];
 
 const CLOSED_STAGES: LeadStage[] = ['won', 'lost', 'postponed', 'bad_fit'];
@@ -61,6 +63,7 @@ export function LeadsKanban({ leads, onLeadClick, onStageChange, onAddLostReason
       access_received: [],
       preparing_offer: [],
       offer_sent: [],
+      waiting_contract_signature: [],
       won: [],
       lost: [],
       postponed: [],

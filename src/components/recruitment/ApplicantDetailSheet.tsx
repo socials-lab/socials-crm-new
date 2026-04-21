@@ -12,6 +12,16 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
@@ -47,6 +57,7 @@ import {
   Clock,
   DollarSign,
   ChevronDown,
+  Trash2,
 } from 'lucide-react';
 import type { Applicant, ApplicantStage } from '@/types/applicant';
 import { APPLICANT_STAGE_CONFIG, APPLICANT_SOURCE_LABELS } from '@/types/applicant';
@@ -73,7 +84,7 @@ export function ApplicantDetailSheet({
   open,
   onOpenChange,
 }: ApplicantDetailSheetProps) {
-  const { updateApplicantStage, updateApplicant, addNote, sendInterviewInvite, sendRejection } = useApplicantsData();
+  const { updateApplicantStage, updateApplicant, deleteApplicant, addNote, sendInterviewInvite, sendRejection } = useApplicantsData();
   const { colleagues } = useCRMData();
   const [newNote, setNewNote] = useState('');
   const [isOnboardingDialogOpen, setIsOnboardingDialogOpen] = useState(false);
@@ -81,6 +92,7 @@ export function ApplicantDetailSheet({
   const [isInterviewInviteDialogOpen, setIsInterviewInviteDialogOpen] = useState(false);
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
   const [isInvitingToCRM, setIsInvitingToCRM] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   if (!applicant) return null;
 
@@ -176,6 +188,19 @@ export function ApplicantDetailSheet({
       toast.error(error instanceof Error ? error.message : 'Nepodařilo se odeslat CRM pozvánku.');
     } finally {
       setIsInvitingToCRM(false);
+    }
+  };
+
+  const handleDeleteApplicant = async () => {
+    try {
+      await deleteApplicant(applicant.id);
+      toast.success('Kandidát byl smazán');
+      setShowDeleteConfirm(false);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to delete applicant:', error);
+      const message = error instanceof Error ? error.message : 'Kandidáta se nepodařilo smazat';
+      toast.error(message);
     }
   };
 
@@ -598,6 +623,34 @@ export function ApplicantDetailSheet({
                       Bez videa
                     </Badge>
                   )}
+                  {applicant.loom_video_url ? (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={applicant.loom_video_url} target="_blank" rel="noopener noreferrer">
+                        <Video className="h-4 w-4 mr-1" />
+                        Loom
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </a>
+                    </Button>
+                  ) : (
+                    <Badge variant="outline" className="text-muted-foreground">
+                      <Video className="h-3 w-3 mr-1" />
+                      Bez Loom videa
+                    </Badge>
+                  )}
+                  {applicant.portfolio_url ? (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={applicant.portfolio_url} target="_blank" rel="noopener noreferrer">
+                        <Briefcase className="h-4 w-4 mr-1" />
+                        Portfolio
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </a>
+                    </Button>
+                  ) : (
+                    <Badge variant="outline" className="text-muted-foreground">
+                      <Briefcase className="h-3 w-3 mr-1" />
+                      Bez portfolia
+                    </Badge>
+                  )}
                 </div>
               </div>
 
@@ -617,6 +670,20 @@ export function ApplicantDetailSheet({
                   </CollapsibleContent>
                 </Collapsible>
               )}
+
+              <Separator />
+
+              <div className="pt-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive gap-1.5"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Smazat kandidáta
+                </Button>
+              </div>
             </div>
           </ScrollArea>
 
@@ -689,6 +756,26 @@ export function ApplicantDetailSheet({
         open={isConvertDialogOpen}
         onOpenChange={setIsConvertDialogOpen}
       />
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat kandidáta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Opravdu chcete smazat kandidáta {applicant.full_name}? Tato akce je nevratná.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteApplicant}
+            >
+              Smazat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

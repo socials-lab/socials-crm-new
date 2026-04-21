@@ -1,4 +1,4 @@
-import { ExternalLink, FileText, Video } from 'lucide-react';
+import { ExternalLink, FileText, Video, Briefcase } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -162,7 +162,35 @@ export function ApplicantsTable({ applicants, onApplicantClick }: ApplicantsTabl
                       <Video className="h-3.5 w-3.5" />
                     </Button>
                   )}
-                  {!applicant.cv_url && !applicant.video_url && (
+                  {applicant.loom_video_url && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title="Loom"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(applicant.loom_video_url!, '_blank');
+                      }}
+                    >
+                      <Video className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                  {applicant.portfolio_url && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title="Portfolio"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(applicant.portfolio_url!, '_blank');
+                      }}
+                    >
+                      <Briefcase className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                  {!applicant.cv_url && !applicant.video_url && !applicant.loom_video_url && !applicant.portfolio_url && (
                     <span className="text-muted-foreground text-xs">-</span>
                   )}
                 </div>

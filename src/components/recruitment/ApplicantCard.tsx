@@ -1,4 +1,4 @@
-import { User, Mail, Phone, FileText, Video } from 'lucide-react';
+import { User, Mail, Phone, FileText, Video, Briefcase } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Applicant } from '@/types/applicant';
@@ -69,6 +69,18 @@ export function ApplicantCard({
             <Badge variant="outline" className="text-xs py-0 px-1.5">
               <Video className="h-3 w-3 mr-1" />
               Video
+            </Badge>
+          )}
+          {applicant.loom_video_url && (
+            <Badge variant="outline" className="text-xs py-0 px-1.5">
+              <Video className="h-3 w-3 mr-1" />
+              Loom
+            </Badge>
+          )}
+          {applicant.portfolio_url && (
+            <Badge variant="outline" className="text-xs py-0 px-1.5">
+              <Briefcase className="h-3 w-3 mr-1" />
+              Portfolio
             </Badge>
           )}
         </div>

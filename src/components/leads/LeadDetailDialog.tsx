@@ -94,6 +94,7 @@ const STAGE_LABELS: Record<LeadStage, string> = {
   access_received: 'Přístupy přijaty',
   preparing_offer: 'Příprava nabídky',
   offer_sent: 'Nabídka odeslána',
+  waiting_contract_signature: 'Čeká na podpis smlouvy',
   won: 'Vyhráno',
   lost: 'Prohráno',
   postponed: 'Odloženo',
@@ -107,6 +108,7 @@ const STAGE_COLORS: Record<LeadStage, string> = {
   access_received: 'bg-green-500/10 text-green-700 border-green-500/30',
   preparing_offer: 'bg-violet-500/10 text-violet-700 border-violet-500/30',
   offer_sent: 'bg-pink-500/10 text-pink-700 border-pink-500/30',
+  waiting_contract_signature: 'bg-cyan-500/10 text-cyan-700 border-cyan-500/30',
   won: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30',
   lost: 'bg-red-500/10 text-red-700 border-red-500/30',
   postponed: 'bg-gray-500/10 text-gray-700 border-gray-500/30',
@@ -335,10 +337,10 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
 
   const handleConvertClick = () => {
     const hasOnboardingCompleted = !!lead.onboarding_form_completed_at;
-    const hasContract = !!lead.contract_url;
+    const hasContractSigned = !!lead.contract_signed_at;
     if (!hasOnboardingCompleted) {
       setShowOnboardingWarning(true);
-    } else if (!hasContract) {
+    } else if (!hasContractSigned) {
       setShowContractWarning(true);
     } else {
       setIsConvertOpen(true);
@@ -420,17 +422,17 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
               ⚠️ Smlouva nebyla podepsána
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Pro tento lead zatím nebyla vytvořena nebo podepsána smlouva.
-              Opravdu chcete pokračovat?
+              Lead lze převést na zakázku až po podpisu smlouvy.
+              Nejprve smlouvu podepište nebo ověřte stav v DigiSign.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogCancel>Zavřít</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={() => setTimeout(() => setIsConvertOpen(true), 100)}
+              onClick={() => setTimeout(() => setIsContractDialogOpen(true), 100)}
               className="bg-amber-500 hover:bg-amber-600"
             >
-              Ano, pokračovat
+              Otevřít smlouvu
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

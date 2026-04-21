@@ -42,6 +42,8 @@ export interface Applicant {
   cover_letter: string | null;
   cv_url: string | null;
   video_url: string | null;
+  loom_video_url: string | null;
+  portfolio_url: string | null;
 
   // Pipeline
   stage: ApplicantStage;

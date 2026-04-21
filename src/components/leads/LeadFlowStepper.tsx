@@ -167,7 +167,13 @@ export function LeadFlowStepper({
     .join(', ');
   const contractInvoiceEmail = lead.billing_email || null;
   const hasOffer = !!offerUrl;
-  const canConvert = !lead.converted_to_client_id && !['won', 'lost'].includes(lead.stage);
+  const hasPreparedContract = Boolean(
+    lead.contract_url ||
+    lead.contract_created_at ||
+    lead.digisign_envelope_id ||
+    lead.digisign_id,
+  );
+  const canConvert = !lead.converted_to_client_id && !lead.converted_at && lead.stage !== 'lost' && lead.stage !== 'bad_fit';
 
   interface StepDef {
     id: string;
@@ -327,14 +333,14 @@ export function LeadFlowStepper({
         ? `Podepsána${lead.digisign_envelope_id ? ' via DigiSign' : ''}`
         : lead.contract_sent_at 
           ? `Odeslána${lead.digisign_envelope_id ? ' via DigiSign' : ''}, čeká na podpis`
-          : lead.contract_url 
-            ? 'Vytvořena'
+          : hasPreparedContract
+            ? 'Připravena'
             : undefined,
-      actions: !lead.contract_url && !lead.digisign_envelope_id ? [{
+      actions: !hasPreparedContract ? [{
         label: 'Připravit smlouvu',
         onClick: onSendContract,
         variant: 'outline',
-      }] : lead.contract_url && !lead.contract_sent_at ? [{
+      }] : hasPreparedContract && !lead.contract_sent_at ? [{
         label: 'Označit jako odeslanou',
         onClick: onMarkContractSent,
         variant: 'outline',

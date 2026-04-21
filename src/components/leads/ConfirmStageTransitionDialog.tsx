@@ -23,6 +23,7 @@ const STAGE_LABELS: Record<LeadStage, string> = {
   access_received: 'Přístupy přijaty',
   preparing_offer: 'Příprava nabídky',
   offer_sent: 'Nabídka odeslána',
+  waiting_contract_signature: 'Čeká na podpis smlouvy',
   won: 'Vyhráno',
   lost: 'Prohráno',
   postponed: 'Odloženo',

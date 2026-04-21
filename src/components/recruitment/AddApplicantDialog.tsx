@@ -48,6 +48,14 @@ const formSchema = z.object({
     .transform(val => val?.trim() || '')
     .refine(val => val === '' || isValidUrlInput(val), 'Zadejte platnou URL')
     .transform(val => val === '' ? '' : normalizeUrlProtocol(val)),
+  loom_video_url: z.string()
+    .transform(val => val?.trim() || '')
+    .refine(val => val === '' || isValidUrlInput(val), 'Zadejte platnou URL')
+    .transform(val => val === '' ? '' : normalizeUrlProtocol(val)),
+  portfolio_url: z.string()
+    .transform(val => val?.trim() || '')
+    .refine(val => val === '' || isValidUrlInput(val), 'Zadejte platnou URL')
+    .transform(val => val === '' ? '' : normalizeUrlProtocol(val)),
   stage: z.string(),
   owner_id: z.string().optional(),
   source: z.string(),
@@ -78,6 +86,8 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
       cover_letter: '',
       cv_url: '',
       video_url: '',
+      loom_video_url: '',
+      portfolio_url: '',
       stage: 'new_applicant',
       owner_id: '',
       source: 'website',
@@ -95,6 +105,8 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
         cover_letter: applicant.cover_letter || '',
         cv_url: applicant.cv_url || '',
         video_url: applicant.video_url || '',
+        loom_video_url: applicant.loom_video_url || '',
+        portfolio_url: applicant.portfolio_url || '',
         stage: applicant.stage,
         owner_id: applicant.owner_id || '',
         source: applicant.source,
@@ -109,6 +121,8 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
         cover_letter: '',
         cv_url: '',
         video_url: '',
+        loom_video_url: '',
+        portfolio_url: '',
         stage: 'new_applicant',
         owner_id: '',
         source: 'website',
@@ -130,6 +144,8 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
         cover_letter: data.cover_letter || null,
         cv_url: data.cv_url || null,
         video_url: data.video_url || null,
+        loom_video_url: data.loom_video_url || null,
+        portfolio_url: data.portfolio_url || null,
         stage: data.stage as ApplicantStage,
         owner_id: data.owner_id || null,
         source: data.source as ApplicantSource,
@@ -353,7 +369,33 @@ export function AddApplicantDialog({ open, onOpenChange, applicant }: AddApplica
                 name="video_url"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>URL videa</FormLabel>
+                    <FormLabel>URL videa (obecné)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="loom_video_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL Loom videa</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://www.loom.com/share/..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="portfolio_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL portfolia</FormLabel>
                     <FormControl>
                       <Input placeholder="https://..." {...field} />
                     </FormControl>

@@ -299,6 +299,7 @@ export type Database = {
           onboarding_completed_at: string | null
           onboarding_sent_at: string | null
           owner_id: string | null
+          portfolio_url: string | null
           personal_email: string | null
           phone: string | null
           position: string
@@ -307,6 +308,7 @@ export type Database = {
           source_custom: string | null
           stage: Database["public"]["Enums"]["applicant_stage"] | null
           updated_at: string | null
+          loom_video_url: string | null
           video_url: string | null
         }
         Insert: {
@@ -332,6 +334,7 @@ export type Database = {
           onboarding_completed_at?: string | null
           onboarding_sent_at?: string | null
           owner_id?: string | null
+          portfolio_url?: string | null
           personal_email?: string | null
           phone?: string | null
           position: string
@@ -340,6 +343,7 @@ export type Database = {
           source_custom?: string | null
           stage?: Database["public"]["Enums"]["applicant_stage"] | null
           updated_at?: string | null
+          loom_video_url?: string | null
           video_url?: string | null
         }
         Update: {
@@ -365,6 +369,7 @@ export type Database = {
           onboarding_completed_at?: string | null
           onboarding_sent_at?: string | null
           owner_id?: string | null
+          portfolio_url?: string | null
           personal_email?: string | null
           phone?: string | null
           position?: string
@@ -373,6 +378,7 @@ export type Database = {
           source_custom?: string | null
           stage?: Database["public"]["Enums"]["applicant_stage"] | null
           updated_at?: string | null
+          loom_video_url?: string | null
           video_url?: string | null
         }
         Relationships: [
@@ -3967,9 +3973,11 @@ export type Database = {
         | "access_received"
         | "preparing_offer"
         | "offer_sent"
+        | "waiting_contract_signature"
         | "won"
         | "lost"
         | "postponed"
+        | "bad_fit"
       line_item_source:
         | "engagement"
         | "manual"
@@ -4287,9 +4295,11 @@ export const Constants = {
         "access_received",
         "preparing_offer",
         "offer_sent",
+        "waiting_contract_signature",
         "won",
         "lost",
         "postponed",
+        "bad_fit",
       ],
       line_item_source: [
         "engagement",
