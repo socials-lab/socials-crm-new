@@ -795,9 +795,12 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
         onSuccess(offerForEdit.token, offerUrl, syncData);
       } else {
         // Create mode: hard guard against accidental token rotation.
-        // If any active offer already exists for this lead, update it in place.
+        // If an offer already exists for this lead, update it in place.
+        // Prefer active offer; if only inactive exists, reactivate it.
         const existingByLead = await getOffersByLeadId(lead.id);
-        const existingOfferForLead = existingByLead[0];
+        const existingOfferForLead =
+          existingByLead.find((offer) => offer.is_active !== false) ||
+          existingByLead[0];
         if (existingOfferForLead) {
           await updatePublicOffer(existingOfferForLead.token, {
             audit_summary: auditSummary.trim() || null,
@@ -812,6 +815,7 @@ export function CreateOfferDialog({ open, onOpenChange, lead, onSuccess, existin
             discount_scope: monthlyDiscountPercent > 0 ? discountScope : undefined,
             intro_discount_percent: introDiscountPercent > 0 ? introDiscountPercent : undefined,
             intro_discount_months: introDiscountPercent > 0 ? introDiscountMonths : undefined,
+            is_active: true,
             valid_until: validUntil || null,
             content_blocks_snapshot: applyReportingVisibility((existingOfferForLead.content_blocks_snapshot || {}) as OfferContentSnapshot),
             owner_name: leadOwner?.full_name || undefined,

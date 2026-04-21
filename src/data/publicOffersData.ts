@@ -189,7 +189,7 @@ export async function getPublicOfferByToken(token: string): Promise<PublicOffer 
     .from('public_offers' as any)
     .select('*')
     .eq('token', token)
-    .eq('is_active', true)
+    .or('is_active.eq.true,is_active.is.null')
     .maybeSingle();
 
   if (error) {
