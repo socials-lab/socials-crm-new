@@ -186,18 +186,14 @@ export async function addPublicOffer(offer: PublicOffer): Promise<void> {
 
 export async function getPublicOfferByToken(token: string): Promise<PublicOffer | undefined> {
   const { data, error } = await supabase
-    .from('public_offers' as any)
-    .select('*')
-    .eq('token', token)
-    .or('is_active.eq.true,is_active.is.null')
-    .maybeSingle();
+    .rpc('get_public_offer_by_token' as any, { p_token: token } as any);
 
   if (error) {
     console.error('Error fetching offer by token:', error);
     return undefined;
   }
 
-  return data ? rowToOffer(data) : undefined;
+  return data ? rowToOffer(data as any) : undefined;
 }
 
 export async function incrementOfferView(token: string): Promise<void> {

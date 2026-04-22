@@ -1,11 +1,28 @@
--- Keep legacy offers with NULL is_active publicly readable (treated as active).
-DROP POLICY IF EXISTS "Public can view active offers by token" ON public.public_offers;
+-- Keep legacy offers with NULL is_active shareable without re-opening anon table reads.
+-- Public access stays behind the token-scoped RPC introduced later.
 
-CREATE POLICY "Public can view active offers by token"
-  ON public.public_offers
-  FOR SELECT
-  TO anon
-  USING (COALESCE(is_active, true) = true);
+CREATE OR REPLACE FUNCTION public.get_public_offer_by_token(p_token text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_offer jsonb;
+BEGIN
+  SELECT to_jsonb(po)
+  INTO v_offer
+  FROM public.public_offers po
+  WHERE po.token = p_token
+    AND COALESCE(po.is_active, true) = true
+  LIMIT 1;
+
+  RETURN v_offer;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_public_offer_by_token(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_public_offer_by_token(text) TO anon, authenticated;
 
 -- Ensure view counter still increments for legacy rows.
 CREATE OR REPLACE FUNCTION public.increment_public_offer_view(p_token text)
