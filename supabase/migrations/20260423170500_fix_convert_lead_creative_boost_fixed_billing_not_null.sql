@@ -52,7 +52,6 @@ BEGIN
     RAISE EXCEPTION 'Not authorized to convert leads'
       USING ERRCODE = '42501';
   END IF;
-
   v_currency := COALESCE(NULLIF(p_engagement_data->>'currency', ''), p_client_data->>'currency', 'CZK');
   IF v_currency NOT IN ('CZK', 'EUR', 'USD') THEN
     v_currency := 'CZK';
