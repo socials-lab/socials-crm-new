@@ -163,6 +163,54 @@ async function markBroadcastState(
   }
 }
 
+async function createTrackedLink(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  broadcastId: string,
+  recipientId: string,
+  targetUrl: string,
+): Promise<string> {
+  const { data, error } = await supabaseAdmin
+    .from("broadcast_tracked_links")
+    .insert({
+      broadcast_id: broadcastId,
+      recipient_id: recipientId,
+      target_url: targetUrl,
+    })
+    .select("link_token")
+    .single();
+
+  if (error || !data?.link_token) {
+    throw new Error(`Failed to create tracked link: ${error?.message ?? "Missing link token"}`);
+  }
+
+  return data.link_token as string;
+}
+
+async function rewriteTrackedLinks(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  htmlBody: string,
+  trackingBaseUrl: string,
+  broadcastId: string,
+  recipientId: string,
+): Promise<string> {
+  const hrefRegex = /href="(https?:\/\/[^"]+)"/g;
+  let result = "";
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = hrefRegex.exec(htmlBody)) !== null) {
+    const rawUrl = match[1];
+    const linkToken = await createTrackedLink(supabaseAdmin, broadcastId, recipientId, rawUrl);
+    const trackedUrl = `${trackingBaseUrl}?type=click&link=${encodeURIComponent(linkToken)}`;
+    result += htmlBody.slice(lastIndex, match.index);
+    result += `href="${trackedUrl}"`;
+    lastIndex = match.index + match[0].length;
+  }
+
+  result += htmlBody.slice(lastIndex);
+  return result;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -277,10 +325,10 @@ serve(async (req) => {
           contact_name: recipient.contact_name ?? null,
           company: recipient.company ?? null,
         })
-        .select("tracking_id")
+        .select("id, tracking_id")
         .single();
 
-      if (recipientInsertError || !recipientRow?.tracking_id) {
+      if (recipientInsertError || !recipientRow?.tracking_id || !recipientRow?.id) {
         console.error("broadcast recipient insert failed:", recipientInsertError);
         failedRecipients.push(recipient.email);
         continue;
@@ -293,12 +341,12 @@ serve(async (req) => {
         .replace(/\{company\}/g, recipient.company ?? "")
         .replace(/\{signature\}/g, senderSignature);
 
-      personalizedBody = personalizedBody.replace(
-        /href="(https?:\/\/[^"]+)"/g,
-        (_match: string, rawUrl: string) => {
-          const trackUrl = `${trackingBaseUrl}?id=${trackingId}&type=click&url=${encodeURIComponent(rawUrl)}`;
-          return `href="${trackUrl}"`;
-        },
+      personalizedBody = await rewriteTrackedLinks(
+        supabaseAdmin,
+        personalizedBody,
+        trackingBaseUrl,
+        broadcastId,
+        recipientRow.id as string,
       );
 
       const trackingPixel = `<img src="${trackingBaseUrl}?id=${trackingId}&type=open" width="1" height="1" style="display:none" alt="" />`;

@@ -11,6 +11,30 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function syncInternalCronSecret(
+  supabaseAdmin: ReturnType<typeof createClient>,
+): Promise<void> {
+  const internalCronSecret = Deno.env.get("INTERNAL_CRON_SECRET");
+  if (!internalCronSecret) {
+    throw new Error("Missing INTERNAL_CRON_SECRET");
+  }
+
+  const { error } = await supabaseAdmin
+    .from("internal_function_secrets")
+    .upsert(
+      {
+        name: "internal-cron",
+        secret: internalCronSecret,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "name" },
+    );
+
+  if (error) {
+    throw new Error(`Failed to sync internal cron secret: ${error.message}`);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -24,13 +48,15 @@ serve(async (req) => {
   try {
     // This is an admin-only function, check for secret key
     const adminKey = req.headers.get("X-Admin-Key");
-    const expectedKey = Deno.env.get("ADMIN_SECRET") || "update-urls-secret-2026";
+    const expectedKey = Deno.env.get("INTERNAL_CRON_SECRET");
     if (adminKey !== expectedKey) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    await syncInternalCronSecret(supabaseAdmin);
 
     const body = await req.json().catch(() => ({})) as { invoice_ids?: string[] };
     const invoiceIds = Array.isArray(body.invoice_ids)

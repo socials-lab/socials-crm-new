@@ -79,12 +79,36 @@ function getErrorMessage(error: unknown): string {
   return "Unknown error";
 }
 
+async function syncInternalCronSecret(
+  supabaseAdmin: ReturnType<typeof createClient>,
+): Promise<void> {
+  const internalCronSecret = Deno.env.get("INTERNAL_CRON_SECRET");
+  if (!internalCronSecret) {
+    throw new Error("Missing INTERNAL_CRON_SECRET");
+  }
+
+  const { error } = await supabaseAdmin
+    .from("internal_function_secrets")
+    .upsert(
+      {
+        name: "internal-cron",
+        secret: internalCronSecret,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "name" },
+    );
+
+  if (error) {
+    throw new Error(`Failed to sync internal cron secret: ${error.message}`);
+  }
+}
+
 async function isAuthorizedOperator(
   supabaseAdmin: ReturnType<typeof createClient>,
   req: Request
 ): Promise<boolean> {
   const adminKey = req.headers.get("X-Admin-Key");
-  const expectedKey = Deno.env.get("ADMIN_SECRET") || "update-urls-secret-2026";
+  const expectedKey = Deno.env.get("INTERNAL_CRON_SECRET");
   if (adminKey && adminKey === expectedKey) {
     return true;
   }
@@ -203,6 +227,8 @@ serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    await syncInternalCronSecret(supabaseAdmin);
 
     const body = await req.json().catch(() => ({})) as ImportRequest;
     const dryRun = body.dry_run === true;

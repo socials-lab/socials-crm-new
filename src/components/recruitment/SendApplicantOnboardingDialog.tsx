@@ -31,6 +31,9 @@ interface SendApplicantOnboardingDialogProps {
   onSend?: () => void;
 }
 
+interface ApplicantOnboardingLinkResponse {
+  token?: string;
+}
 
 export function SendApplicantOnboardingDialog({
   applicant,
@@ -46,23 +49,56 @@ export function SendApplicantOnboardingDialog({
   const signature = getDefaultEmailSignature(currentUserColleague, { fallbackName: 'HR tým Socials.cz' });
   const [copied, setCopied] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [onboardingUrl, setOnboardingUrl] = useState('');
 
-  const onboardingUrl = `${window.location.origin}/applicant-onboarding/${applicant.id}`;
-
-  const getDefaults = () => fillTemplate('applicant_onboarding', {
+  function getDefaults(url: string) {
+    return fillTemplate('applicant_onboarding', {
     name: inflectVocativeFullName(applicant.full_name),
     position: applicant.position,
-    url: onboardingUrl,
+    url,
     signature,
   });
+  }
+
+  async function createOrReuseOnboardingUrl() {
+    const { data, error } = await invokeWithTimeout<ApplicantOnboardingLinkResponse>('create-applicant-onboarding-link', {
+      body: { applicantId: applicant.id },
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data?.token) {
+      throw new Error('Nepodařilo se vytvořit onboarding odkaz.');
+    }
+
+    return `${window.location.origin}/applicant-onboarding/${data.token}`;
+  }
+
+  async function ensureOnboardingUrl() {
+    if (onboardingUrl) {
+      return onboardingUrl;
+    }
+
+    setIsGeneratingLink(true);
+    try {
+      const url = await createOrReuseOnboardingUrl();
+      setOnboardingUrl(url);
+      return url;
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  }
 
   const [emailTo, setEmailTo] = useState(applicant.email || '');
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [newCcEmail, setNewCcEmail] = useState('');
   const [bccEmails, setBccEmails] = useState<string[]>([DEFAULT_GMAIL_BCC]);
   const [newBccEmail, setNewBccEmail] = useState('');
-  const [subject, setSubject] = useState(() => getDefaults().subject);
-  const [message, setMessage] = useState(() => getDefaults().body);
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
 
   // Reset fields when applicant changes or dialog opens
   useEffect(() => {
@@ -72,11 +108,39 @@ export function SendApplicantOnboardingDialog({
       setNewCcEmail('');
       setBccEmails([DEFAULT_GMAIL_BCC]);
       setNewBccEmail('');
-      const defaults = getDefaults();
+      setOnboardingUrl('');
+      const defaults = getDefaults('');
       setSubject(defaults.subject);
       setMessage(defaults.body);
+
+      let cancelled = false;
+
+      async function loadOnboardingUrl() {
+        setIsGeneratingLink(true);
+        try {
+          const url = await createOrReuseOnboardingUrl();
+          if (cancelled) return;
+          setOnboardingUrl(url);
+          const nextDefaults = getDefaults(url);
+          setSubject(nextDefaults.subject);
+          setMessage(nextDefaults.body);
+        } catch (err) {
+          if (cancelled) return;
+          toast.error(err instanceof Error ? err.message : 'Nepodařilo se vytvořit onboarding odkaz');
+        } finally {
+          if (!cancelled) {
+            setIsGeneratingLink(false);
+          }
+        }
+      }
+
+      void loadOnboardingUrl();
+
+      return () => {
+        cancelled = true;
+      };
     }
-  }, [open, applicant.id, applicant.position, signature, fillTemplate]);
+  }, [open, applicant.id, applicant.email, applicant.full_name, applicant.position, signature, fillTemplate]);
 
   const parseEmails = (value: string) =>
     value
@@ -128,7 +192,8 @@ export function SendApplicantOnboardingDialog({
   };
 
   const handleCopyLink = async () => {
-    await navigator.clipboard.writeText(onboardingUrl);
+    const url = await ensureOnboardingUrl();
+    await navigator.clipboard.writeText(url);
     setCopied(true);
     toast.success('Odkaz zkopírován');
     setTimeout(() => setCopied(false), 2000);
@@ -143,6 +208,7 @@ export function SendApplicantOnboardingDialog({
     setIsSending(true);
 
     try {
+      await ensureOnboardingUrl();
       const htmlContent = formatEmailTextToHtml(message);
 
       const finalCcEmails = mergeEmails(ccEmails, newCcEmail);
@@ -247,11 +313,13 @@ export function SendApplicantOnboardingDialog({
                 value={onboardingUrl}
                 readOnly
                 className="text-sm"
+                placeholder={isGeneratingLink ? 'Generuji bezpečný onboarding odkaz...' : 'Onboarding odkaz není k dispozici'}
               />
               <Button
                 variant="outline"
                 size="icon"
                 onClick={handleCopyLink}
+                disabled={isGeneratingLink}
               >
                 {copied ? (
                   <Check className="h-4 w-4 text-green-600" />
@@ -278,7 +346,7 @@ export function SendApplicantOnboardingDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Zrušit
           </Button>
-          <Button onClick={handleSend} disabled={isSending || !emailTo.trim()}>
+          <Button onClick={handleSend} disabled={isSending || isGeneratingLink || !emailTo.trim() || !onboardingUrl}>
             {isSending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (

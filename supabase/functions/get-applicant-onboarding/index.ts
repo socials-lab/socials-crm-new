@@ -6,6 +6,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function isExpired(value: string | null | undefined): boolean {
+  if (!value) {
+    return true;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return true;
+  }
+  return parsed.getTime() <= Date.now();
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -17,19 +28,19 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { applicantId } = await req.json();
+    const { onboardingToken } = await req.json();
 
-    if (!applicantId) {
+    if (!onboardingToken) {
       return new Response(
-        JSON.stringify({ error: "Applicant ID is required" }),
+        JSON.stringify({ error: "Onboarding token is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const { data: applicant, error } = await supabaseAdmin
       .from("applicants")
-      .select("*")
-      .eq("id", applicantId)
+      .select("id, full_name, email, phone, position, birthday, personal_email, avatar_url, ico, company_name, dic, billing_country, billing_street, billing_city, billing_zip, hourly_rate, bank_account, onboarding_completed_at, onboarding_access_expires_at")
+      .eq("onboarding_access_token", onboardingToken)
       .single();
 
     if (error) {
@@ -48,7 +59,7 @@ serve(async (req) => {
 
     if (!applicant) {
       return new Response(
-        JSON.stringify({ error: "Applicant not found" }),
+        JSON.stringify({ error: "Invalid onboarding link" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -56,6 +67,13 @@ serve(async (req) => {
     if (applicant.onboarding_completed_at) {
       return new Response(
         JSON.stringify({ error: "Onboarding already completed" }),
+        { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (isExpired(applicant.onboarding_access_expires_at)) {
+      return new Response(
+        JSON.stringify({ error: "Onboarding link expired" }),
         { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

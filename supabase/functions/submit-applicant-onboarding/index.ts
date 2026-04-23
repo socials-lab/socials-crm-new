@@ -26,6 +26,13 @@ function toNullableString(v: unknown): string | null {
   return s === '' ? null : s;
 }
 
+function isExpired(value: string | null | undefined): boolean {
+  if (!value) return true;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return true;
+  return parsed.getTime() <= Date.now();
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -39,9 +46,9 @@ serve(async (req) => {
 
     const data = await req.json();
 
-    if (!data.applicantId) {
+    if (!data.onboardingToken) {
       return new Response(
-        JSON.stringify({ error: "Applicant ID is required" }),
+        JSON.stringify({ error: "Onboarding token is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -58,8 +65,8 @@ serve(async (req) => {
     // Verify applicant exists and onboarding not yet completed
     const { data: applicant, error: fetchError } = await supabaseAdmin
       .from("applicants")
-      .select("id, onboarding_completed_at")
-      .eq("id", data.applicantId)
+      .select("id, onboarding_completed_at, onboarding_access_expires_at")
+      .eq("onboarding_access_token", data.onboardingToken)
       .single();
 
     if (fetchError || !applicant) {
@@ -72,6 +79,13 @@ serve(async (req) => {
     if (applicant.onboarding_completed_at) {
       return new Response(
         JSON.stringify({ error: "Onboarding already completed" }),
+        { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (isExpired(applicant.onboarding_access_expires_at)) {
+      return new Response(
+        JSON.stringify({ error: "Onboarding link expired" }),
         { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -96,8 +110,10 @@ serve(async (req) => {
         hourly_rate: toNullableNumber(data.hourly_rate),
         bank_account: toNullableString(data.bank_account),
         onboarding_completed_at: new Date().toISOString(),
+        onboarding_access_token: null,
+        onboarding_access_expires_at: null,
       })
-      .eq("id", data.applicantId);
+      .eq("id", applicant.id);
 
     if (updateError) {
       console.error("Update applicant error:", updateError);
@@ -136,9 +152,9 @@ serve(async (req) => {
             type: "form_completed",
             title: "Onboarding kolegy vyplněn",
             message: `Kandidát "${fullName}" dokončil onboarding formulář.`,
-            link: `/recruitment?openApplicant=${data.applicantId}`,
+            link: `/recruitment?openApplicant=${applicant.id}`,
             metadata: {
-              applicant_id: data.applicantId,
+              applicant_id: applicant.id,
               full_name: fullName,
               email,
             },

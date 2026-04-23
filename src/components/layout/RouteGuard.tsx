@@ -32,10 +32,13 @@ const ROUTE_TO_PAGE: Record<string, string> = {
   '/sop': 'sop',
   '/analytics': 'analytics',
   '/settings': 'settings',
+  '/bug-reports': 'bug-reports',
+  '/offer-management': 'offer-management',
+  '/portfolio': 'offer-management',
 };
 
 // Pages that are always accessible (don't require permission)
-const ALWAYS_ACCESSIBLE = ['/my-profile'];
+const ALWAYS_ACCESSIBLE = ['/my-profile', '/notifications'];
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -140,7 +143,14 @@ export function RouteGuard({ children }: RouteGuardProps) {
   // SOP detail routes use /sop/:articleId, so normalize by prefix.
   const normalizedPath = currentPath.startsWith('/sop/') ? '/sop' : currentPath;
   const pageId = ROUTE_TO_PAGE[normalizedPath];
-  if (pageId && !canAccessPage(pageId)) {
+  if (!pageId) {
+    if (canAccessPage('my-work')) {
+      return <Navigate to="/my-work" replace />;
+    }
+    return <Navigate to="/my-profile" replace />;
+  }
+
+  if (!canAccessPage(pageId)) {
     // Prefer redirect to my-work for restricted users, fallback to profile.
     if (canAccessPage('my-work')) {
       return <Navigate to="/my-work" replace />;

@@ -148,7 +148,7 @@ const App = () => (
                             <Route path="/auth" element={<Auth />} />
                             <Route path="/auth/callback" element={<AuthCallback />} />
                             <Route path="/onboarding/:leadId" element={<OnboardingForm />} />
-                            <Route path="/applicant-onboarding/:applicantId" element={<ApplicantOnboardingForm />} />
+                            <Route path="/applicant-onboarding/:onboardingToken" element={<ApplicantOnboardingForm />} />
                             <Route path="/offer/:token" element={<PublicOfferPage />} />
                             <Route path="/offer-test" element={<PublicOfferPage testToken="test-nabidka-123" />} />
                             <Route path="/modification/:token" element={<PublicModificationPage />} />

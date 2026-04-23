@@ -95,7 +95,7 @@ const stepFieldMap: Record<number, string[]> = {
 };
 
 export default function ApplicantOnboardingForm() {
-  const { applicantId } = useParams<{ applicantId: string }>();
+  const { onboardingToken } = useParams<{ onboardingToken: string }>();
   const [currentStep, setCurrentStep] = useState(0);
   const [stepDirection, setStepDirection] = useState<'forward' | 'backward'>('forward');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -134,7 +134,7 @@ export default function ApplicantOnboardingForm() {
 
   // Load applicant data from edge function
   useEffect(() => {
-    if (!applicantId) {
+    if (!onboardingToken) {
       setNotFound(true);
       setIsLoading(false);
       return;
@@ -146,7 +146,7 @@ export default function ApplicantOnboardingForm() {
           error?: string;
           applicant?: ApplicantOnboardingPayload;
         }>('get-applicant-onboarding', {
-          body: { applicantId },
+          body: { onboardingToken },
           authMode: 'none',
         });
 
@@ -210,7 +210,7 @@ export default function ApplicantOnboardingForm() {
     }
 
     fetchApplicant();
-  }, [applicantId, form]);
+  }, [onboardingToken, form]);
 
   function handleCompanySelect(company: CompanySearchResult) {
     form.setValue('company_name', company.name, { shouldDirty: true, shouldValidate: true });
@@ -250,7 +250,7 @@ export default function ApplicantOnboardingForm() {
     try {
       const { data, error } = await invokeWithTimeout<{ error?: string; details?: string }>('submit-applicant-onboarding', {
         body: {
-          applicantId,
+          onboardingToken,
           ...formData,
           birthday: formData.birthday ? toDateOnlyString(formData.birthday) : null,
         },

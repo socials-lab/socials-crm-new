@@ -24,6 +24,17 @@ function trackingPixelResponse(): Response {
   });
 }
 
+function invalidClickResponse(): Response {
+  return new Response("Invalid or expired tracking link.", {
+    status: 404,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+    },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -39,26 +50,30 @@ serve(async (req) => {
     const requestUrl = new URL(req.url);
     const trackingId = requestUrl.searchParams.get("id");
     const type = requestUrl.searchParams.get("type");
-    const redirectUrl = requestUrl.searchParams.get("url");
+    const linkToken = requestUrl.searchParams.get("link");
 
-    if (!trackingId || !type) {
+    if (!type) {
       throw new Error("Missing tracking parameters");
     }
     if (type !== "open" && type !== "click") {
       throw new Error("Invalid tracking type");
     }
 
-    const { data: recipient, error: recipientError } = await supabaseAdmin
-      .from("broadcast_recipients")
-      .select("id, broadcast_id, opened_at, clicked_at")
-      .eq("tracking_id", trackingId)
-      .single();
-
-    if (recipientError || !recipient) {
-      throw new Error("Recipient tracking id not found");
-    }
-
     if (type === "open") {
+      if (!trackingId) {
+        throw new Error("Missing tracking id for open tracking");
+      }
+
+      const { data: recipient, error: recipientError } = await supabaseAdmin
+        .from("broadcast_recipients")
+        .select("id, broadcast_id, opened_at")
+        .eq("tracking_id", trackingId)
+        .single();
+
+      if (recipientError || !recipient) {
+        throw new Error("Recipient tracking id not found");
+      }
+
       const nowIso = new Date().toISOString();
       const { data: updatedRows, error: openUpdateError } = await supabaseAdmin
         .from("broadcast_recipients")
@@ -94,8 +109,28 @@ serve(async (req) => {
       return trackingPixelResponse();
     }
 
-    if (!redirectUrl) {
-      throw new Error("Missing redirect URL for click tracking");
+    if (!linkToken) {
+      return invalidClickResponse();
+    }
+
+    const { data: trackedLink, error: trackedLinkError } = await supabaseAdmin
+      .from("broadcast_tracked_links")
+      .select("id, broadcast_id, recipient_id, target_url, clicked_at")
+      .eq("link_token", linkToken)
+      .single();
+
+    if (trackedLinkError || !trackedLink) {
+      return invalidClickResponse();
+    }
+
+    const { data: recipient, error: recipientError } = await supabaseAdmin
+      .from("broadcast_recipients")
+      .select("id, broadcast_id, opened_at, clicked_at")
+      .eq("id", trackedLink.recipient_id)
+      .single();
+
+    if (recipientError || !recipient) {
+      return invalidClickResponse();
     }
 
     const nowIso = new Date().toISOString();
@@ -113,6 +148,18 @@ serve(async (req) => {
 
     if (clickUpdateError) {
       throw new Error(`Failed to update click tracking: ${clickUpdateError.message}`);
+    }
+
+    if (!trackedLink.clicked_at) {
+      const { error: trackedLinkUpdateError } = await supabaseAdmin
+        .from("broadcast_tracked_links")
+        .update({ clicked_at: nowIso })
+        .eq("id", trackedLink.id)
+        .is("clicked_at", null);
+
+      if (trackedLinkUpdateError) {
+        throw new Error(`Failed to update tracked link click: ${trackedLinkUpdateError.message}`);
+      }
     }
 
     if ((clickUpdatedRows ?? []).length > 0) {
@@ -147,7 +194,7 @@ serve(async (req) => {
       status: 302,
       headers: {
         ...corsHeaders,
-        Location: redirectUrl,
+        Location: trackedLink.target_url,
       },
     });
   } catch (error) {
@@ -165,6 +212,18 @@ serve(async (req) => {
       triggered_by: null,
       duration_ms: Date.now() - startedAt,
     });
+
+    const type = (() => {
+      try {
+        return new URL(req.url).searchParams.get("type");
+      } catch {
+        return null;
+      }
+    })();
+
+    if (type === "click") {
+      return invalidClickResponse();
+    }
 
     return trackingPixelResponse();
   }
