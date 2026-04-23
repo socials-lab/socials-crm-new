@@ -133,8 +133,8 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
       // applied in the shared-offer flow (including monthly % discounts).
       const { data: offersData, error: offersError } = await supabase
         .from('public_offers')
-        .select('lead_id, total_price, created_at, token')
-        .eq('is_active', true)
+        .select('lead_id, total_price, created_at, token, services')
+        .or('is_active.eq.true,is_active.is.null')
         .order('created_at', { ascending: false });
 
       if (offersError) {
@@ -143,10 +143,12 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
 
       const latestOfferTotalByLeadId = new Map<string, number>();
       const latestOfferTokenByLeadId = new Map<string, string>();
+      const latestOfferServicesByLeadId = new Map<string, unknown[]>();
       (offersData || []).forEach((offer: Record<string, unknown>) => {
         const leadId = typeof offer.lead_id === 'string' ? offer.lead_id : null;
         const totalPrice = Number(offer.total_price);
         const token = typeof offer.token === 'string' ? offer.token : null;
+        const services = Array.isArray(offer.services) ? offer.services : [];
 
         if (!leadId || !Number.isFinite(totalPrice)) return;
         if (!latestOfferTotalByLeadId.has(leadId)) {
@@ -154,6 +156,9 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         }
         if (token && !latestOfferTokenByLeadId.has(leadId)) {
           latestOfferTokenByLeadId.set(leadId, token);
+        }
+        if (!latestOfferServicesByLeadId.has(leadId) && services.length > 0) {
+          latestOfferServicesByLeadId.set(leadId, services);
         }
       });
 
@@ -163,6 +168,35 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
         const leadId = typeof lead.id === 'string' ? lead.id : null;
         const offerTotal = leadId ? latestOfferTotalByLeadId.get(leadId) : undefined;
         const offerToken = leadId ? latestOfferTokenByLeadId.get(leadId) : undefined;
+        const offerServices = leadId ? latestOfferServicesByLeadId.get(leadId) : undefined;
+        const leadServices = Array.isArray(lead.potential_services) ? lead.potential_services : [];
+        const normalizedOfferServices = Array.isArray(offerServices)
+          ? offerServices
+              .filter((service): service is Record<string, unknown> =>
+                !!service &&
+                typeof service === 'object' &&
+                typeof service.name === 'string' &&
+                service.name.trim().length > 0
+              )
+              .map((service, idx) => ({
+                id: (typeof service.id === 'string' && service.id) || `offer-service-${idx}`,
+                service_id: (typeof service.service_id === 'string' && service.service_id) || null,
+                name: service.name as string,
+                selected_tier: typeof service.selected_tier === 'string' ? service.selected_tier : null,
+                price: Number(service.price || 0),
+                currency: typeof service.currency === 'string' ? service.currency : (lead.currency as string) || 'CZK',
+                billing_type: typeof service.billing_type === 'string' ? service.billing_type : 'monthly',
+                managed_countries: Array.isArray(service.managed_countries) ? service.managed_countries : [],
+                country_variants: Array.isArray(service.country_variants) ? service.country_variants : [],
+                intro_discount_percent: null,
+                intro_discount_months: null,
+                creative_boost_credits: typeof service.creative_boost_credits === 'number' ? service.creative_boost_credits : null,
+                creative_boost_price_per_credit: typeof service.creative_boost_price_per_credit === 'number' ? service.creative_boost_price_per_credit : null,
+                creative_boost_graphic_reward: null,
+                creative_boost_editor_reward: null,
+              }))
+          : [];
+        const effectiveServices = leadServices.length > 0 ? leadServices : normalizedOfferServices;
 
         return {
           ...lead,
@@ -170,7 +204,10 @@ export function LeadsDataProvider({ children }: { children: ReactNode }) {
           offer_token: offerToken ?? null,
           notes: Array.isArray(lead.notes) ? lead.notes : [],
           stage: lead.stage || 'new_lead',
-          potential_services: Array.isArray(lead.potential_services) ? lead.potential_services : [],
+          potential_services: effectiveServices,
+          potential_service: (typeof lead.potential_service === 'string' && lead.potential_service.trim().length > 0)
+            ? lead.potential_service
+            : (effectiveServices[0]?.name || ''),
           access_request_platforms: Array.isArray(lead.access_request_platforms) ? lead.access_request_platforms : [],
           meeting_request_sent_at: lead.meeting_request_sent_at || null,
         };

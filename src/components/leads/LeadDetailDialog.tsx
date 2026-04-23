@@ -337,10 +337,10 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
 
   const handleConvertClick = () => {
     const hasOnboardingCompleted = !!lead.onboarding_form_completed_at;
-    const hasContractSigned = !!lead.contract_signed_at;
+    const hasContractPrepared = !!(lead.contract_url || lead.contract_created_at || lead.digisign_envelope_id || lead.digisign_id);
     if (!hasOnboardingCompleted) {
       setShowOnboardingWarning(true);
-    } else if (!hasContractSigned) {
+    } else if (!hasContractPrepared) {
       setShowContractWarning(true);
     } else {
       setIsConvertOpen(true);
@@ -419,20 +419,19 @@ export function LeadDetailDialog({ lead: leadProp, open, onOpenChange, onDelete 
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              ⚠️ Smlouva nebyla podepsána
+              ⚠️ Smlouva není připravená
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Lead lze převést na zakázku až po podpisu smlouvy.
-              Nejprve smlouvu podepište nebo ověřte stav v DigiSign.
+              U leadu zatím není připravená smlouva. Přesto můžete pokračovat na převod bez podepsané smlouvy.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Zavřít</AlertDialogCancel>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={() => setTimeout(() => setIsContractDialogOpen(true), 100)}
+              onClick={() => setTimeout(() => setIsConvertOpen(true), 100)}
               className="bg-amber-500 hover:bg-amber-600"
             >
-              Otevřít smlouvu
+              Pokračovat bez smlouvy
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

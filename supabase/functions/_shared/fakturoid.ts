@@ -417,6 +417,8 @@ export async function listAllInvoices(
 export const COUNTRY_CODE_MAP: Record<string, string> = {
   "Czech Republic": "CZ",
   "Česká republika": "CZ",
+  "Česko": "CZ",
+  "Cesko": "CZ",
   "Czechia": "CZ",
   "Slovakia": "SK",
   "Slovensko": "SK",

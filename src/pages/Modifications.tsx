@@ -266,7 +266,7 @@ export default function Modifications() {
           offer_url: null,
           contract_url: null,
           contact_person_id: null,
-          notice_period_months: null,
+          notice_period_months: 1,
           managed_countries: [],
           pinned_notes: '',
         });
@@ -413,7 +413,7 @@ export default function Modifications() {
         offer_url: null,
         contract_url: null,
         contact_person_id: null,
-        notice_period_months: null,
+        notice_period_months: 1,
         managed_countries: [],
         pinned_notes: '',
       });

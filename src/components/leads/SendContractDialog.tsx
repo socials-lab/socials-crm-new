@@ -37,6 +37,7 @@ interface SendContractDialogProps {
 
 export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl, onSend }: SendContractDialogProps) {
   const [copied, setCopied] = useState(false);
+  const [assistantBriefCopied, setAssistantBriefCopied] = useState(false);
   const [showPayload, setShowPayload] = useState(false);
   const getInitialGoogleDocsUrl = () =>
     lead.google_docs_contract_url ||
@@ -98,89 +99,179 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
   const [draftCreated, setDraftCreated] = useState(false);
   const [draftEnvelopeId, setDraftEnvelopeId] = useState<string | null>(null);
   const [hasResetDraft, setHasResetDraft] = useState(false);
-  const [offerServicesFallback, setOfferServicesFallback] = useState<LeadService[]>([]);
+  const [offerServicesSnapshot, setOfferServicesSnapshot] = useState<LeadService[]>([]);
   const { createContract } = useDigiSign();
 
   useEffect(() => {
     if (!open) return;
 
-    const localServices = Array.isArray(lead.potential_services) ? lead.potential_services : [];
-    if (localServices.length > 0) {
-      setOfferServicesFallback([]);
-      return;
-    }
-
     let mounted = true;
     (async () => {
       try {
-        let query = supabase
-          .from('public_offers')
-          .select('services, token')
-          .eq('is_active', true);
+        const normalizeOfferServices = (services: PublicOfferService[]): LeadService[] =>
+          Array.isArray(services)
+            ? services.map((service, idx) => ({
+                id: service.id || `offer-service-${idx}`,
+                service_id: service.service_id,
+                name: service.name,
+                selected_tier: service.selected_tier ?? null,
+                price: Number(service.price || 0),
+                currency: service.currency || lead.currency || 'CZK',
+                billing_type: service.billing_type || 'monthly',
+              managed_countries: Array.isArray(service.managed_countries) ? service.managed_countries : [],
+              country_variants: Array.isArray(service.country_variants) ? service.country_variants : [],
+                intro_discount_percent: null,
+                intro_discount_months: null,
+                creative_boost_credits: service.creative_boost_credits ?? null,
+                creative_boost_price_per_credit: service.creative_boost_price_per_credit ?? null,
+                creative_boost_graphic_reward: null,
+                creative_boost_editor_reward: null,
+              }))
+            : [];
+
+        let offerData: { services?: PublicOfferService[] } | null = null;
 
         if (lead.offer_token) {
-          query = query.eq('token', lead.offer_token);
-        } else {
-          query = query.eq('lead_id', lead.id);
+          const byToken = await supabase
+            .from('public_offers')
+            .select('services')
+            .eq('token', lead.offer_token)
+            .or('is_active.eq.true,is_active.is.null')
+            .maybeSingle();
+
+          if (!byToken.error && byToken.data) {
+            offerData = byToken.data as { services?: PublicOfferService[] };
+          }
         }
 
-        const { data, error } = await query
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        if (!offerData) {
+          let query = supabase
+          .from('public_offers')
+            .select('services')
+            .eq('lead_id', lead.id)
+            .or('is_active.eq.true,is_active.is.null');
 
-        if (error) throw error;
+          const { data, error } = await query
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-        const services = (data?.services ?? []) as PublicOfferService[];
-        const normalized: LeadService[] = Array.isArray(services)
-          ? services.map((service, idx) => ({
-              id: service.id || `offer-service-${idx}`,
-              service_id: service.service_id,
-              name: service.name,
-              selected_tier: service.selected_tier ?? null,
-              price: Number(service.price || 0),
-              currency: service.currency || lead.currency || 'CZK',
-              billing_type: service.billing_type || 'monthly',
-              managed_countries: service.managed_countries || [],
-              country_variants: service.country_variants || [],
-              intro_discount_percent: null,
-              intro_discount_months: null,
-              creative_boost_credits: service.creative_boost_credits ?? null,
-              creative_boost_price_per_credit: service.creative_boost_price_per_credit ?? null,
-              creative_boost_graphic_reward: null,
-              creative_boost_editor_reward: null,
-            }))
-          : [];
+          if (error) throw error;
+          offerData = data as { services?: PublicOfferService[] } | null;
+        }
 
         if (mounted) {
-          setOfferServicesFallback(normalized);
+          const services = (offerData?.services ?? []) as PublicOfferService[];
+          setOfferServicesSnapshot(normalizeOfferServices(services));
         }
       } catch (error) {
-        console.error('Failed to load services from public offer fallback:', error);
+        console.error('Failed to load services from public offer for contract preview:', error);
       }
     })();
 
     return () => {
       mounted = false;
     };
-  }, [open, lead.id, lead.offer_token, lead.potential_services, lead.currency]);
+  }, [open, lead.id, lead.offer_token, lead.currency]);
 
   const localLeadServices: LeadService[] = Array.isArray(lead.potential_services) ? lead.potential_services : [];
-  const leadServices: LeadService[] = localLeadServices.length > 0 ? localLeadServices : offerServicesFallback;
+  const rawLeadServices: LeadService[] = offerServicesSnapshot.length > 0 ? offerServicesSnapshot : localLeadServices;
+  const leadServices: LeadService[] = rawLeadServices.filter((service): service is LeadService => {
+    if (!service || typeof service !== 'object') return false;
+    const candidate = service as Partial<LeadService>;
+    return typeof candidate.name === 'string' && candidate.name.trim().length > 0;
+  });
   const monthlyServices = leadServices.filter(s => (s.billing_type || 'monthly') === 'monthly');
   const oneOffServices = leadServices.filter(s => s.billing_type === 'one_off');
-  const monthlyTotal = monthlyServices.reduce((sum, s) => sum + (s.price || 0), 0);
-  const oneOffTotal = oneOffServices.reduce((sum, s) => sum + (s.price || 0), 0);
+  const getSafeCountryVariants = (service: LeadService) =>
+    Array.isArray(service.country_variants) ? service.country_variants : [];
+  const getCountryVariantsTotal = (service: LeadService) =>
+    getSafeCountryVariants(service).reduce((sum, variant) => sum + Number(variant?.price || 0), 0);
+  const getServiceTotalPrice = (service: LeadService) => (service.price || 0) + getCountryVariantsTotal(service);
+  const monthlyTotal = monthlyServices.reduce((sum, s) => sum + getServiceTotalPrice(s), 0);
+  const oneOffTotal = oneOffServices.reduce((sum, s) => sum + getServiceTotalPrice(s), 0);
   const currency = lead.currency || 'CZK';
-
+  const companyDisplayName = (() => {
+    const rawWebsite = typeof lead.website === 'string' ? lead.website.trim() : '';
+    if (!rawWebsite) return lead.company_name;
+    return rawWebsite
+      .replace(/^https?:\/\//i, '')
+      .replace(/^www\./i, '')
+      .replace(/\/+$/, '') || lead.company_name;
+  })();
+  const onboardingSignatories = Array.isArray((lead as any).onboarding_signatories)
+    ? ((lead as any).onboarding_signatories as Array<{ name?: string; position?: string; email?: string; phone?: string }>)
+    : [];
+  const onboardingProjectContacts = Array.isArray((lead as any).onboarding_project_contacts)
+    ? ((lead as any).onboarding_project_contacts as Array<{ name?: string; position?: string; email?: string; phone?: string }>)
+    : [];
+  const onboardingStartDate = ((lead as any).onboarding_start_date as string | null | undefined) || null;
+  const toSafeText = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
+  const formatContactLine = (contact: { name?: string; position?: string; email?: string; phone?: string }) => {
+    const raw = contact && typeof contact === 'object' ? contact : {};
+    const name = toSafeText((raw as { name?: unknown }).name) || 'Bez jména';
+    const parts = [
+      toSafeText((raw as { position?: unknown }).position),
+      toSafeText((raw as { email?: unknown }).email),
+      toSafeText((raw as { phone?: unknown }).phone),
+    ].filter(Boolean);
+    return parts.length > 0 ? `${name} — ${parts.join(' · ')}` : name;
+  };
+  const toSafeCountryCode = (value: unknown): string | null => {
+    if (typeof value !== 'string') return null;
+    const normalized = value.trim().toUpperCase();
+    return normalized.length > 0 ? normalized : null;
+  };
+  const formatDateSafe = (value: string | null | undefined): string => {
+    if (!value) return 'neuvedeno';
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? 'neuvedeno' : parsed.toLocaleDateString('cs-CZ');
+  };
   const hasGoogleDocsUrl = googleDocsUrl.trim().length > 0 && googleDocsUrl.includes('docs.google.com');
+  const serviceLines = open ? leadServices.map((svc) => {
+    const countryCodes = getSafeCountryVariants(svc)
+      .map((variant) => toSafeCountryCode(variant?.country_code))
+      .filter((code): code is string => !!code);
+    const countriesText = countryCodes.length > 0 ? ` + ${countryCodes.join(', ')}` : '';
+    const totalPrice = getServiceTotalPrice(svc);
+    const billingSuffix = (svc.billing_type || 'monthly') === 'monthly' ? '/měs' : ' jednorázově';
+    return `- ${svc.name}${countriesText}: ${totalPrice.toLocaleString('cs-CZ')} ${svc.currency || currency}${billingSuffix}`;
+  }) : [];
+  const assistantBriefText = open ? [
+    `Ahoj, prosím o kontrolu a následné odeslání smlouvy klientovi.`,
+    ``,
+    `Klient: ${companyDisplayName}`,
+    ``,
+    `1) Souhrn onboarding formuláře`,
+    `- Firma: ${companyDisplayName}`,
+    `- IČO/DIČ: ${lead.ico || 'neuvedeno'}${lead.dic ? ` / ${lead.dic}` : ''}`,
+    `- Fakturační adresa: ${[lead.billing_street, lead.billing_city, lead.billing_zip, lead.billing_country].filter(Boolean).join(', ') || 'neuvedeno'}`,
+    `- Fakturační e-mail: ${lead.billing_email || 'neuvedeno'}`,
+    `- Hlavní kontakt: ${lead.contact_name}${lead.contact_email ? ` · ${lead.contact_email}` : ''}${lead.contact_phone ? ` · ${lead.contact_phone}` : ''}`,
+    `- Podpisující osoby: ${onboardingSignatories.length > 0 ? '' : 'neuvedeny'}`,
+    ...(onboardingSignatories.length > 0 ? onboardingSignatories.map((s) => `  ${formatContactLine(s)}`) : []),
+    `- Projektové kontakty: ${onboardingProjectContacts.length > 0 ? '' : 'neuvedeny'}`,
+    ...(onboardingProjectContacts.length > 0 ? onboardingProjectContacts.map((c) => `  ${formatContactLine(c)}`) : []),
+    `- Start spolupráce: ${formatDateSafe(onboardingStartDate)}`,
+    ``,
+    `2) Služby z nabídky`,
+    ...(serviceLines.length > 0 ? serviceLines : ['- služby chybí']),
+    `- Celkem měsíčně: ${monthlyTotal.toLocaleString('cs-CZ')} ${currency}/měs`,
+    ...(oneOffTotal > 0 ? [`- Jednorázově: ${oneOffTotal.toLocaleString('cs-CZ')} ${currency}`] : []),
+    ``,
+    `3) Google Docs smlouva`,
+    `- ${hasGoogleDocsUrl ? googleDocsUrl.trim() : 'odkaz není vyplněn'}`,
+    ``,
+    `Prosím po kontrole odešli klientovi k podpisu v DigiSign. Díky.`,
+  ].join('\n') : '';
+
   const hasExistingDigisignDraftInCrm = (lead.contract_url || '').includes('app.digisign.org/selfcare/envelopes/');
 
   // Build DigiSign API payload — always as DRAFT
   const digisignPayload = {
     envelope: {
       status: 'draft',
-      email_subject: `Smlouva o propagaci — ${lead.company_name}`,
+      email_subject: `Smlouva o propagaci — ${companyDisplayName}`,
       email_body:
         `Dobrý den,\n\n` +
         `posílám Vám smlouvu o propagaci k podpisu.\n\n` +
@@ -198,7 +289,7 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
         },
       ],
       document: {
-        name: `${lead.company_name} - Smlouva o propagaci.pdf`,
+        name: `${companyDisplayName} - Smlouva o propagaci.pdf`,
         source: hasGoogleDocsUrl ? 'google_docs_export' : 'generated',
         google_docs_url: hasGoogleDocsUrl ? googleDocsUrl.trim() : undefined,
         export_format: 'application/pdf',
@@ -229,9 +320,10 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
       services: leadServices.map(svc => ({
         name: svc.name,
         tier: svc.selected_tier || null,
-        price: svc.price || 0,
+        price: getServiceTotalPrice(svc),
         currency: svc.currency || currency,
         billing_type: svc.billing_type || 'monthly',
+        country_variants: getSafeCountryVariants(svc),
       })),
       pricing: {
         monthly_total: monthlyTotal,
@@ -263,6 +355,12 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
     setCopied(true);
     toast.success('Payload zkopírován');
     setTimeout(() => setCopied(false), 2000);
+  };
+  const handleCopyAssistantBrief = async () => {
+    await navigator.clipboard.writeText(assistantBriefText);
+    setAssistantBriefCopied(true);
+    toast.success('Text pro asistentku zkopírován');
+    setTimeout(() => setAssistantBriefCopied(false), 2000);
   };
 
   const handleOpenGoogleDocs = async () => {
@@ -434,13 +532,21 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
                   {leadServices.map((svc, idx) => (
                     <div key={idx} className="flex items-center justify-between px-3 py-1.5">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="truncate">{svc.name}</span>
+                        <span className="truncate">
+                          {svc.name}
+                          {getSafeCountryVariants(svc).length > 0
+                            ? ` + ${getSafeCountryVariants(svc)
+                                .map((variant) => variant?.country_code)
+                                .filter(Boolean)
+                                .join(', ')}`
+                            : ''}
+                        </span>
                         {svc.selected_tier && (
                           <Badge variant="outline" className="text-[10px] uppercase shrink-0">{svc.selected_tier}</Badge>
                         )}
                       </div>
                       <span className="font-medium tabular-nums whitespace-nowrap ml-2">
-                        {(svc.price || 0).toLocaleString('cs-CZ')} {svc.currency || currency}
+                        {getServiceTotalPrice(svc).toLocaleString('cs-CZ')} {svc.currency || currency}
                         {(svc.billing_type || 'monthly') === 'monthly' ? '/měs' : ''}
                       </span>
                     </div>
@@ -665,6 +771,33 @@ export function SendContractDialog({ open, onOpenChange, lead, onSaveContractUrl
               )}
                 </>
               )}
+            </div>
+          </div>
+
+          {/* ── Assistant handoff text ── */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Badge className="bg-muted text-muted-foreground text-[10px] rounded-full h-5 px-2 flex items-center justify-center shrink-0">COPY</Badge>
+              <h5 className="text-sm font-semibold">Text pro asistentku (copy & paste)</h5>
+            </div>
+            <div className="rounded-lg border p-4 space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Tento text pošlete asistentce pro finální kontrolu údajů a odeslání smlouvy klientovi.
+              </p>
+              <div className="relative">
+                <pre className="rounded-md border bg-muted/50 p-3 text-[11px] leading-relaxed whitespace-pre-wrap max-h-[260px] overflow-y-auto">
+                  {assistantBriefText}
+                </pre>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="absolute top-2 right-2 h-7 gap-1.5 text-xs"
+                  onClick={handleCopyAssistantBrief}
+                >
+                  {assistantBriefCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                  {assistantBriefCopied ? 'Zkopírováno' : 'Kopírovat text'}
+                </Button>
+              </div>
             </div>
           </div>
 

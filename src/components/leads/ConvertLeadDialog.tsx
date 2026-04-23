@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
@@ -42,6 +42,7 @@ import { toast } from 'sonner';
 import { getLeadOfferUrl } from '@/utils/offerUrl';
 import { invokeWithTimeout } from '@/lib/supabaseUtils';
 import { buildFreeloProjectName, buildSlackChannelNameFromWebsite } from '@/lib/slackChannelName';
+import { canonicalizeAssignmentRole } from '@/lib/assignmentRoles';
 
 const convertSchema = z.object({
   // Editable client fields
@@ -66,12 +67,22 @@ const CREATIVE_BOOST_SERVICE_CODE = 'CREATIVE_BOOST';
 interface TeamMember {
   colleague_id: string;
   role: string;
-  cost_model: CostModel;
+  cost_model: CostModel | 'per_credit';
   monthly_cost: number;
   hourly_cost: number;
   percentage_of_revenue: number;
+  reward_per_credit: number;
   // Marks this row as auto-proposed from a concrete service.
   _serviceIndex?: number;
+}
+
+interface ConvertLeadDraftData {
+  formData: ConvertFormData;
+  teamMembers: TeamMember[];
+  successFeeEnabled: boolean;
+  successFeePercent: number;
+  successFeeMonths: number;
+  savedAt: number;
 }
 
 interface ConvertLeadDialogProps {
@@ -81,6 +92,71 @@ interface ConvertLeadDialogProps {
   onSuccess: () => void;
 }
 
+function getConvertLeadDraftKey(leadId: string): string {
+  return `convert-lead-draft-${leadId}`;
+}
+
+function saveConvertLeadDraft(key: string, data: ConvertLeadDraftData): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (error) {
+    console.error('Failed to save convert lead draft:', error);
+  }
+}
+
+function loadConvertLeadDraft(key: string): ConvertLeadDraftData | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as ConvertLeadDraftData;
+  } catch {
+    return null;
+  }
+}
+
+function clearConvertLeadDraft(key: string): void {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // noop
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function invokeEdgeWithRetry<T>(
+  functionName: string,
+  options: Parameters<typeof invokeWithTimeout>[1],
+  timeoutMs = 30000,
+  attempts = 3,
+): Promise<T> {
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const { data, error } = await invokeWithTimeout<T>(functionName, options, timeoutMs);
+      if (error) {
+        lastError = error;
+      } else if (!data) {
+        lastError = new Error(`Prázdná odpověď z ${functionName}`);
+      } else {
+        return data;
+      }
+    } catch (error) {
+      lastError = error;
+    }
+
+    if (attempt < attempts) {
+      await sleep(1000 * attempt);
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(`Volání ${functionName} selhalo po ${attempts} pokusech`);
+}
+
 export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: ConvertLeadDialogProps) {
   const { colleagues, services } = useCRMData();
   const { user } = useAuth();
@@ -88,8 +164,9 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [successFeeEnabled, setSuccessFeeEnabled] = useState(true);
   const [successFeePercent, setSuccessFeePercent] = useState(10);
-  const [successFeeMonths, setSuccessFeeMonths] = useState(3);
+  const [successFeeMonths, setSuccessFeeMonths] = useState(1);
   const [isConverting, setIsConverting] = useState(false);
+  const [restoredDraftAt, setRestoredDraftAt] = useState<number | null>(null);
 
   const activeColleagues = colleagues.filter(c => c.status === 'active');
 
@@ -106,10 +183,29 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       engagement_name: '',
       start_date: '',
       end_date: '',
-      notice_period_months: 3,
+      notice_period_months: 1,
       engagement_notes: '',
     },
   });
+
+  const safePotentialServices = useMemo(
+    () => (Array.isArray(lead?.potential_services)
+      ? lead.potential_services.filter((service) => Boolean(service))
+      : []),
+    [lead?.potential_services]
+  );
+  const safeOnboardingSignatories = useMemo(
+    () => (Array.isArray(lead?.onboarding_signatories)
+      ? lead.onboarding_signatories.filter((contact) => Boolean(contact))
+      : []),
+    [lead?.onboarding_signatories]
+  );
+  const safeOnboardingProjectContacts = useMemo(
+    () => (Array.isArray(lead?.onboarding_project_contacts)
+      ? lead.onboarding_project_contacts.filter((contact) => Boolean(contact))
+      : []),
+    [lead?.onboarding_project_contacts]
+  );
 
   function getRewardRolesForTier(
     rewardConfig: ServiceRewardTierConfig[] | null | undefined,
@@ -131,7 +227,12 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   // Reset form when lead changes
   useEffect(() => {
     if (lead && open) {
-      form.reset({
+      setSuccessFeeEnabled(true);
+      setSuccessFeePercent(10);
+      setSuccessFeeMonths(1);
+      const autoEngagementName = buildFreeloProjectName(lead.website || '', lead.company_name);
+
+      const defaultFormValues: ConvertFormData = {
         brand_name: lead.company_name,
         website: lead.website || '',
         industry: lead.industry || '',
@@ -139,19 +240,19 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         acquisition_channel: lead.source === 'other' ? (lead.source_custom || 'Jiný') : lead.source,
         pinned_notes: '',
         client_notes: '',
-        engagement_name: lead.potential_services?.[0]?.name
-          ? `${lead.potential_services[0].name} - ${lead.company_name}`
-          : `${lead.company_name}`,
-        start_date: lead.contract_signed_at
-          ? toDateOnlyString(new Date(lead.contract_signed_at))
-          : toDateOnlyString(new Date()),
+        engagement_name: autoEngagementName,
+        start_date: lead.onboarding_start_date
+          ? toDateOnlyString(new Date(lead.onboarding_start_date))
+          : lead.contract_signed_at
+            ? toDateOnlyString(new Date(lead.contract_signed_at))
+            : toDateOnlyString(new Date()),
         end_date: '',
-        notice_period_months: 3,
+        notice_period_months: 1,
         engagement_notes: lead.summary,
-      });
+      };
 
       const suggestedTeam: TeamMember[] = [];
-      for (const [serviceIndex, leadService] of (lead.potential_services || []).entries()) {
+      for (const [serviceIndex, leadService] of safePotentialServices.entries()) {
         const catalogService = services.find(s => s.id === leadService.service_id);
         if (!catalogService?.reward_config?.length) continue;
 
@@ -163,22 +264,123 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             : role.reward_type === 'per_credit'
               ? role.reward * 30
               : 0;
+          const isPerCreditReward = role.reward_type === 'per_credit';
 
           suggestedTeam.push({
             colleague_id: '',
             role: role.role,
-            cost_model: costModel,
+            cost_model: isPerCreditReward ? 'per_credit' : costModel,
             monthly_cost: monthlyCost,
             hourly_cost: role.reward_type === 'hourly' ? role.reward : 0,
             percentage_of_revenue: 0,
+            reward_per_credit: isPerCreditReward ? role.reward : 0,
             _serviceIndex: serviceIndex,
           });
         }
       }
 
-      setTeamMembers(suggestedTeam);
+      const draftKey = getConvertLeadDraftKey(lead.id);
+      const savedDraft = loadConvertLeadDraft(draftKey);
+
+      if (savedDraft) {
+        form.reset({
+          ...defaultFormValues,
+          ...savedDraft.formData,
+          engagement_name: autoEngagementName,
+        });
+        setTeamMembers(Array.isArray(savedDraft.teamMembers) ? savedDraft.teamMembers : suggestedTeam);
+        setSuccessFeeEnabled(savedDraft.successFeeEnabled === true);
+        setSuccessFeePercent(
+          Number.isFinite(savedDraft.successFeePercent)
+            ? Math.min(100, Math.max(0, Number(savedDraft.successFeePercent)))
+            : 10
+        );
+        setSuccessFeeMonths(1);
+        setRestoredDraftAt(typeof savedDraft.savedAt === 'number' ? savedDraft.savedAt : null);
+      } else {
+        form.reset(defaultFormValues);
+        setTeamMembers(suggestedTeam);
+        setRestoredDraftAt(null);
+      }
     }
-  }, [lead, open, form, services]);
+  }, [lead, open, form, services, safePotentialServices]);
+
+  const watchedBrandName = form.watch('brand_name');
+  const watchedWebsite = form.watch('website');
+  const watchedIndustry = form.watch('industry');
+  const watchedTier = form.watch('tier');
+  const watchedAcquisitionChannel = form.watch('acquisition_channel');
+  const watchedPinnedNotes = form.watch('pinned_notes');
+  const watchedClientNotes = form.watch('client_notes');
+  const watchedEngagementName = form.watch('engagement_name');
+  const watchedStartDate = form.watch('start_date');
+  const watchedEndDate = form.watch('end_date');
+  const watchedNoticePeriodMonths = form.watch('notice_period_months');
+  const watchedEngagementNotes = form.watch('engagement_notes');
+
+  useEffect(() => {
+    if (!open || !lead?.id || isConverting) return;
+
+    const draftKey = getConvertLeadDraftKey(lead.id);
+    const timer = setTimeout(() => {
+      const draftToSave: ConvertLeadDraftData = {
+        formData: {
+          brand_name: watchedBrandName || '',
+          website: watchedWebsite || '',
+          industry: watchedIndustry || '',
+          tier: watchedTier || 'standard',
+          acquisition_channel: watchedAcquisitionChannel || 'inbound',
+          pinned_notes: watchedPinnedNotes || '',
+          client_notes: watchedClientNotes || '',
+          engagement_name: watchedEngagementName || '',
+          start_date: watchedStartDate || '',
+          end_date: watchedEndDate || '',
+          notice_period_months: Number.isFinite(Number(watchedNoticePeriodMonths))
+            ? Number(watchedNoticePeriodMonths)
+            : 1,
+          engagement_notes: watchedEngagementNotes || '',
+        },
+        teamMembers,
+        successFeeEnabled,
+        successFeePercent: Number.isFinite(successFeePercent) ? Math.min(100, Math.max(0, successFeePercent)) : 10,
+        successFeeMonths: 1,
+        savedAt: Date.now(),
+      };
+
+      saveConvertLeadDraft(draftKey, draftToSave);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [
+    open,
+    lead?.id,
+    isConverting,
+    watchedBrandName,
+    watchedWebsite,
+    watchedIndustry,
+    watchedTier,
+    watchedAcquisitionChannel,
+    watchedPinnedNotes,
+    watchedClientNotes,
+    watchedEngagementName,
+    watchedStartDate,
+    watchedEndDate,
+    watchedNoticePeriodMonths,
+    watchedEngagementNotes,
+    teamMembers,
+    successFeeEnabled,
+    successFeePercent,
+    successFeeMonths,
+  ]);
+
+  useEffect(() => {
+    if (!open || !lead) return;
+    const autoEngagementName = buildFreeloProjectName(watchedWebsite || lead.website || '', lead.company_name);
+    const currentEngagementName = form.getValues('engagement_name');
+    if (currentEngagementName !== autoEngagementName) {
+      form.setValue('engagement_name', autoEngagementName, { shouldDirty: true });
+    }
+  }, [open, lead, watchedWebsite, form]);
 
   const addTeamMember = () => {
     setTeamMembers(prev => [...prev, {
@@ -188,6 +390,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       monthly_cost: 0,
       hourly_cost: 0,
       percentage_of_revenue: 0,
+      reward_per_credit: 0,
     }]);
   };
 
@@ -216,14 +419,37 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
     try {
       // Derive engagement type and fees from services
-      const hasMonthlyServices = lead.potential_services?.some(s => s.billing_type === 'monthly') || false;
+      const hasMonthlyServices = safePotentialServices.some(s => s.billing_type === 'monthly');
       const engagementType = hasMonthlyServices ? 'retainer' : 'one_off';
-      const monthlyFee = lead.potential_services
-        ?.filter(s => s.billing_type === 'monthly')
+      const monthlyFee = safePotentialServices
+        .filter(s => s.billing_type === 'monthly')
         .reduce((sum, s) => sum + s.price, 0) || lead.estimated_price || 0;
-      const oneOffFee = lead.potential_services
-        ?.filter(s => s.billing_type === 'one_off')
+      const oneOffFee = safePotentialServices
+        .filter(s => s.billing_type === 'one_off')
         .reduce((sum, s) => sum + s.price, 0) || 0;
+      const normalizedEngagementName = buildFreeloProjectName(data.website || lead.website || '', lead.company_name);
+      const effectiveStartDate = lead.onboarding_start_date
+        ? toDateOnlyString(new Date(lead.onboarding_start_date))
+        : data.start_date;
+      const hasCreativeBoostService = safePotentialServices.some((leadService) => {
+        const catalogService = services.find((service) => service.id === leadService.service_id);
+        return (
+          catalogService?.code === CREATIVE_BOOST_SERVICE_CODE ||
+          leadService.name?.toLowerCase().includes('creative boost')
+        );
+      });
+
+      const invalidPerCreditMember = teamMembers.find((member) => {
+        if (member.cost_model !== 'per_credit') return false;
+        const canonicalRole = canonicalizeAssignmentRole(member.role || '');
+        const roleEligible = canonicalRole === 'Graphic Designer' || canonicalRole === 'Video Editor';
+        return !hasCreativeBoostService || !roleEligible || !Number.isFinite(member.reward_per_credit) || member.reward_per_credit <= 0;
+      });
+
+      if (invalidPerCreditMember) {
+        toast.error('Pro odměnu za kredit vyberte roli Graphic Designer/Video Editor, nastavte částku > 0 a mějte v zakázce Creative Boost.');
+        return;
+      }
 
       // NOTE: Fakturoid subject creation is now done AFTER client creation
       // to prevent orphaned subjects if the database transaction fails.
@@ -241,7 +467,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       }> = [];
 
       // Add signatories
-      for (const signatory of lead.onboarding_signatories || []) {
+      for (const signatory of safeOnboardingSignatories) {
         if (!signatory.email || addedEmails.has(signatory.email)) continue;
         addedEmails.add(signatory.email);
         additionalContacts.push({
@@ -256,7 +482,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
       // Add project contacts
       // Issue #14: Preserve position from project contacts
-      for (const projectContact of lead.onboarding_project_contacts || []) {
+      for (const projectContact of safeOnboardingProjectContacts) {
         if (!projectContact.email || addedEmails.has(projectContact.email)) continue;
         addedEmails.add(projectContact.email);
         additionalContacts.push({
@@ -270,7 +496,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       }
 
       // STEP 3: Prepare services data
-      const servicesData = (lead.potential_services || []).map(ls => ({
+      const servicesData = safePotentialServices.map(ls => ({
         service_id: ls.service_id,
         name: ls.name,
         price: ls.price,
@@ -296,11 +522,11 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         .map(member => ({
           colleague_id: member.colleague_id,
           role: member.role,
-          cost_model: member.cost_model,
+          cost_model: member.cost_model === 'per_credit' ? 'fixed_monthly' : member.cost_model,
           hourly_cost: member.cost_model === 'hourly' ? member.hourly_cost : null,
           monthly_cost: member.cost_model === 'fixed_monthly' ? member.monthly_cost : null,
           percentage_of_revenue: member.cost_model === 'percentage' ? member.percentage_of_revenue : null,
-          start_date: data.start_date,
+          start_date: effectiveStartDate,
           end_date: null,
           notes: '',
         }));
@@ -328,7 +554,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             billing_email: lead.billing_email || lead.contact_email || null,
             // NOTE: main_contact_* fields removed - contacts now stored in client_contacts table
             acquisition_channel: data.acquisition_channel,
-            start_date: data.start_date,
+            start_date: effectiveStartDate,
             end_date: data.end_date || null,
             notes: data.client_notes || '',
             pinned_notes: data.pinned_notes || '',
@@ -346,13 +572,13 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
           },
           p_additional_contacts: additionalContacts,
           p_engagement_data: {
-            name: data.engagement_name,
+            name: normalizedEngagementName,
             type: engagementType,
             billing_model: 'fixed_fee',
             currency: lead.currency,
             monthly_fee: monthlyFee,
             one_off_fee: oneOffFee,
-            start_date: data.start_date,
+            start_date: effectiveStartDate,
             end_date: data.end_date || null,
             notice_period_months: toNullableNumber(data.notice_period_months),
             offer_url: offerUrl || null,
@@ -378,7 +604,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
       // STEP 5b: Ensure Creative Boost service settings + client month are initialized
       // RPC currently does not persist Creative Boost-specific fields from lead services.
       try {
-        const cbLeadServices = (lead.potential_services || []).filter((leadService) => {
+        const cbLeadServices = safePotentialServices.filter((leadService) => {
           const catalogService = services.find((service) => service.id === leadService.service_id);
           return (
             catalogService?.code === CREATIVE_BOOST_SERVICE_CODE ||
@@ -395,7 +621,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
           if (createdServicesError) throw createdServicesError;
 
-          const startDate = data.start_date ? new Date(data.start_date) : new Date();
+          const startDate = effectiveStartDate ? new Date(effectiveStartDate) : new Date();
           const monthDate = Number.isNaN(startDate.getTime()) ? new Date() : startDate;
           const targetYear = monthDate.getFullYear();
           const targetMonth = monthDate.getMonth() + 1;
@@ -426,14 +652,33 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
             if (!credits || !pricePerCredit) continue;
 
+            const graphicPerCreditMember = teamMembers.find((member) =>
+              member.cost_model === 'per_credit'
+              && canonicalizeAssignmentRole(member.role || '') === 'Graphic Designer'
+              && Number.isFinite(member.reward_per_credit)
+              && member.reward_per_credit > 0
+            );
+            const videoPerCreditMember = teamMembers.find((member) =>
+              member.cost_model === 'per_credit'
+              && canonicalizeAssignmentRole(member.role || '') === 'Video Editor'
+              && Number.isFinite(member.reward_per_credit)
+              && member.reward_per_credit > 0
+            );
+
             const { error: updateServiceError } = await supabase
               .from('engagement_services')
               .update({
                 creative_boost_min_credits: credits,
                 creative_boost_max_credits: credits,
                 creative_boost_price_per_credit: pricePerCredit,
-                creative_boost_reward_per_credit_banner: cbLeadService.creative_boost_graphic_reward ?? null,
-                creative_boost_reward_per_credit_video: cbLeadService.creative_boost_editor_reward ?? null,
+                creative_boost_reward_per_credit_banner:
+                  graphicPerCreditMember?.reward_per_credit
+                  ?? cbLeadService.creative_boost_graphic_reward
+                  ?? 150,
+                creative_boost_reward_per_credit_video:
+                  videoPerCreditMember?.reward_per_credit
+                  ?? cbLeadService.creative_boost_editor_reward
+                  ?? 100,
                 creative_boost_fixed_billing: true,
               })
               .eq('id', matchedEngagementService.id);
@@ -462,38 +707,48 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         toast.warning('Zakázka vytvořena, ale Creative Boost měsíc se nepodařilo inicializovat automaticky.');
       }
 
-      // STEP 6: Create Fakturoid subject AFTER successful conversion
-      // This prevents orphaned subjects - if this fails, client exists and can be synced later manually
+      // STEP 6: Create integrations AFTER successful conversion (with retry)
       const clientId = conversionResult.client_id;
+      const integrationFailures: string[] = [];
+
       try {
-        const { data: fakturoidResult, error: fakturoidError } = await invokeWithTimeout<{
+        const fakturoidResult = await invokeEdgeWithRetry<{
           success?: boolean;
           error?: string;
         }>('fakturoid-create-subject', {
           body: {
-            client_id: clientId, // Use the newly created client ID
+            client_id: clientId,
           },
-        });
+        }, 45000, 3);
 
-        if (fakturoidError || !fakturoidResult?.success) {
-          console.warn('Fakturoid subject creation failed (non-blocking):', fakturoidError || fakturoidResult?.error);
-          toast.warning('Klient vytvořen, ale propojení s Fakturoid selhalo. Propojte manuálně v kartě klienta.');
+        if (!fakturoidResult?.success) {
+          throw new Error(fakturoidResult?.error || 'Neznámá chyba Fakturoid');
         }
       } catch (fakturoidErr) {
-        console.warn('Fakturoid subject creation error (non-blocking):', fakturoidErr);
-        toast.warning('Klient vytvořen, ale propojení s Fakturoid selhalo. Propojte manuálně v kartě klienta.');
+        integrationFailures.push('Fakturoid');
+        console.warn('Fakturoid subject creation failed:', fakturoidErr);
       }
 
       // Save success fee to engagement
       if (successFeeEnabled && lead.owner_id && conversionResult.engagement_id) {
-        await supabase.from('engagements').update({
+        const normalizedSuccessFeePercent = Number.isFinite(successFeePercent)
+          ? Math.min(100, Math.max(0, successFeePercent))
+          : 10;
+        const normalizedSuccessFeeMonths = 1;
+
+        const { error: successFeeError } = await supabase.from('engagements').update({
           success_fee_colleague_id: lead.owner_id,
-          success_fee_percent: successFeePercent,
-          success_fee_months: successFeeMonths,
+          success_fee_percent: normalizedSuccessFeePercent,
+          success_fee_months: normalizedSuccessFeeMonths,
         }).eq('id', conversionResult.engagement_id);
+
+        if (successFeeError) {
+          console.warn('Success fee save failed (non-blocking):', successFeeError);
+          toast.warning('Zakázka vytvořena, ale success fee se nepodařilo uložit.');
+        }
       }
 
-      // STEP 7: Create Freelo project (non-blocking)
+      // STEP 7: Create Freelo project (with retry)
       const websiteName = form.getValues('website') || lead.website || '';
       const clientNameFallback = form.getValues('brand_name') || lead.company_name;
       const freeloProjectName = buildFreeloProjectName(websiteName, clientNameFallback);
@@ -503,9 +758,8 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         .filter(Boolean) as string[];
       const allEmails = [...new Set([...defaultEmails, ...teamEmails])];
 
-      let freeloFailed = false;
       try {
-        const { data: freeloResult, error: freeloError } = await invokeWithTimeout<{
+        const freeloResult = await invokeEdgeWithRetry<{
           success?: boolean;
           project_url?: string;
           error?: string;
@@ -515,24 +769,26 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             currency: lead.currency || 'CZK',
             team_emails: allEmails,
           },
-        }, 30000);
+        }, 45000, 3);
 
-        if (freeloError || !freeloResult?.success) {
-          freeloFailed = true;
-          console.warn('Freelo project creation failed (non-blocking):', freeloError || freeloResult?.error);
+        if (!freeloResult?.success) {
+          throw new Error(freeloResult?.error || 'Neznámá chyba Freelo');
         } else if (freeloResult.project_url && conversionResult.engagement_id) {
-          await supabase.from('engagements').update({ freelo_url: freeloResult.project_url }).eq('id', conversionResult.engagement_id);
+          const { error: freeloLinkError } = await supabase
+            .from('engagements')
+            .update({ freelo_url: freeloResult.project_url })
+            .eq('id', conversionResult.engagement_id);
+          if (freeloLinkError) throw freeloLinkError;
         }
       } catch (err) {
-        freeloFailed = true;
-        console.warn('Freelo project creation error (non-blocking):', err);
+        integrationFailures.push('Freelo');
+        console.warn('Freelo project creation failed:', err);
       }
 
-      // STEP 7b: Create Slack channel (non-blocking)
-      let slackFailed = false;
+      // STEP 7b: Create Slack channel (with retry)
       try {
         const channelName = buildSlackChannelNameFromWebsite(websiteName, lead.company_name || data.brand_name);
-        const { data: slackResult, error: slackError } = await invokeWithTimeout<{
+        const slackResult = await invokeEdgeWithRetry<{
           success?: boolean;
           channel_name?: string;
           error?: string;
@@ -541,22 +797,25 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             channel_name: channelName,
             team_emails: allEmails,
           },
-        }, 30000);
+        }, 45000, 3);
 
-        if (slackError || !slackResult?.success) {
-          slackFailed = true;
-          console.warn('Slack channel creation failed (non-blocking):', slackError || slackResult?.error);
+        if (!slackResult?.success) {
+          throw new Error(slackResult?.error || 'Neznámá chyba Slack');
         } else if (slackResult.channel_name && conversionResult.engagement_id) {
-          await supabase.from('engagements').update({ slack_channel_name: slackResult.channel_name } as any).eq('id', conversionResult.engagement_id);
+          const { error: slackLinkError } = await supabase
+            .from('engagements')
+            .update({ slack_channel_name: slackResult.channel_name } as any)
+            .eq('id', conversionResult.engagement_id);
+          if (slackLinkError) throw slackLinkError;
         }
       } catch (err) {
-        slackFailed = true;
-        console.warn('Slack channel creation error (non-blocking):', err);
+        integrationFailures.push('Slack');
+        console.warn('Slack channel creation failed:', err);
       }
 
-      if (freeloFailed || slackFailed) {
-        const failedParts = [freeloFailed && 'Freelo', slackFailed && 'Slack'].filter(Boolean).join(' a ');
-        toast.warning(`Zakázka vytvořena, ale ${failedParts} se nepodařilo nastavit. Nastavte manuálně.`);
+      if (integrationFailures.length > 0) {
+        const failedParts = integrationFailures.join(', ');
+        toast.error(`Zakázka vytvořena, ale nepodařilo se dokončit integrace: ${failedParts}. Opravte prosím integrace v detailu klienta/zakázky.`);
       }
 
       // Invalidate all affected caches
@@ -587,6 +846,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
         // Non-blocking
       }
 
+      clearConvertLeadDraft(getConvertLeadDraftKey(lead.id));
       toast.success('Lead byl úspěšně převeden na zakázku');
       onSuccess();
     } catch (error) {
@@ -615,18 +875,22 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
   if (!lead) return null;
 
   const watchCostModel = (index: number) => teamMembers[index]?.cost_model || 'fixed_monthly';
+  const getAutoRoleForColleague = (colleagueId: string): string => {
+    const colleague = activeColleagues.find((item) => item.id === colleagueId);
+    return (colleague?.position || '').trim();
+  };
 
   // Calculate service totals for display
-  const monthlyTotal = lead.potential_services
-    ?.filter(s => s.billing_type === 'monthly')
-    .reduce((sum, s) => sum + s.price, 0) || 0;
-  const oneOffTotal = lead.potential_services
-    ?.filter(s => s.billing_type === 'one_off')
-    .reduce((sum, s) => sum + s.price, 0) || 0;
+  const monthlyTotal = safePotentialServices
+    .filter(s => s.billing_type === 'monthly')
+    .reduce((sum, s) => sum + s.price, 0);
+  const oneOffTotal = safePotentialServices
+    .filter(s => s.billing_type === 'one_off')
+    .reduce((sum, s) => sum + s.price, 0);
   const currency = lead.currency || 'CZK';
 
   // Check if lead has at least one service
-  const hasServices = (lead.potential_services?.length ?? 0) > 0;
+  const hasServices = safePotentialServices.length > 0;
   const offerUrl = getLeadOfferUrl(lead);
   const hasSuggestedTeam = teamMembers.some(member => member._serviceIndex !== undefined);
 
@@ -641,9 +905,9 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
   // Count contacts that will be created
   const totalContacts = 1 + // Primary contact
-    (lead.onboarding_signatories?.filter(s => s.email && s.email !== lead.contact_email).length || 0) +
-    (lead.onboarding_project_contacts?.filter(pc => pc.email && pc.email !== lead.contact_email &&
-      !lead.onboarding_signatories?.some(s => s.email === pc.email)).length || 0);
+    (safeOnboardingSignatories.filter(s => s.email && s.email !== lead.contact_email).length || 0) +
+    (safeOnboardingProjectContacts.filter(pc => pc.email && pc.email !== lead.contact_email &&
+      !safeOnboardingSignatories.some(s => s.email === pc.email)).length || 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -779,9 +1043,9 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             <div className="space-y-4">
               <h4 className="font-medium text-sm border-b pb-2">Služby k převodu</h4>
 
-              {lead.potential_services && lead.potential_services.length > 0 ? (
+              {safePotentialServices.length > 0 ? (
                 <div className="p-4 rounded-lg bg-muted/30 border space-y-2">
-                  {lead.potential_services.map((service, idx) => (
+                  {safePotentialServices.map((service, idx) => (
                     <div key={idx} className="flex items-center justify-between py-2 border-b last:border-0">
                       <div>
                         <p className="text-sm font-medium">{service.name}</p>
@@ -840,10 +1104,10 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                   )}
                 </div>
 
-                {lead.onboarding_signatories && lead.onboarding_signatories.length > 0 && (
+                {safeOnboardingSignatories.length > 0 && (
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Podpisující osoby (rozhodovatelé)</p>
-                    {lead.onboarding_signatories
+                    {safeOnboardingSignatories
                       .filter(s => s.email && s.email !== lead.contact_email)
                       .map((signatory, idx) => (
                         <div key={idx} className="text-sm py-1">
@@ -859,13 +1123,13 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                   </div>
                 )}
 
-                {lead.onboarding_project_contacts && lead.onboarding_project_contacts.length > 0 && (
+                {safeOnboardingProjectContacts.length > 0 && (
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Projektové kontakty</p>
-                    {lead.onboarding_project_contacts
+                    {safeOnboardingProjectContacts
                       .filter(pc => pc.email &&
                         pc.email !== lead.contact_email &&
-                        !lead.onboarding_signatories?.some(s => s.email === pc.email))
+                        !safeOnboardingSignatories.some(s => s.email === pc.email))
                       .map((contact, idx) => (
                         <div key={idx} className="text-sm py-1">
                           <p className="font-medium">{contact.name}</p>
@@ -882,6 +1146,11 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
             {/* Section 4: Editable Fields */}
             <div className="space-y-4">
               <h4 className="font-medium text-sm border-b pb-2">Nastavení převodu</h4>
+              {restoredDraftAt && (
+                <p className="text-xs text-emerald-600">
+                  Obnoven rozpracovaný draft převodu ({new Date(restoredDraftAt).toLocaleString('cs-CZ')}).
+                </p>
+              )}
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
@@ -891,8 +1160,11 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                     <FormItem>
                       <FormLabel>Název zakázky *</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} readOnly />
                       </FormControl>
+                      <FormDescription>
+                        Název se vždy generuje automaticky podle URL webu klienta.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -933,7 +1205,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                         <Input type="date" {...field} />
                       </FormControl>
                       <FormDescription>
-                        Předvyplněno z data podpisu smlouvy, ale můžete upravit (např. u starších smluv).
+                        Převod používá datum z onboarding formuláře. Pokud tam není vyplněné, použije se hodnota z tohoto pole.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -956,8 +1228,8 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
 
               <div className="p-3 rounded-lg bg-muted/30 border">
                 <p className="text-xs text-muted-foreground mb-1">Výpovědní lhůta (ze smlouvy)</p>
-                <p className="text-sm font-medium">3 měsíce</p>
-                <p className="text-xs text-muted-foreground mt-1">Dle standardní smlouvy</p>
+                <p className="text-sm font-medium">1 měsíc</p>
+                <p className="text-xs text-muted-foreground mt-1">Default pro nové zakázky</p>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -1066,9 +1338,9 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                 <li>• 1 klient ({lead.company_name})</li>
                 <li>• {totalContacts} {totalContacts === 1 ? 'kontakt' : totalContacts < 5 ? 'kontakty' : 'kontaktů'}</li>
                 <li>• 1 zakázka ({form.watch('engagement_name') || lead.company_name})</li>
-                {lead.potential_services && lead.potential_services.length > 0 && (
+                {safePotentialServices.length > 0 && (
                   <li>
-                    • {lead.potential_services.length} {lead.potential_services.length === 1 ? 'služba' : lead.potential_services.length < 5 ? 'služby' : 'služeb'}
+                    • {safePotentialServices.length} {safePotentialServices.length === 1 ? 'služba' : safePotentialServices.length < 5 ? 'služby' : 'služeb'}
                     {monthlyTotal > 0 && ` (${monthlyTotal.toLocaleString('cs-CZ')} ${currency}/měsíc`}
                     {monthlyTotal > 0 && oneOffTotal > 0 && ' + '}
                     {oneOffTotal > 0 && `${oneOffTotal.toLocaleString('cs-CZ')} ${currency} jednorázově`}
@@ -1100,7 +1372,7 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                       {colleagues.find(c => c.id === lead.owner_id)?.full_name || 'Nepřiřazeno'}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3">
                     <div className="space-y-1">
                       <Label className="text-xs">Procento z MRR</Label>
                       <div className="flex items-center gap-1.5">
@@ -1115,21 +1387,10 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                         <span className="text-sm text-muted-foreground">%</span>
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Počet měsíců</Label>
-                      <Input
-                        type="number"
-                        value={successFeeMonths}
-                        onChange={(e) => setSuccessFeeMonths(Number(e.target.value))}
-                        min={1}
-                        max={24}
-                        className="h-8 text-sm"
-                      />
-                    </div>
                   </div>
                   {monthlyTotal > 0 && (
                     <p className="text-xs text-muted-foreground">
-                      = {Math.round(monthlyTotal * successFeePercent / 100).toLocaleString('cs-CZ')} {currency}/měsíc po dobu {successFeeMonths} měsíců
+                      = {Math.round(monthlyTotal * successFeePercent / 100).toLocaleString('cs-CZ')} {currency}/měsíc po dobu 1 měsíce
                     </p>
                   )}
                 </div>
@@ -1166,7 +1427,20 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                     <label className="text-xs text-muted-foreground">Kolega</label>
                     <Select
                       value={member.colleague_id}
-                      onValueChange={(v) => updateTeamMember(index, 'colleague_id', v)}
+                      onValueChange={(v) => {
+                        const previousAutoRole = member.colleague_id ? getAutoRoleForColleague(member.colleague_id) : '';
+                        const nextAutoRole = getAutoRoleForColleague(v);
+                        const shouldReplaceRole = !member.role || (previousAutoRole !== '' && member.role === previousAutoRole);
+
+                        setTeamMembers((prev) => prev.map((currentMember, currentIndex) => {
+                          if (currentIndex !== index) return currentMember;
+                          return {
+                            ...currentMember,
+                            colleague_id: v,
+                            role: shouldReplaceRole && nextAutoRole ? nextAutoRole : currentMember.role,
+                          };
+                        }));
+                      }}
                     >
                       <SelectTrigger className="mt-1">
                         <SelectValue placeholder="Vyberte" />
@@ -1202,12 +1476,14 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                         <SelectItem value="fixed_monthly">Fixní měsíčně</SelectItem>
                         <SelectItem value="hourly">Hodinově</SelectItem>
                         <SelectItem value="percentage">% z revenue</SelectItem>
+                        <SelectItem value="per_credit">Odměna za kredit (Creative Boost)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
                     <label className="text-xs text-muted-foreground">
                       {watchCostModel(index) === 'hourly' ? 'Hodinová sazba' :
+                       watchCostModel(index) === 'per_credit' ? 'Odměna za kredit' :
                        watchCostModel(index) === 'percentage' ? '% z revenue' : 'Měsíční náklad'}
                     </label>
                     <Input
@@ -1215,11 +1491,13 @@ export function ConvertLeadDialog({ lead, open, onOpenChange, onSuccess }: Conve
                       type="number"
                       value={
                         watchCostModel(index) === 'hourly' ? (member.hourly_cost || '') :
+                        watchCostModel(index) === 'per_credit' ? (member.reward_per_credit || '') :
                         watchCostModel(index) === 'percentage' ? (member.percentage_of_revenue || '') :
                         (member.monthly_cost || '')
                       }
                       onChange={(e) => {
                         const field = watchCostModel(index) === 'hourly' ? 'hourly_cost' :
+                                      watchCostModel(index) === 'per_credit' ? 'reward_per_credit' :
                                       watchCostModel(index) === 'percentage' ? 'percentage_of_revenue' :
                                       'monthly_cost';
                         const raw = e.target.value;
