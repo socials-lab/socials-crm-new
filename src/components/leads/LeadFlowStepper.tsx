@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { 
   Plus, 
   KeyRound, 
@@ -19,6 +20,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { Lead, LeadService } from '@/types/crm';
+import type { PublicOfferService } from '@/types/publicOffer';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LeadFlowStepperProps {
   lead: Lead;
@@ -131,9 +134,87 @@ export function LeadFlowStepper({
   onConvert,
   onRemoveService,
 }: LeadFlowStepperProps) {
-  const servicesCount = lead.potential_services?.length || 0;
-  const services = lead.potential_services || [];
+  const [offerServicesSnapshot, setOfferServicesSnapshot] = useState<LeadService[]>([]);
+  const localLeadServices: LeadService[] = Array.isArray(lead.potential_services) ? lead.potential_services : [];
+  const rawServices = localLeadServices.length > 0 ? localLeadServices : offerServicesSnapshot;
+  const services = rawServices.filter((service): service is LeadService => {
+    if (!service || typeof service !== 'object') return false;
+    const candidate = service as Partial<LeadService>;
+    return typeof candidate.name === 'string' && candidate.name.trim().length > 0;
+  });
+  const servicesCount = services.length;
   const currency = lead.currency || 'CZK';
+
+  useEffect(() => {
+    if (Array.isArray(lead.potential_services) && lead.potential_services.length > 0) {
+      setOfferServicesSnapshot((prev) => (prev.length === 0 ? prev : []));
+      return;
+    }
+
+    let mounted = true;
+
+    (async () => {
+      try {
+        const normalizeOfferServices = (list: PublicOfferService[]): LeadService[] =>
+          Array.isArray(list)
+            ? list.map((service, idx) => ({
+                id: service.id || `offer-service-${idx}`,
+                service_id: service.service_id,
+                name: service.name,
+                selected_tier: service.selected_tier ?? null,
+                price: Number(service.price || 0),
+                currency: service.currency || lead.currency || 'CZK',
+                billing_type: service.billing_type || 'monthly',
+                managed_countries: service.managed_countries || [],
+                country_variants: service.country_variants || [],
+                intro_discount_percent: null,
+                intro_discount_months: null,
+                creative_boost_credits: service.creative_boost_credits ?? null,
+                creative_boost_price_per_credit: service.creative_boost_price_per_credit ?? null,
+                creative_boost_graphic_reward: null,
+                creative_boost_editor_reward: null,
+              }))
+            : [];
+
+        let offerData: { services?: PublicOfferService[] } | null = null;
+
+        if (lead.offer_token) {
+          const byToken = await supabase
+            .from('public_offers')
+            .select('services')
+            .eq('token', lead.offer_token)
+            .or('is_active.eq.true,is_active.is.null')
+            .maybeSingle();
+          if (!byToken.error && byToken.data) {
+            offerData = byToken.data as { services?: PublicOfferService[] };
+          }
+        }
+
+        if (!offerData) {
+          const byLead = await supabase
+            .from('public_offers')
+            .select('services')
+            .eq('lead_id', lead.id)
+            .or('is_active.eq.true,is_active.is.null')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (byLead.error) throw byLead.error;
+          offerData = byLead.data as { services?: PublicOfferService[] } | null;
+        }
+
+        if (mounted) {
+          setOfferServicesSnapshot(normalizeOfferServices((offerData?.services ?? []) as PublicOfferService[]));
+        }
+      } catch (error) {
+        console.error('Failed to load offer services for contract preview in lead flow:', error);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [lead.id, lead.offer_token, lead.currency, lead.potential_services?.length]);
   const getServiceCountryVariants = (service: LeadService) => {
     if (!Array.isArray(service.country_variants)) return [];
     return service.country_variants

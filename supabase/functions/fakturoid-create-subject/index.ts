@@ -379,7 +379,12 @@ serve(async (req) => {
     if (subjectStreet) subjectData.street = subjectStreet;
     if (subjectCity) subjectData.city = subjectCity;
     if (subjectZip) subjectData.zip = subjectZip;
-    if (subjectCountry) subjectData.country = getCountryCode(subjectCountry);
+    if (subjectCountry) {
+      const normalizedCountry = getCountryCode(subjectCountry);
+      if (/^[A-Z]{2}$/.test(normalizedCountry)) {
+        subjectData.country = normalizedCountry;
+      }
+    }
     if (subjectEmail) subjectData.email = subjectEmail;
     if (subjectWebsite) subjectData.web = subjectWebsite;
     if (subjectPhone) subjectData.phone = subjectPhone;

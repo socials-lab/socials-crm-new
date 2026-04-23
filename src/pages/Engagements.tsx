@@ -251,44 +251,134 @@ function EngagementsContent() {
   const [tempContractUrl, setTempContractUrl] = useState<string>('');
 
   // Integration retry state
+  const [retryingFakturoid, setRetryingFakturoid] = useState<string | null>(null);
   const [retryingFreelo, setRetryingFreelo] = useState<string | null>(null);
   const [retryingSlack, setRetryingSlack] = useState<string | null>(null);
+  const [repairingIntegrations, setRepairingIntegrations] = useState<string | null>(null);
 
-  const handleRetryFreelo = async (engagement: Engagement) => {
-    const client = getClientById(engagement.client_id);
-    const websiteName = client?.website || '';
-    const clientNameFallback = client?.brand_name || client?.name || engagement.name || 'Projekt';
-    const freeloProjectName = buildFreeloProjectName(websiteName, clientNameFallback);
+  const getIntegrationTeamEmails = useCallback((engagement: Engagement): string[] => {
     const engAssignments = getAssignmentsByEngagementId(engagement.id);
     const defaultEmails = ['danny@socials.cz', 'otas@socials.cz', 'david.hala@socials.cz'];
     const teamEmails = engAssignments
       .map(a => getColleagueById(a.colleague_id)?.email)
       .filter(Boolean) as string[];
-    const allEmails = [...new Set([...defaultEmails, ...teamEmails])];
+    return [...new Set([...defaultEmails, ...teamEmails])];
+  }, [getAssignmentsByEngagementId, getColleagueById]);
 
-    setRetryingFreelo(engagement.id);
+  const createFakturoidForEngagement = useCallback(async (engagement: Engagement): Promise<{ ok: boolean; message: string }> => {
+    const client = getClientById(engagement.client_id);
+    if (!client) {
+      return { ok: false, message: 'Klient k zakázce nebyl nalezen.' };
+    }
+
+    const { data, error } = await invokeWithTimeout<{
+      success?: boolean;
+      error?: string;
+      message?: string;
+      existing?: boolean;
+      fakturoid_subject_id?: number;
+    }>('fakturoid-create-subject', {
+      body: { client_id: client.id },
+    }, 45000);
+
+    if (error) {
+      return { ok: false, message: error.message || 'Neznámá chyba' };
+    }
+
+    if (data?.error || data?.success === false) {
+      return { ok: false, message: data?.error || data?.message || 'Nepodařilo se vytvořit kontakt ve Fakturoid.' };
+    }
+
+    queryClient.invalidateQueries({ queryKey: ['clients'] });
+    return { ok: true, message: data?.existing ? 'Fakturoid už byl propojen.' : 'Fakturoid byl propojen.' };
+  }, [getClientById, queryClient]);
+
+  const createFreeloForEngagement = useCallback(async (engagement: Engagement): Promise<{ ok: boolean; message: string }> => {
+    const client = getClientById(engagement.client_id);
+    const websiteName = client?.website || '';
+    const clientNameFallback = client?.brand_name || client?.name || engagement.name || 'Projekt';
+    const freeloProjectName = buildFreeloProjectName(websiteName, clientNameFallback);
+    const allEmails = getIntegrationTeamEmails(engagement);
+
+    const { data: result, error } = await invokeWithTimeout<{
+      success?: boolean;
+      project_url?: string;
+      error?: string;
+    }>('create-freelo-project', {
+      body: {
+        project_name: freeloProjectName,
+        currency: engagement.currency || 'CZK',
+        team_emails: allEmails,
+      },
+    }, 45000);
+
+    if (error || !result?.success) {
+      return { ok: false, message: error?.message || result?.error || 'Neznámá chyba' };
+    }
+
+    if (result.project_url) {
+      await supabase.from('engagements').update({ freelo_url: result.project_url }).eq('id', engagement.id);
+      await updateEngagement(engagement.id, { freelo_url: result.project_url } as any);
+    }
+
+    return { ok: true, message: 'Freelo projekt vytvořen.' };
+  }, [getClientById, getIntegrationTeamEmails, updateEngagement]);
+
+  const createSlackForEngagement = useCallback(async (engagement: Engagement): Promise<{ ok: boolean; message: string }> => {
+    const client = getClientById(engagement.client_id);
+    const websiteName = client?.website || '';
+    const clientNameFallback = client?.brand_name || client?.name || engagement.name || 'klient';
+    const channelName = buildSlackChannelNameFromWebsite(websiteName, clientNameFallback);
+    const allEmails = getIntegrationTeamEmails(engagement);
+
+    const { data: result, error } = await invokeWithTimeout<{
+      success?: boolean;
+      channel_name?: string;
+      error?: string;
+    }>('create-slack-channel', {
+      body: {
+        channel_name: channelName,
+        team_emails: allEmails,
+      },
+    }, 45000);
+
+    if (error || !result?.success) {
+      return { ok: false, message: error?.message || result?.error || 'Neznámá chyba' };
+    }
+
+    if (result.channel_name) {
+      await supabase.from('engagements').update({ slack_channel_name: result.channel_name } as any).eq('id', engagement.id);
+      await updateEngagement(engagement.id, { slack_channel_name: result.channel_name } as any);
+    }
+
+    return { ok: true, message: `Slack kanál #${result.channel_name || channelName} vytvořen.` };
+  }, [getClientById, getIntegrationTeamEmails, updateEngagement]);
+
+  const handleRetryFakturoid = async (engagement: Engagement) => {
+    setRetryingFakturoid(engagement.id);
     try {
-      const { data: result, error } = await invokeWithTimeout<{
-        success?: boolean;
-        project_url?: string;
-        error?: string;
-      }>('create-freelo-project', {
-        body: {
-          project_name: freeloProjectName,
-          currency: engagement.currency || 'CZK',
-          team_emails: allEmails,
-        },
-      }, 30000);
-
-      if (error || !result?.success) {
-        toast.error(`Freelo se nepodařilo vytvořit: ${error?.message || result?.error || 'Neznámá chyba'}`);
+      const result = await createFakturoidForEngagement(engagement);
+      if (!result.ok) {
+        toast.error(`Fakturoid se nepodařilo propojit: ${result.message}`);
         return;
       }
-      if (result.project_url) {
-        await supabase.from('engagements').update({ freelo_url: result.project_url }).eq('id', engagement.id);
-        await updateEngagement(engagement.id, { freelo_url: result.project_url } as any);
+      toast.success(result.message);
+    } catch (err) {
+      toast.error(`Fakturoid chyba: ${err instanceof Error ? err.message : 'Timeout'}`);
+    } finally {
+      setRetryingFakturoid(null);
+    }
+  };
+
+  const handleRetryFreelo = async (engagement: Engagement) => {
+    setRetryingFreelo(engagement.id);
+    try {
+      const result = await createFreeloForEngagement(engagement);
+      if (!result.ok) {
+        toast.error(`Freelo se nepodařilo vytvořit: ${result.message}`);
+        return;
       }
-      toast.success('Freelo projekt vytvořen');
+      toast.success(result.message);
     } catch (err) {
       toast.error(`Freelo chyba: ${err instanceof Error ? err.message : 'Timeout'}`);
     } finally {
@@ -297,43 +387,65 @@ function EngagementsContent() {
   };
 
   const handleRetrySlack = async (engagement: Engagement) => {
-    const client = getClientById(engagement.client_id);
-    const websiteName = client?.website || '';
-    const clientNameFallback = client?.brand_name || client?.name || engagement.name || 'klient';
-    const channelName = buildSlackChannelNameFromWebsite(websiteName, clientNameFallback);
-    const engAssignments = getAssignmentsByEngagementId(engagement.id);
-    const defaultEmails = ['danny@socials.cz', 'otas@socials.cz', 'david.hala@socials.cz'];
-    const teamEmails = engAssignments
-      .map(a => getColleagueById(a.colleague_id)?.email)
-      .filter(Boolean) as string[];
-    const allEmails = [...new Set([...defaultEmails, ...teamEmails])];
-
     setRetryingSlack(engagement.id);
     try {
-      const { data: result, error } = await invokeWithTimeout<{
-        success?: boolean;
-        channel_name?: string;
-        error?: string;
-      }>('create-slack-channel', {
-        body: {
-          channel_name: channelName,
-          team_emails: allEmails,
-        },
-      }, 30000);
-
-      if (error || !result?.success) {
-        toast.error(`Slack kanál se nepodařilo vytvořit: ${error?.message || result?.error || 'Neznámá chyba'}`);
+      const result = await createSlackForEngagement(engagement);
+      if (!result.ok) {
+        toast.error(`Slack kanál se nepodařilo vytvořit: ${result.message}`);
         return;
       }
-      if (result.channel_name) {
-        await supabase.from('engagements').update({ slack_channel_name: result.channel_name } as any).eq('id', engagement.id);
-        await updateEngagement(engagement.id, { slack_channel_name: result.channel_name } as any);
-      }
-      toast.success(`Slack kanál #${result.channel_name || channelName} vytvořen`);
+      toast.success(result.message);
     } catch (err) {
       toast.error(`Slack chyba: ${err instanceof Error ? err.message : 'Timeout'}`);
     } finally {
       setRetryingSlack(null);
+    }
+  };
+
+  const handleRepairIntegrations = async (engagement: Engagement) => {
+    const client = getClientById(engagement.client_id);
+    if (!client) {
+      toast.error('Klient k zakázce nebyl nalezen.');
+      return;
+    }
+
+    const hasFakturoid = !!(client as any)?.fakturoid_subject_id;
+    const hasFreelo = !!engagement.freelo_url;
+    const hasSlack = !!engagement.slack_channel_name;
+
+    if (hasFakturoid && hasFreelo && hasSlack) {
+      toast.success('Všechny integrace už jsou propojené.');
+      return;
+    }
+
+    setRepairingIntegrations(engagement.id);
+    try {
+      const failures: string[] = [];
+
+      if (!hasFakturoid) {
+        const fakturoidResult = await createFakturoidForEngagement(engagement);
+        if (!fakturoidResult.ok) failures.push(`Fakturoid (${fakturoidResult.message})`);
+      }
+
+      if (!hasFreelo) {
+        const freeloResult = await createFreeloForEngagement(engagement);
+        if (!freeloResult.ok) failures.push(`Freelo (${freeloResult.message})`);
+      }
+
+      if (!hasSlack) {
+        const slackResult = await createSlackForEngagement(engagement);
+        if (!slackResult.ok) failures.push(`Slack (${slackResult.message})`);
+      }
+
+      if (failures.length > 0) {
+        toast.error(`Některé integrace se nepodařilo opravit: ${failures.join(' | ')}`);
+      } else {
+        toast.success('Integrace byly úspěšně opraveny.');
+      }
+    } catch (err) {
+      toast.error(`Repair selhal: ${err instanceof Error ? err.message : 'Neznámá chyba'}`);
+    } finally {
+      setRepairingIntegrations(null);
     }
   };
 
@@ -1630,6 +1742,20 @@ function EngagementsContent() {
                               <span className={hasFakturoid ? 'text-muted-foreground' : 'text-amber-600 font-medium'}>
                                 Fakturoid {hasFakturoid ? 'propojeno' : 'nepropojeno'}
                               </span>
+                              {!hasFakturoid && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 text-xs ml-1 px-2"
+                                  disabled={retryingFakturoid === engagement.id || repairingIntegrations === engagement.id}
+                                  onClick={(e) => { e.stopPropagation(); handleRetryFakturoid(engagement); }}
+                                >
+                                  {(retryingFakturoid === engagement.id || repairingIntegrations === engagement.id)
+                                    ? <Loader2 className="h-3 w-3 animate-spin" />
+                                    : <Plus className="h-3 w-3" />}
+                                  <span className="ml-1">Vytvořit</span>
+                                </Button>
+                              )}
                             </div>
                             <div className="flex items-center gap-2">
                               {hasFreelo ? (
@@ -1686,6 +1812,30 @@ function EngagementsContent() {
                                 </>
                               )}
                             </div>
+                            {(!hasFakturoid || !hasFreelo || !hasSlack) && (
+                              <div className="pt-2">
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  disabled={
+                                    repairingIntegrations === engagement.id
+                                    || retryingFakturoid === engagement.id
+                                    || retryingFreelo === engagement.id
+                                    || retryingSlack === engagement.id
+                                  }
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void handleRepairIntegrations(engagement);
+                                  }}
+                                >
+                                  {repairingIntegrations === engagement.id
+                                    ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                                    : <Globe className="h-3.5 w-3.5 mr-1" />}
+                                  Repair Integrations
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
